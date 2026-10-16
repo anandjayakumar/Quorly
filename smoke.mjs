@@ -211,15 +211,18 @@ try {
 
 // --- funnel endpoint (M-1): same-origin, anonymous, fail-open ------------------------
 
-// POST a valid event -> 204. Unbound locally (the Analytics Engine binding cannot be used with
-// `wrangler pages dev`), which is exactly the no-write case the handler must tolerate.
+// POST -> 204. The body deliberately carries a name that is NOT in the function's allowlist, so
+// running this gate against production can never write a fake event into the funnel dataset — the
+// contract being checked (204 + no-store) is identical for an accepted, a rejected or an unbound
+// request. Unbound locally (the Analytics Engine binding cannot be used with `wrangler pages dev`),
+// which is the no-write case the handler must tolerate.
 try {
   const res = await fetch(BASE + '/e', {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-    body: JSON.stringify({ e: 'first_keystroke' }),
+    body: JSON.stringify({ e: 'smoke-check', format: 'smoke' }),
   });
-  record('POST /e accepts an event', res.status === 204, `status=${res.status}`);
+  record('POST /e answers 204', res.status === 204, `status=${res.status}`);
   record('/e is not cached', /no-store/i.test(res.headers.get('cache-control') || ''),
     `cache-control=${res.headers.get('cache-control') || '(none)'}`);
 } catch (e) {
