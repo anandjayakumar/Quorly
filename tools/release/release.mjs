@@ -39,7 +39,11 @@ const PROD_ALIAS = 'https://quorly.pages.dev';
 const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID || '07e6e9a6b18b4cae4d21fccba4dae17a';
 const API = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/pages/projects/${PROJECT}/deployments`;
 
-const WRANGLER = 'npx --yes wrangler@3';
+// Never resolve node/npx through PATH: the hook runs under Git-for-Windows' sh, whose PATH
+// differs from a normal shell's. Pin both to the interpreter running this file.
+const NODE = `"${process.execPath}"`;
+const NPX_BIN = path.join(path.dirname(process.execPath), process.platform === 'win32' ? 'npx.cmd' : 'npx');
+const WRANGLER = fs.existsSync(NPX_BIN) ? `"${NPX_BIN}" --yes wrangler@3` : 'npx --yes wrangler@3';
 const KEEP_PREVIEWS = 3;
 const SMOKE_TOTAL = 104;
 const DEV_READY_MS = 150_000;
@@ -183,14 +187,17 @@ function lastPassedRun(sha) {
 function snapshot(sha, runDir, stage) {
   fs.rmSync(runDir, { recursive: true, force: true });
   fs.mkdirSync(stage, { recursive: true });
+  // git takes an absolute path (git understands Windows paths). tar is handed relative names and
+  // its own cwd, because under Git-for-Windows' sh the GNU tar on PATH parses "C:\..." as a remote
+  // host and dies with "Cannot connect to C: resolve failed".
   const tar = path.join(runDir, 'snapshot.tar');
-  sh(`git archive --format=tar -o "${tar}" ${sha}`);
-  sh(`tar -xf "${tar}" -C "${stage}"`);
+  sh(`git archive --format=tar -o "${tar}" ${sha}`, { cwd: REPO });
+  sh('tar -xf snapshot.tar -C stage', { cwd: runDir });
   fs.rmSync(tar, { force: true });
   return countFiles(stage);
 }
 
-const smokeCmd = (base) => `node "${SMOKE}" ${base}`;
+const smokeCmd = (base) => `${NODE} "${SMOKE}" ${base}`;
 
 /** Run smoke.mjs and demand the full suite. Returns a summary string or throws. */
 function runSmoke(base, { label, cwd = REPO } = {}) {
