@@ -1,0 +1,281 @@
+/* Quorly landing page — self-hosted fonts, no third-party requests.
+   Dark is the default, to match the editor; the OS preference is deliberately not followed. */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/lora.woff2') format('woff2');
+}
+
+:root {
+  --bg: #0e0e0e;
+  --panel: #151517;
+  --border: rgba(255, 255, 255, 0.10);
+  --text: #f5f6f7;
+  --muted: #a1a3a8;
+  --accent: #6ee7b7;
+  --accent-ink: #06110c;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 40px rgba(0,0,0,.35);
+  --maxw: 1040px;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+img { max-width: 100%; height: auto; }
+
+a { color: inherit; }
+
+h1, h2, h3 { line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 .6em; }
+
+h2 { font-size: clamp(1.5rem, 3.2vw, 2.1rem); }
+h3 { font-size: 1.05rem; margin-bottom: .4em; }
+
+p { margin: 0 0 1em; }
+
+kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .82em;
+  padding: .15em .45em;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+/* ---------- nav ---------- */
+
+.nav {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 22px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  font-size: 1.05rem;
+}
+
+.brand img { border-radius: 8px; display: block; }
+
+.nav .brand img { border-radius: 10px; }
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  font-size: .92rem;
+}
+
+.nav-links a { text-decoration: none; color: var(--muted); }
+.nav-links a:hover { color: var(--text); }
+
+.nav-cta {
+  color: var(--accent-ink) !important;
+  background: var(--accent);
+  padding: .5em 1em;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* ---------- hero ---------- */
+
+.hero {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 64px 24px 40px;
+}
+
+.eyebrow {
+  display: inline-block;
+  font-size: .78rem;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 18px;
+}
+
+.hero h1 {
+  font-size: clamp(2.1rem, 6.4vw, 4rem);
+  margin-bottom: .4em;
+}
+
+.hero h1 em {
+  font-family: 'Lora', Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.lede {
+  max-width: 46ch;
+  font-size: clamp(1rem, 2vw, 1.18rem);
+  color: var(--muted);
+}
+
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 26px 0 14px;
+}
+
+.cta-row.center { justify-content: center; }
+
+.btn-primary, .btn-ghost {
+  display: inline-block;
+  text-decoration: none;
+  font-weight: 600;
+  padding: .78em 1.5em;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  transition: transform .12s ease, opacity .12s ease;
+}
+
+.btn-primary { background: var(--accent); color: var(--accent-ink); }
+.btn-ghost { border-color: var(--border); color: var(--text); }
+
+.btn-primary:hover, .btn-ghost:hover { transform: translateY(-1px); opacity: .92; }
+
+.micro { font-size: .85rem; color: var(--muted); margin: 0; }
+
+/* ---------- sections ---------- */
+
+.section {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 72px 24px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+.card p { margin: 0; color: var(--muted); font-size: .95rem; }
+
+/* ---------- checklist (privacy policy page) ---------- */
+
+.checklist { list-style: none; padding: 0; margin: 26px 0 0; display: grid; gap: 10px; }
+.checklist li {
+  position: relative;
+  padding-left: 30px;
+  font-size: .95rem;
+  color: var(--muted);
+}
+.checklist li::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: .55em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.checklist strong { color: var(--text); }
+
+/* ---------- faq ---------- */
+
+.faq details {
+  border-bottom: 1px solid var(--border);
+  padding: 4px 0;
+}
+.faq summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 16px 0;
+  list-style: none;
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: " +"; color: var(--muted); }
+.faq details[open] summary::after { content: " –"; }
+.faq details p { color: var(--muted); margin: 0 0 20px; font-size: .95rem; max-width: 62ch; }
+
+/* ---------- final + footer ---------- */
+
+.final { text-align: center; }
+
+.footer { border-top: 1px solid var(--border); margin-top: 24px; }
+
+.footer-inner {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 28px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: .9rem;
+  color: var(--muted);
+}
+
+.brand.small { font-size: .95rem; color: var(--text); }
+
+.footer-inner nav { display: flex; gap: 18px; }
+.footer-inner nav a { text-decoration: none; }
+.footer-inner nav a:hover { color: var(--text); }
+.copy { margin: 0; }
+
+/* ---------- long-form prose (privacy page) ---------- */
+
+.prose { max-width: 760px; }
+.prose h2 { margin-top: 1.6em; font-size: 1.25rem; }
+.prose p, .prose li { color: var(--muted); }
+.prose a { color: var(--accent); }
+.prose code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .85em;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .1em .35em;
+}
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 720px) {
+  .nav-links { gap: 14px; }
+  .nav-links a:not(.nav-cta) { display: none; }
+  .section { padding: 52px 24px; }
+}

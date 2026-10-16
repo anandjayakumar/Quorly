@@ -1,0 +1,85 @@
+# Cloudflare headers — https://developers.cloudflare.com/pages/configuration/headers/
+#
+# Third-party requests: exactly one, and only for anonymous visit counts.
+# Cloudflare Web Analytics loads beacon.min.js from static.cloudflareinsights.com and
+# beacons to cloudflareinsights.com. Nothing else leaves the origin, and no document
+# content is ever transmitted (the app itself makes no requests at all).
+#
+# script-src stays free of 'unsafe-inline': no inline <script>, no inline styles and no
+# inline event handlers anywhere in the markup.
+#
+# connect-src keeps 'self'. The app makes no requests of its own, but without 'self' the
+# browser refuses even to read our own /robots.txt and /sitemap.xml, which breaks
+# same-origin tooling (Lighthouse reports "robots.txt is not valid").
+#
+# manifest-src and worker-src have to be named explicitly. Both fall back to default-src,
+# which is 'none', so the web app manifest would be blocked and the service worker could not
+# register. Chrome only fetches the manifest once a page is installable — i.e. once a service
+# worker exists — so this is inert until W-1 lands and then becomes load-bearing.
+
+/*
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://cloudflareinsights.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  X-Frame-Options: DENY
+  Strict-Transport-Security: max-age=31536000
+
+# Self-hosted variable fonts never change in place — cache them hard.
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: font/woff2
+
+# Pin the served MIME for every document type.
+#
+# On a Worker with static assets the direct-upload API records the Content-Type sent for
+# each file part and keys assets by content hash, so a stored type cannot be corrected
+# without changing the file bytes. These pins make the served type independent of that.
+# (Cloudflare Pages derives MIME from the extension; the pins are harmless there.)
+/
+  Content-Type: text/html; charset=utf-8
+/index.html
+  Content-Type: text/html; charset=utf-8
+/404.html
+  Content-Type: text/html; charset=utf-8
+/app/
+  Content-Type: text/html; charset=utf-8
+/app/index.html
+  Content-Type: text/html; charset=utf-8
+/privacy/
+  Content-Type: text/html; charset=utf-8
+/privacy/index.html
+  Content-Type: text/html; charset=utf-8
+/styles.css
+  Content-Type: text/css; charset=utf-8
+/landing.css
+  Content-Type: text/css; charset=utf-8
+/app.js
+  Content-Type: text/javascript; charset=utf-8
+
+# The service worker must never be answered from a stale cache — that is the one failure
+# mode that can outlive a deploy — and it must keep a pinned type: a worker fetched as
+# application/octet-stream under nosniff is refused outright, which would silently disable
+# offline support for every returning visitor.
+/sw.js
+  Content-Type: text/javascript; charset=utf-8
+  Cache-Control: no-cache
+
+# Vendored libraries (marked, DOMPurify): pin the type so a future re-upload cannot
+# silently break them under `nosniff`.
+/vendor/*
+  Content-Type: text/javascript; charset=utf-8
+
+# Non-HTML documents and images.
+/sitemap.xml
+  Content-Type: application/xml; charset=utf-8
+/robots.txt
+  Content-Type: text/plain; charset=utf-8
+/manifest.webmanifest
+  Content-Type: application/manifest+json; charset=utf-8
+/og.png
+  Content-Type: image/png
+/icon-192.png
+  Content-Type: image/png
+/icon-512.png
+  Content-Type: image/png

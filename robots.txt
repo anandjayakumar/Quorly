@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://quorly.pages.dev/sitemap.xml

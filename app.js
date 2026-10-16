@@ -1,0 +1,2028 @@
+
+let fileHandle = null;
+let bodyFontSize = 18;
+let editorWidth = 1080;
+// UI-14: at ≤1180px the panel is a drawer and the Formatting section moves under the top bar.
+const MOBILE_LAYOUT = window.matchMedia('(max-width: 1180px)');
+let savedRange = null;
+let lastSelectionRange = null; // last caret/selection inside the editor (used by side-panel controls)
+let filePrefix = null; // Store the 6-digit prefix from first save
+// Write-Assist feature disabled: no model IDs or API credentials in this build.
+let isLoading = false; // True while importing a file (prevents auto-rewriting it to disk)
+
+// --- DOCUMENT LIBRARY (Recents) ---
+// The live document keeps using the original *_v13 keys, unchanged. In addition, every
+// document gets its own snapshot so it can be reopened from the Recents list later.
+const FILES_INDEX_KEY = 'quorly_files_v1';
+const CURRENT_ID_KEY = 'quorly_current_id_v1';
+const FILE_KEY_PREFIX = 'quorly_file_';
+const MAX_RECENTS = 10;
+const RESTORE_WINDOW_MS = 48 * 60 * 60 * 1000; // reopen the last document only if touched within 48 h
+let currentId = null;
+// File handles cannot be stored in localStorage, so disk links live for this session only.
+const sessionHandles = new Map();
+
+// Default document shown on first load and when starting a new file.
+const DEFAULT_TITLE = "Welcome to Quorly";
+const DEFAULT_BODY = "<h2>Overview</h2><p>Quorly is a quiet, local-first writing space. Select any text to format it, or use the panel on the right.</p><blockquote>Everything stays on your device.</blockquote>";
+
+// --- SAFETY & UTILITIES ---
+
+// File System Access API feature detection (Chromium only; Firefox/Safari lack these)
+const FSA_SUPPORTED = typeof window.showSaveFilePicker === 'function' && typeof window.showOpenFilePicker === 'function';
+
+// Escape text for safe interpolation into HTML
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// Sanitize untrusted HTML before it ever reaches innerHTML
+const PURIFY_CONFIG = {
+    ADD_ATTR: ['contenteditable', 'data-highlighted', 'target'],
+    ADD_DATA_URI_TAGS: ['img'],
+    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'link', 'meta'],
+    FORBID_ATTR: ['srcdoc']
+};
+function sanitizeHTML(html) {
+    if (window.DOMPurify) {
+        return DOMPurify.sanitize(html, PURIFY_CONFIG);
+    }
+    // Fallback if the sanitizer failed to load: strip scripts and event handlers.
+    const t = document.createElement('div');
+    t.innerHTML = String(html);
+    t.querySelectorAll('script, style, iframe, object, embed, link, meta').forEach(n => n.remove());
+    t.querySelectorAll('*').forEach(el => {
+        [...el.attributes].forEach(a => {
+            const n = a.name.toLowerCase();
+            if (n.startsWith('on') || ((n === 'href' || n === 'src') && /^\s*javascript:/i.test(a.value))) {
+                el.removeAttribute(a.name);
+            }
+        });
+    });
+    return t.innerHTML;
+}
+
+// Transient on-screen notice (replaces silent failures)
+let toastTimer = null;
+function toast(message) {
+    let el = document.getElementById('appToast');
+    if (!el) { el = document.createElement('div'); el.id = 'appToast'; document.body.appendChild(el); }
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+// localStorage write that can't crash the app when the quota is exceeded
+function safeSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (err) {
+        if (err && (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014)) {
+            toast('Storage full — this document (or its images) is too large to save locally. Try removing images or exporting to disk.');
+        } else {
+            console.warn('localStorage write failed', err);
+        }
+        return false;
+    }
+}
+
+// Debounce helper for autosave
+function debounce(fn, wait) {
+    let t = null;
+    return function (...args) {
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(this, args), wait);
+    };
+}
+
+const editTitle = document.getElementById('editTitle');
+const editBody = document.getElementById('editBody');
+const cmdPalette = document.getElementById('commandPalette');
+const toolbar = document.getElementById('toolbar');
+
+function init() {
+    // Load mode preference
+    if (localStorage.getItem("mode") === 'light') {
+        document.body.classList.add('light-mode');
+    }
+    syncModeButton();
+
+    // UI-09: reopen the last-worked document, but only if it was touched within 48 h.
+    const savedId = localStorage.getItem(CURRENT_ID_KEY);
+    const entry = savedId ? readIndex().find((e) => e.id === savedId) : null;
+    const expired = !!entry && (Date.now() - entry.updatedAt) > RESTORE_WINDOW_MS;
+    const hasLiveDoc = localStorage.getItem("doc_title_v13") !== null
+        || localStorage.getItem("doc_body_v13") !== null;
+
+    // Which document does the legacy global version history belong to? (See migration below.)
+    let legacyOwnerId = null;
+
+    if (savedId && !expired) {
+        currentId = savedId;
+        legacyOwnerId = savedId;
+        restoreLiveDocument();
+    } else if (savedId && expired) {
+        // Too old: open a clean page. The previous document stays in Recents, untouched.
+        // The legacy history belongs to that previous document, not to this fresh page.
+        legacyOwnerId = savedId;
+        // Its latest content is in the live keys (the open document's only storage), so park it
+        // under its own id before startCleanDocument overwrites those keys.
+        if (writeSnapshot(savedId, snapshotFromLiveKeys())) {
+            currentId = newDocId();
+            safeSetItem(CURRENT_ID_KEY, currentId);
+            startCleanDocument(false);
+        } else {
+            // Could not park it. Keep the live keys and carry on with that document, rather than
+            // clear the only copy of it. It will be parked when the user switches documents.
+            currentId = savedId;
+            restoreLiveDocument();
+        }
+    } else if (hasLiveDoc) {
+        // Upgrade path: adopt a document written before the library existed.
+        currentId = newDocId();
+        safeSetItem(CURRENT_ID_KEY, currentId);
+        legacyOwnerId = currentId;
+        restoreLiveDocument();
+    } else {
+        currentId = newDocId();
+        safeSetItem(CURRENT_ID_KEY, currentId);
+        startCleanDocument(false);
+    }
+
+    updateStats();
+    // One-time upgrade: adopt version history written before it became per-document, then drop the
+    // legacy global key — once the per-document copy exists it is dead weight (and can be
+    // image-sized). If it cannot be written (quota), the legacy key is left alone, never discarded.
+    if (legacyOwnerId) {
+        const legacy = localStorage.getItem('doc_versions_v13');
+        if (legacy) {
+            if (localStorage.getItem(versionsKey(legacyOwnerId)) !== null) {
+                localStorage.removeItem('doc_versions_v13'); // already migrated in an earlier session
+            } else {
+                try {
+                    const list = JSON.parse(legacy);
+                    if (Array.isArray(list) && list.length && writeRaw(versionsKey(legacyOwnerId), JSON.stringify(list))) {
+                        localStorage.removeItem('doc_versions_v13');
+                    }
+                } catch (err) {
+                    console.warn('Could not migrate legacy version history', err);
+                }
+            }
+        }
+    }
+    touchCurrentDocument(); // make sure this document has an index entry
+    renderRecents();
+    setTimeout(attachTitleButton, 100);
+    setTimeout(attachBodyImageDeleteButtons, 100);
+    setTimeout(applyCodeHighlighting, 100);
+}
+
+function newFile() {
+    // No confirmation dialog: the current document is parked into Recents automatically, so
+    // starting a new one cannot lose it. Flush the editor into the live keys, then park that
+    // copy — the live keys are the open document's only storage and startCleanDocument is
+    // about to overwrite them.
+    saveToLocalStorage();
+    if (!parkCurrentDocument()) return; // never switch away from a document we could not keep
+
+    currentId = newDocId();
+    safeSetItem(CURRENT_ID_KEY, currentId);
+    fileHandle = null;
+    filePrefix = null;
+
+    startCleanDocument(true); // blank "Untitled" page
+    fileDisplayEl().textContent = "Local Storage";
+    updateStats();
+    touchCurrentDocument();
+}
+
+// Load markdown file (import only)
+function loadMarkdown(markdownText) {
+    if (typeof marked === 'undefined') {
+        toast('Markdown renderer failed to load. Check your connection and try again.');
+        return;
+    }
+    const html = marked.parse(markdownText);
+    const temp = document.createElement('div');
+    temp.innerHTML = sanitizeHTML(html); // sanitize BEFORE building interactive nodes
+    
+    // Convert MD images to interactive containers
+    temp.querySelectorAll('img').forEach(img => {
+        const container = document.createElement('div');
+        container.className = 'img-container';
+        container.contentEditable = "false";
+        const newImg = img.cloneNode();
+        container.appendChild(newImg);
+        img.replaceWith(container);
+    });
+    
+    // Clean up list items - remove wrapping paragraphs that marked.js adds
+    temp.querySelectorAll('li > p').forEach(p => {
+        if (p.parentElement.childNodes.length === 1) {
+            const li = p.parentElement;
+            while (p.firstChild) {
+                li.insertBefore(p.firstChild, p);
+            }
+            p.remove();
+        }
+    });
+
+    const h1 = temp.querySelector('h1');
+    editTitle.textContent = h1 ? h1.textContent : "Untitled Document";
+    if(h1) h1.remove();
+    isLoading = true;
+    editBody.innerHTML = temp.innerHTML;
+    updateStats();
+    saveToLocalStorage(); // Save the imported content
+    isLoading = false;
+    setTimeout(attachTitleButton, 100);
+    setTimeout(attachBodyImageDeleteButtons, 100);
+    setTimeout(applyCodeHighlighting, 100);
+}
+
+// --- DOCUMENT LIBRARY (Recents) ---
+
+function newDocId() {
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
+
+function fileKey(id) { return FILE_KEY_PREFIX + id; }
+
+function readIndex() {
+    try {
+        const list = JSON.parse(localStorage.getItem(FILES_INDEX_KEY) || '[]');
+        return Array.isArray(list) ? list.filter((e) => e && e.id) : [];
+    } catch (err) {
+        console.warn('Recents index was unreadable; starting a new one.', err);
+        return [];
+    }
+}
+
+// localStorage write that reports failure instead of toasting (the caller decides).
+function writeRaw(key, value) {
+    try { localStorage.setItem(key, value); return true; }
+    catch (err) { return false; }
+}
+
+// Version history is per document, so opening a different document doesn't show someone
+// else's snapshots. (The legacy global key `doc_versions_v13` is read once for migration.)
+function versionsKey(id) { return 'quorly_versions_' + id; }
+
+function readVersions() {
+    if (!currentId) return [];
+    try {
+        const list = JSON.parse(localStorage.getItem(versionsKey(currentId)) || '[]');
+        return Array.isArray(list) ? list : [];
+    } catch (err) {
+        console.warn('Version history was unreadable.', err);
+        return [];
+    }
+}
+
+// Keep only the newest MAX_RECENTS entries, deleting the snapshot and version history of anything
+// dropped. The document that is currently open is never evicted.
+function trimIndex(list) {
+    if (list.length <= MAX_RECENTS) return list;
+    list.slice(MAX_RECENTS).forEach((entry) => {
+        if (entry.id !== currentId) {
+            localStorage.removeItem(fileKey(entry.id));
+            // Version history belongs to its document, so it goes with it. Without this the
+            // history of every evicted document was orphaned in storage forever.
+            localStorage.removeItem(versionsKey(entry.id));
+        }
+    });
+    return list.slice(0, MAX_RECENTS);
+}
+
+function countWords() {
+    const text = editBody.innerText || '';
+    return text.trim() ? text.trim().split(/\s+/).length : 0;
+}
+
+// Remember the disk handle for the open document (session only) so switching documents
+// through Recents can never make one document overwrite another's file.
+function rememberHandle() {
+    if (currentId && fileHandle) {
+        sessionHandles.set(currentId, { handle: fileHandle, prefix: filePrefix });
+    }
+}
+
+// --- HOW A DOCUMENT IS STORED ---
+// The live *_v13 keys are the open document's ONLY storage. A body snapshot under
+// quorly_file_<id> is written only when we are about to switch away from a document
+// (parkCurrentDocument). Writing a second copy on every autosave is what used to halve the
+// usable storage, and it is why an ordinary illustrated post could fail to save at all.
+
+// Snapshot the open document from the live keys. Reading the keys rather than the DOM also works
+// before the editor has been populated (e.g. when the 48 h restore window has lapsed).
+function snapshotFromLiveKeys() {
+    const title = (localStorage.getItem("doc_title_v13") || '').trim() || 'Untitled';
+    let titleImage = null;
+    const rawImage = localStorage.getItem("doc_title_image_v13");
+    if (rawImage) {
+        try { titleImage = JSON.parse(rawImage); } catch (err) { titleImage = null; }
+    }
+    return {
+        title: title,
+        body: localStorage.getItem("doc_body_v13") || '',
+        titleImage: titleImage
+    };
+}
+
+// Write a snapshot for `id`. If storage is full, evict the oldest parked documents and retry.
+// Returns true only when the snapshot actually reached the disk.
+function writeSnapshot(id, snapshot) {
+    const payload = JSON.stringify({
+        title: snapshot.title,
+        body: snapshot.body,
+        titleImage: snapshot.titleImage,
+        updatedAt: Date.now()
+    });
+    if (writeRaw(fileKey(id), payload)) return true;
+
+    const victims = readIndex().filter((e) => e.id !== id && e.id !== currentId).slice(-3);
+    for (const v of victims) {
+        localStorage.removeItem(fileKey(v.id));
+        localStorage.removeItem(versionsKey(v.id));
+        if (writeRaw(fileKey(id), payload)) return true;
+    }
+    return false;
+}
+
+// Park the open document before anything overwrites the live keys. Callers must NOT switch
+// documents when this returns false: at that moment the live keys hold the only copy.
+function parkCurrentDocument() {
+    if (!currentId) return true;
+    if (!writeSnapshot(currentId, snapshotFromLiveKeys())) {
+        toast('Storage is full — this document could not be kept in Recents. Export it to disk, then try again.');
+        return false;
+    }
+    touchCurrentDocument();
+    return true;
+}
+
+// Upsert the open document into the Recents index. Runs on every autosave and is deliberately
+// cheap (a few hundred bytes) — it writes no body snapshot.
+function touchCurrentDocument() {
+    if (!currentId) {
+        currentId = newDocId();
+        safeSetItem(CURRENT_ID_KEY, currentId);
+    }
+
+    const title = (editTitle.textContent || '').trim() || 'Untitled';
+    const list = readIndex().filter((e) => e.id !== currentId);
+    list.unshift({
+        id: currentId,
+        title: title,
+        updatedAt: Date.now(),
+        wordCount: countWords()
+    });
+    safeSetItem(FILES_INDEX_KEY, JSON.stringify(trimIndex(list)));
+    renderRecents();
+}
+
+function relativeTime(ts) {
+    const mins = Math.round((Date.now() - ts) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + ' min ago';
+    const hours = Math.round(mins / 60);
+    if (hours < 24) return hours + ' h ago';
+    return Math.round(hours / 24) + ' d ago';
+}
+
+// UI-13: inline SVG for the Recents rows. Inline (rather than an icon font or an image
+// request) so the strict CSP has nothing to block and light/dark is just currentColor.
+const ICON_DOC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>';
+const ICON_MORE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>';
+
+// --- Recents row actions (UI-13) ---------------------------------------------------------
+// The menu element lives at the end of <body> and is positioned against the viewport, so
+// neither the Recents list nor the sidebar's own scroll box can clip it.
+let rowMenuDocId = null;
+let rowMenuAnchor = null;
+
+function openRowMenu(anchor, id) {
+    const menu = document.getElementById('rowMenu');
+    if (!menu) { deleteRecent(id); return; }   // no menu in the DOM → keep the action reachable
+    if (rowMenuAnchor === anchor && !menu.hidden) { closeRowMenu(); return; }
+    closeRowMenu();
+
+    rowMenuDocId = id;
+    rowMenuAnchor = anchor;
+    menu.hidden = false;
+    anchor.setAttribute('aria-expanded', 'true');
+
+    // Right-aligned under the kebab; flipped above it when the viewport bottom is close.
+    const a = anchor.getBoundingClientRect();
+    const m = menu.getBoundingClientRect();
+    const left = Math.max(8, Math.min(a.right - m.width, window.innerWidth - m.width - 8));
+    let top = a.bottom + 6;
+    if (top + m.height > window.innerHeight - 8) top = Math.max(8, a.top - m.height - 6);
+    menu.style.setProperty('left', left + 'px');
+    menu.style.setProperty('top', top + 'px');
+
+    const first = menu.querySelector('.row-menu-item');
+    if (first) first.focus();
+}
+
+function closeRowMenu(refocus) {
+    const menu = document.getElementById('rowMenu');
+    if (!menu || menu.hidden) return;
+    menu.hidden = true;
+    const anchor = rowMenuAnchor;
+    if (anchor) {
+        anchor.setAttribute('aria-expanded', 'false');
+        // The row may have been re-rendered (e.g. by the delete that just ran).
+        if (refocus && document.contains(anchor)) anchor.focus();
+    }
+    rowMenuAnchor = null;
+    rowMenuDocId = null;
+}
+
+function renderRecents() {
+    const list = document.getElementById('recentsList');
+    if (!list) return;
+
+    const searchEl = document.getElementById('recentsSearch');
+    const query = (searchEl ? searchEl.value : '').trim().toLowerCase();
+    const files = readIndex();
+    const shown = query ? files.filter((f) => (f.title || '').toLowerCase().includes(query)) : files;
+
+    list.textContent = '';
+
+    if (files.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'recents-empty';
+        empty.textContent = 'Documents you write are saved here automatically.';
+        list.appendChild(empty);
+        return;
+    }
+    if (shown.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'recents-empty';
+        empty.textContent = 'No documents match this search.';
+        list.appendChild(empty);
+        return;
+    }
+
+    shown.forEach((entry) => {
+        const row = document.createElement('div');
+        row.className = 'recent-item' + (entry.id === currentId ? ' is-current' : '');
+
+        // Leading document glyph — decorative, so it is hidden from assistive tech.
+        const icon = document.createElement('span');
+        icon.className = 'recent-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.innerHTML = ICON_DOC;
+
+        const open = document.createElement('button');
+        open.type = 'button';
+        open.className = 'recent-open';
+        open.title = entry.title;
+
+        const name = document.createElement('span');
+        name.className = 'recent-title';
+        name.textContent = entry.title;
+
+        const meta = document.createElement('span');
+        meta.className = 'recent-meta';
+        meta.textContent = relativeTime(entry.updatedAt) + ' · ' + (entry.wordCount || 0) + ' words';
+
+        open.append(name, meta);
+        open.addEventListener('click', () => openRecent(entry.id));
+
+        // Row actions: the ⋮ from the UI-13 design replaces the old × delete affordance.
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'recent-menu-btn';
+        more.setAttribute('aria-haspopup', 'menu');
+        more.setAttribute('aria-expanded', 'false');
+        more.setAttribute('aria-label', 'Actions for ' + entry.title);
+        more.title = 'More actions';
+        more.innerHTML = ICON_MORE;
+        more.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openRowMenu(more, entry.id);
+        });
+
+        row.append(icon, open, more);
+        list.appendChild(row);
+    });
+}
+
+function deleteRecent(id) {
+    const entry = readIndex().find((e) => e.id === id);
+    if (!entry) return;
+    if (!confirm('Delete "' + entry.title + '" from this browser? This cannot be undone.')) return;
+
+    localStorage.removeItem(fileKey(id));
+    localStorage.removeItem(versionsKey(id));
+    sessionHandles.delete(id);
+    safeSetItem(FILES_INDEX_KEY, JSON.stringify(readIndex().filter((e) => e.id !== id)));
+
+    if (id === currentId) {
+        // The open document was deleted — move to a clean page.
+        currentId = newDocId();
+        safeSetItem(CURRENT_ID_KEY, currentId);
+        fileHandle = null;
+        filePrefix = null;
+        startCleanDocument(false);
+        updateStats();
+        touchCurrentDocument();
+    }
+    renderRecents();
+    toast('Deleted "' + entry.title + '"');
+}
+
+// Put the live document (the original *_v13 keys) into the editor.
+function restoreLiveDocument() {
+    editTitle.textContent = localStorage.getItem("doc_title_v13") || DEFAULT_TITLE;
+    editBody.innerHTML = sanitizeHTML(localStorage.getItem("doc_body_v13") || DEFAULT_BODY);
+    loadStoredTitleImage();
+}
+
+function loadStoredTitleImage() {
+    const img = document.getElementById('titleImage');
+    const container = document.getElementById('titleImageContainer');
+    img.src = '';
+    img.style.width = '';
+    container.classList.remove('has-image');
+
+    const saved = localStorage.getItem("doc_title_image_v13");
+    if (!saved) return;
+    try {
+        const imageData = JSON.parse(saved);
+        img.src = imageData.src;
+        img.style.width = imageData.width;
+        container.classList.add('has-image');
+    } catch (e) {
+        console.error('Failed to load title image', e);
+    }
+}
+
+// A clean page (first run, "New", or after the 48 h restore window lapses).
+function startCleanDocument(blank) {
+    editTitle.textContent = blank ? "Untitled" : DEFAULT_TITLE;
+    editBody.innerHTML = blank ? "" : sanitizeHTML(DEFAULT_BODY);
+
+    const img = document.getElementById('titleImage');
+    const container = document.getElementById('titleImageContainer');
+    img.src = '';
+    img.style.width = '';
+    container.classList.remove('has-image');
+
+    // Overwrite the live keys so a reload cannot resurrect the previous document.
+    safeSetItem("doc_title_v13", editTitle.textContent);
+    safeSetItem("doc_body_v13", editBody.innerHTML);
+    localStorage.removeItem("doc_title_image_v13");
+}
+
+function openRecent(id) {
+    if (id === currentId) {
+        toast('That document is already open.');
+        return;
+    }
+    // Flush the editor into the live keys, then park that copy before switching: the live keys
+    // are the open document's only storage.
+    saveToLocalStorage();
+    if (!parkCurrentDocument()) return;
+
+    let snapshot = null;
+    try {
+        snapshot = JSON.parse(localStorage.getItem(fileKey(id)) || 'null');
+    } catch (err) {
+        snapshot = null;
+    }
+    if (!snapshot) {
+        toast('That document is no longer stored in this browser.');
+        renderRecents();
+        return;
+    }
+
+    currentId = id;
+
+    // Restore this document's disk link if it was saved earlier in this session.
+    const linked = sessionHandles.get(id);
+    fileHandle = linked ? linked.handle : null;
+    filePrefix = linked ? linked.prefix : null;
+
+    isLoading = true;
+    editTitle.textContent = snapshot.title || 'Untitled';
+    editBody.innerHTML = sanitizeHTML(snapshot.body || '');
+    if (snapshot.titleImage) {
+        // Set the width before setTitleImage so the write it triggers records the real width.
+        document.getElementById('titleImage').style.width = snapshot.titleImage.width || '700px';
+        setTitleImage(snapshot.titleImage.src);
+    } else {
+        deleteTitleImage();
+    }
+    isLoading = false;
+
+    // Point the stored id at the document only now that its content is in the live keys, so an
+    // interrupted switch cannot leave the id pointing at a different document's content.
+    safeSetItem(CURRENT_ID_KEY, id);
+
+    fileDisplayEl().textContent = linked ? linked.handle.name : 'Local Storage';
+    updateStats();
+    touchCurrentDocument(); // opening a document counts as working on it
+    setTimeout(attachTitleButton, 100);
+    setTimeout(attachBodyImageDeleteButtons, 100);
+    setTimeout(applyCodeHighlighting, 100);
+    toast('Opened "' + (snapshot.title || 'Untitled') + '"');
+}
+
+// --- FILE SYSTEM ---
+
+function generateFileName() {
+    // Reuse existing prefix if we have one, otherwise generate new
+    if (!filePrefix) {
+        filePrefix = Math.floor(100000 + Math.random() * 900000).toString();
+    }
+    
+    const slug = editTitle.textContent.toLowerCase().trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .substring(0, 50);
+    return `${filePrefix}-${slug || 'document'}.html`;
+}
+
+async function syncNow() {
+    if (!FSA_SUPPORTED) {
+        toast('Saving to disk requires a Chromium-based browser (Chrome, Edge, Brave, Opera). Your work is still saved in this browser.');
+        return;
+    }
+    if (!fileHandle || !fileHandle.name.endsWith('.html')) {
+        // First time save - create new file
+        const suggestedName = generateFileName();
+        try {
+            fileHandle = await window.showSaveFilePicker({
+                suggestedName: suggestedName,
+                types: [{ description: 'HTML Document', accept: {'text/html': ['.html']} }]
+            });
+            
+            // Extract and store the prefix from the chosen filename
+            const match = fileHandle.name.match(/^(\d{6})-/);
+            if (match) {
+                filePrefix = match[1];
+            }
+            rememberHandle();
+
+            fileDisplayEl().textContent = fileHandle.name;
+            await saveToDisk();
+            saveSnapshot(); // Save version history
+            const display = fileDisplayEl();
+            display.textContent = "Saved ✓";
+            setTimeout(() => display.textContent = fileHandle.name, 1500);
+        } catch (err) {
+            if (err && err.name !== 'AbortError') {
+                toast('Could not save file: ' + (err.message || err.name));
+            }
+            return;
+        }
+    } else {
+        // Existing file - check if title changed and update filename
+        const currentName = fileHandle.name;
+        const newName = generateFileName();
+        
+        if (currentName !== newName) {
+            // Title changed - save to new filename
+            try {
+                const newHandle = await window.showSaveFilePicker({
+                    suggestedName: newName,
+                    types: [{ description: 'HTML Document', accept: {'text/html': ['.html']} }]
+                });
+                fileHandle = newHandle;
+                rememberHandle();
+                fileDisplayEl().textContent = fileHandle.name;
+            } catch (err) {
+                // User cancelled, keep using old file
+                return;
+            }
+        }
+        
+        await saveToDisk();
+        saveSnapshot(); // Save version history
+        
+        const display = fileDisplayEl();
+        const originalName = fileHandle.name;
+        display.textContent = "Saved ✓";
+        setTimeout(() => display.textContent = originalName, 1500);
+    }
+}
+
+async function exportMarkdown() {
+    if (!FSA_SUPPORTED) {
+        toast('Exporting files requires a Chromium-based browser (Chrome, Edge, Brave, Opera).');
+        return;
+    }
+    const slug = editTitle.textContent.toLowerCase().trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .substring(0, 50);
+    
+    try {
+        const handle = await window.showSaveFilePicker({
+            suggestedName: `${slug || 'document'}.md`,
+            types: [{ description: 'Markdown', accept: {'text/markdown': ['.md']} }]
+        });
+        
+        const writable = await handle.createWritable();
+        const markdown = convertToMarkdown();
+        await writable.write(markdown);
+        await writable.close();
+        
+        // Brief feedback
+        const display = fileDisplayEl();
+        const originalName = fileHandle ? fileHandle.name : 'Local Storage';
+        display.textContent = "Exported ✓";
+        setTimeout(() => display.textContent = originalName, 1500);
+    } catch (err) {
+        if (err && err.name !== 'AbortError') {
+            toast('Export failed: ' + (err.message || err.name));
+        }
+    }
+}
+
+// Plain-text download (same File System Access path as the .MD export).
+async function exportText() {
+    if (!FSA_SUPPORTED) {
+        toast('Exporting files requires a Chromium-based browser (Chrome, Edge, Brave, Opera).');
+        return;
+    }
+    const slug = editTitle.textContent.toLowerCase().trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .substring(0, 50);
+
+    try {
+        const handle = await window.showSaveFilePicker({
+            suggestedName: `${slug || 'document'}.txt`,
+            types: [{ description: 'Plain text', accept: { 'text/plain': ['.txt'] } }]
+        });
+        const writable = await handle.createWritable();
+        const text = (editTitle.textContent ? editTitle.textContent + '\n\n' : '') + (editBody.innerText || '');
+        await writable.write(text);
+        await writable.close();
+
+        const display = fileDisplayEl();
+        const originalName = fileHandle ? fileHandle.name : 'Local Storage';
+        display.textContent = "Exported ✓";
+        setTimeout(() => display.textContent = originalName, 1500);
+    } catch (err) {
+        if (err && err.name !== 'AbortError') {
+            toast('Export failed: ' + (err.message || err.name));
+        }
+    }
+}
+
+async function copyMarkdown() {
+    const markdown = convertToMarkdown();
+    try {
+        if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('Clipboard unavailable');
+        await navigator.clipboard.writeText(markdown);
+        toast('Markdown copied to the clipboard.');
+    } catch (err) {
+        // Fallback for when the Clipboard API is blocked or unavailable.
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = markdown;
+            ta.setAttribute('readonly', '');
+            ta.className = 'copy-buffer';
+            document.body.appendChild(ta);
+            ta.select();
+            const ok = document.execCommand('copy');
+            ta.remove();
+            toast(ok ? 'Markdown copied to the clipboard.' : 'Could not copy — please select and copy manually.');
+        } catch (e) {
+            toast('Could not copy Markdown.');
+        }
+    }
+}
+
+async function openFile() {
+    if (!FSA_SUPPORTED) {
+        toast('Opening files requires a Chromium-based browser (Chrome, Edge, Brave, Opera).');
+        return;
+    }
+    try {
+        const [handle] = await window.showOpenFilePicker({
+            types: [
+                { description: 'Documents', accept: {'text/html': ['.html'], 'text/markdown': ['.md']} }
+            ]
+        });
+        
+        const file = await handle.getFile();
+        const content = await file.text();
+        
+        // Detect file type and load accordingly
+        if (handle.name.endsWith('.md')) {
+            // Load markdown but don't set fileHandle (so sync creates new .html)
+            loadMarkdown(content);
+            fileHandle = null;
+            filePrefix = null; // Reset prefix for new file
+            fileDisplayEl().textContent = 'Imported from .md';
+        } else {
+            // Ask for write access up-front (needed later to save back to this file).
+            // Must happen while we still have the user's click as activation.
+            try {
+                if (handle.requestPermission && (await handle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+                    await handle.requestPermission({ mode: 'readwrite' });
+                }
+            } catch (permErr) {
+                console.warn('Write permission not granted; saving back to this file may fail.', permErr);
+            }
+
+            // Load HTML and extract prefix from filename
+            fileHandle = handle;
+            const match = handle.name.match(/^(\d{6})-/);
+            if (match) {
+                filePrefix = match[1];
+            }
+            rememberHandle();
+            loadHTML(content);
+            fileDisplayEl().textContent = fileHandle.name;
+        }
+    } catch (err) {
+        if (err && err.name !== 'AbortError') {
+            toast('Could not open file: ' + (err.message || err.name));
+        }
+    }
+}
+
+function loadHTML(htmlContent) {
+    const temp = document.createElement('div');
+    temp.innerHTML = sanitizeHTML(htmlContent); // strip scripts/handlers from untrusted files
+    
+    // Extract title from h1 or title tag
+    let title = "Untitled Document";
+    const h1 = temp.querySelector('h1');
+    if (h1) {
+        title = h1.textContent;
+        h1.remove();
+    } else {
+        const titleTag = htmlContent.match(/<title>(.*?)<\/title>/i);
+        if (titleTag) title = titleTag[1];
+    }
+    
+    editTitle.textContent = title;
+    isLoading = true;
+    editBody.innerHTML = temp.innerHTML;
+    updateStats();
+    saveToLocalStorage();
+    isLoading = false;
+    setTimeout(attachTitleButton, 100);
+    setTimeout(attachBodyImageDeleteButtons, 100);
+    setTimeout(applyCodeHighlighting, 100);
+}
+
+async function saveToDisk() {
+    if (!fileHandle) return false;
+    try {
+        const writable = await fileHandle.createWritable();
+        const htmlContent = generateHTMLFile();
+        await writable.write(htmlContent);
+        await writable.close();
+        return true;
+    } catch (err) {
+        console.error("Save failed", err);
+        return false;
+    }
+}
+
+
+// --- SELECTION TOOLBAR ---
+
+document.addEventListener('selectionchange', () => {
+    const selection = window.getSelection();
+    // Remember the caret/selection inside the editor so panel controls (heading dropdown,
+    // sidebar buttons) can still act on it after focus moves to the sidebar.
+    if (selection.rangeCount && selection.anchorNode && editBody.contains(selection.anchorNode)) {
+        lastSelectionRange = selection.getRangeAt(0).cloneRange();
+    }
+    if (selection.toString().length > 0 && !selection.isCollapsed && editBody.contains(selection.anchorNode)) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        toolbar.style.display = 'flex';
+        // Keep the floating toolbar inside the viewport (it used to run off-screen near the edges)
+        const tbWidth = toolbar.offsetWidth;
+        const viewportLeft = window.scrollX;
+        const viewportRight = window.scrollX + document.documentElement.clientWidth;
+        let left = rect.left + window.scrollX + (rect.width / 2) - (tbWidth / 2);
+        left = Math.max(viewportLeft + 8, Math.min(left, viewportRight - tbWidth - 8));
+        let top = rect.top + window.scrollY - toolbar.offsetHeight - 10;
+        top = Math.max(window.scrollY + 8, top);
+        toolbar.style.top = `${top}px`;
+        toolbar.style.left = `${left}px`;
+    } else {
+        setTimeout(() => { 
+            if (window.getSelection().toString().length === 0) toolbar.style.display = 'none'; 
+        }, 150);
+    }
+});
+
+// --- COMMAND PALETTE (@) ---
+
+editBody.addEventListener('keyup', (e) => {
+    const sel = window.getSelection();
+    if (e.key === '@') {
+        if (sel.rangeCount > 0) {
+            savedRange = sel.getRangeAt(0).cloneRange();
+            const rect = savedRange.getBoundingClientRect();
+            cmdPalette.style.display = 'flex';
+            cmdPalette.style.top = `${rect.bottom + window.scrollY}px`;
+            cmdPalette.style.left = `${rect.left + window.scrollX}px`;
+        }
+    } else if (e.key === 'Escape' || e.key === ' ') {
+        cmdPalette.style.display = 'none';
+    } else if (e.key === 'Backspace') {
+        // Check if @ was just deleted - hide palette
+        if (sel.rangeCount > 0) {
+            const range = sel.getRangeAt(0);
+            const text = range.startContainer.textContent || '';
+            const cursorPos = range.startOffset;
+            // Check if there's no @ before cursor
+            const textBeforeCursor = text.substring(0, cursorPos);
+            if (!textBeforeCursor.includes('@') || textBeforeCursor.lastIndexOf('@') < cursorPos - 10) {
+                cmdPalette.style.display = 'none';
+            }
+        }
+    }
+});
+
+function triggerCmd(type) {
+    cmdPalette.style.display = 'none';
+    if (!savedRange) return;
+
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedRange);
+
+    // Remove '@'
+    document.execCommand('delete', false, null);
+
+    if (type === 'image') {
+        insertImageSlot();
+    } else if (type === 'rule') {
+        insertDivider();
+    }
+}
+
+// Insert an inline image dropzone at the caret
+function insertImageSlot() {
+    const id = 'dz-' + Date.now();
+    const dzHtml = `<div id="${id}" class="inline-dropzone" contenteditable="false">Click or Drop Image Here</div><p><br></p>`;
+    document.execCommand('insertHTML', false, dzHtml);
+
+    const dz = document.getElementById(id);
+    if (dz) wireDropzone(dz);
+    saveToLocalStorage();
+}
+
+// Make a dropzone accept a click or a dragged file
+function wireDropzone(dz) {
+    dz.addEventListener('click', () => pickImageInto(dz));
+    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+    dz.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dz.classList.remove('dragover');
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file && file.type.indexOf('image/') === 0) handleImage(file, dz);
+    });
+}
+
+function pickImageInto(target) {
+    const input = document.getElementById('fileInput');
+    input.value = '';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) handleImage(file, target);
+    };
+    input.click();
+}
+
+// Insert a horizontal divider
+function insertDivider() {
+    const ruleHtml = `<div class="content-divider" contenteditable="false"></div><p><br></p>`;
+    document.execCommand('insertHTML', false, ruleHtml);
+    saveToLocalStorage();
+}
+
+// Insert an editable table
+function insertTable() {
+    const rows = Math.max(1, Math.min(20, parseInt(prompt('Number of rows (including header):', '3'), 10) || 3));
+    const cols = Math.max(1, Math.min(10, parseInt(prompt('Number of columns:', '3'), 10) || 3));
+    let html = '<table class="editor-table"><thead><tr>';
+    for (let c = 0; c < cols; c++) html += '<th><br></th>';
+    html += '</tr></thead><tbody>';
+    for (let r = 1; r < rows; r++) {
+        html += '<tr>';
+        for (let c = 0; c < cols; c++) html += '<td><br></td>';
+        html += '</tr>';
+    }
+    html += '</tbody></table><p><br></p>';
+    document.execCommand('insertHTML', false, html);
+    saveToLocalStorage();
+}
+
+function handleImage(file, target) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const container = document.createElement('div');
+        container.className = 'img-container';
+        container.contentEditable = "false";
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.style.width = "450px";
+        container.appendChild(img);
+        
+        // Add delete button
+        const deleteBtn = document.createElement('div');
+        deleteBtn.className = 'img-delete';
+        deleteBtn.textContent = '×';
+        deleteBtn.contentEditable = "false";
+        deleteBtn.onclick = (ev) => {
+            ev.stopPropagation();
+            container.remove();
+            saveToLocalStorage();
+        };
+        container.appendChild(deleteBtn);
+        
+        target.replaceWith(container);
+        saveToLocalStorage();
+    };
+    reader.readAsDataURL(file);
+}
+
+// Attach delete buttons to existing body images
+function attachBodyImageDeleteButtons() {
+    editBody.querySelectorAll('.img-container').forEach(container => {
+        if (!container.querySelector('.img-delete')) {
+            const deleteBtn = document.createElement('div');
+            deleteBtn.className = 'img-delete';
+            deleteBtn.textContent = '×';
+            deleteBtn.contentEditable = "false";
+            deleteBtn.onclick = (ev) => {
+                ev.stopPropagation();
+                container.remove();
+                saveToLocalStorage();
+            };
+            container.appendChild(deleteBtn);
+        }
+    });
+}
+
+// --- CORE SYNC & CONVERSION ---
+
+function saveToLocalStorage() {
+    safeSetItem("doc_title_v13", editTitle.textContent);
+    safeSetItem("doc_body_v13", editBody.innerHTML);
+    
+    // Save title image data
+    const titleImageData = getTitleImageData();
+    if (titleImageData) {
+        safeSetItem("doc_title_image_v13", JSON.stringify(titleImageData));
+    } else {
+        localStorage.removeItem("doc_title_image_v13");
+    }
+    
+    updateStats();
+    // Keep the Recents index in step with the live document (the live keys are its storage, so
+    // nothing else has to be written on an autosave).
+    if (!isLoading) touchCurrentDocument();
+    // Don't rewrite a file we just imported, and don't hit the disk on every keystroke.
+    if (fileHandle && !isLoading) scheduleDiskSave();
+}
+
+const scheduleDiskSave = debounce(() => { saveToDisk(); }, 800);
+
+function generateHTMLFile() {
+    const safeTitle = escapeHtml(editTitle.textContent);
+    const titleImageData = getTitleImageData();
+    const titleImageHTML = titleImageData 
+        ? `<div style="text-align: center; margin-bottom: 30px;"><img src="${titleImageData.src}" style="max-width: 100%; width: ${titleImageData.width}; border-radius: 12px;" /></div>`
+        : '';
+    
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${safeTitle}</title>
+    <style>
+        body { max-width: 800px; margin: 40px auto; padding: 20px; font-family: 'Inter', sans-serif; line-height: 1.8; }
+        h1 { font-size: 2.5em; margin-bottom: 0.5em; }
+        img { max-width: 100%; height: auto; border-radius: 8px; }
+        .img-container { text-align: center; margin: 30px 0; }
+        blockquote { border-left: 3px solid #ccc; padding-left: 20px; color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    ${titleImageHTML}
+    <h1>${safeTitle}</h1>
+    ${editBody.innerHTML}
+</body>
+</html>`;
+}
+
+function convertToMarkdown() {
+    let md = `# ${editTitle.textContent}\n\n`;
+    
+    // Add title image if exists
+    const titleImageData = getTitleImageData();
+    if (titleImageData) {
+        md += `![Header Image](${titleImageData.src})\n\n`;
+    }
+    
+    // Helper to serialize inline content (preserves bold, italic, etc.)
+    const serializeInline = (node) => {
+        let text = "";
+        node.childNodes.forEach(child => {
+            if (child.nodeType === 3) {
+                text += child.textContent;
+            } else if (child.nodeType === 1) {
+                const tag = child.tagName;
+                if (tag === 'STRONG' || tag === 'B') {
+                    text += `**${serializeInline(child)}**`;
+                } else if (tag === 'EM' || tag === 'I') {
+                    text += `*${serializeInline(child)}*`;
+                } else if (tag === 'CODE') {
+                    text += `\`${child.textContent}\``;
+                } else if (tag === 'BR') {
+                    text += '\n';
+                } else {
+                    text += serializeInline(child);
+                }
+            }
+        });
+        return text;
+    };
+    
+    const serializeTable = (table) => {
+        const rows = Array.from(table.querySelectorAll('tr'));
+        if (!rows.length) return '';
+        const cellText = (cell) => serializeInline(cell).trim().replace(/\s+/g, ' ').replace(/\|/g, '\\|');
+        const line = (cells) => '| ' + cells.join(' | ') + ' |';
+        const header = Array.from(rows[0].children).map(cellText);
+        let out = line(header) + '\n' + line(header.map(() => '---')) + '\n';
+        rows.slice(1).forEach(tr => { out += line(Array.from(tr.children).map(cellText)) + '\n'; });
+        return out.replace(/\n$/, '');
+    };
+
+    const serialize = (el) => {
+        let text = "";
+        el.childNodes.forEach(node => {
+            if (node.nodeType === 3) { // Plain text
+                const val = node.textContent.trim();
+                if (val) text += val + "\n\n";
+            } else if (node.nodeType === 1) { // Elements
+                const tag = node.tagName;
+                
+                if (node.classList.contains('img-container')) {
+                    const img = node.querySelector('img');
+                    text += `\n![image](${img.src})\n\n`;
+                } 
+                else if (tag === 'H1') text += `# ${serializeInline(node)}\n\n`;
+                else if (tag === 'H2') text += `## ${serializeInline(node)}\n\n`;
+                else if (tag === 'H3') text += `### ${serializeInline(node)}\n\n`;
+                else if (tag === 'H4') text += `#### ${serializeInline(node)}\n\n`;
+                else if (tag === 'BLOCKQUOTE') text += `> ${serializeInline(node)}\n\n`;
+                else if (tag === 'PRE') text += '\n```\n' + node.textContent.replace(/\n$/, '') + '\n```\n\n';
+                else if (tag === 'TABLE') text += serializeTable(node) + '\n\n';
+                else if (tag === 'UL') {
+                    const listItems = Array.from(node.children).filter(child => child.tagName === 'LI');
+                    listItems.forEach(li => {
+                        text += `* ${serializeInline(li).trim()}\n`;
+                    });
+                    text += "\n";
+                }
+                else if (tag === 'OL') {
+                    const listItems = Array.from(node.children).filter(child => child.tagName === 'LI');
+                    listItems.forEach((li, idx) => {
+                        text += `${idx + 1}. ${serializeInline(li).trim()}\n`;
+                    });
+                    text += "\n";
+                }
+                else if (tag === 'P' || tag === 'DIV') {
+                    const content = serializeInline(node).trim();
+                    if (content !== "") text += `${content}\n\n`;
+                }
+            }
+        });
+        
+        return text.replace(/\n{3,}/g, '\n\n').trim();
+    };
+
+    return md + serialize(editBody);
+}
+
+function format(cmd) {
+    if (['h1', 'h2', 'h3', 'h4', 'blockquote', 'p'].includes(cmd)) {
+        document.execCommand('formatBlock', false, cmd);
+    } else if (cmd === 'link') {
+        const url = prompt('Enter URL:');
+        if (url) {
+            if (window.getSelection().isCollapsed) {
+                document.execCommand('insertHTML', false, '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(url) + '</a>');
+            } else {
+                document.execCommand('createLink', false, url);
+            }
+        }
+    } else if (cmd === 'code') {
+        formatInlineCode();
+        return; // formatInlineCode saves the document itself
+    } else if (cmd === 'codeblock') {
+        document.execCommand('formatBlock', false, 'pre');
+    } else {
+        document.execCommand(cmd, false, null);
+    }
+    saveToLocalStorage();
+}
+
+// Toggle inline <code> around the current selection
+function formatInlineCode() {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const anchorEl = sel.anchorNode ? (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement) : null;
+    const existing = anchorEl && anchorEl.closest ? anchorEl.closest('code') : null;
+
+    // Already inside a <code> element → unwrap it
+    if (existing && editBody.contains(existing)) {
+        const parent = existing.parentNode;
+        while (existing.firstChild) parent.insertBefore(existing.firstChild, existing);
+        existing.remove();
+        saveToLocalStorage();
+        return;
+    }
+
+    if (range.collapsed) {
+        toast('Select some text to format as inline code.');
+        return;
+    }
+
+    const code = document.createElement('code');
+    code.appendChild(range.extractContents());
+    range.insertNode(code);
+
+    sel.removeAllRanges();
+    const r = document.createRange();
+    r.selectNodeContents(code);
+    sel.addRange(r);
+    saveToLocalStorage();
+}
+
+// Apply a block style from the side-panel heading dropdown
+function applyHeading(value) {
+    if (!value) return;
+    if (!lastSelectionRange) {
+        toast('Click into the document first, then choose a style.');
+        return;
+    }
+    editBody.focus();
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(lastSelectionRange);
+    document.execCommand('formatBlock', false, value);
+    saveToLocalStorage();
+}
+
+// Toggle the "More" panel in the Document section
+// UI-16: the bottom bar's "Local Storage" / filename chip is gone from the markup. Every write to
+// it goes through this accessor, which hands back a detached stand-in when the chip isn't in the
+// page — so the Save/Export feedback below becomes a no-op instead of throwing. Putting the chip
+// back is then a markup-only change.
+function fileDisplayEl() {
+    const el = document.getElementById('fileNameDisplay');
+    return el || { textContent: '' };
+}
+
+function updateStats() {
+    const text = editBody.innerText || "";
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    document.getElementById('wordCount').textContent = `${words} words`;
+    document.getElementById('charCount').textContent = `${text.length} chars`;
+    document.getElementById('readTime').textContent = `Estimated read - ${Math.max(1, Math.ceil(words/200))} min`;
+}
+
+// --- UTILS ---
+function toggleFocus() {
+    const on = document.body.classList.toggle('focus-mode');
+    const btn = document.getElementById('focusModeBtn');
+    if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    // UI-14: otherwise an open drawer would sit behind a scrim with its panel hidden.
+    if (on) setPanelOpen(false);
+}
+
+// UI-13 / UI-14: one action, two behaviours. Above 1180px the header chevron collapses the panel
+// into the grid (a floating button brings it back); at ≤1180px the same action opens and closes
+// the panel drawer, and the hamburger in the top bar uses it too.
+function setPanelOpen(open) {
+    document.body.classList.toggle('panel-open', open);
+    const menuBtn = document.getElementById('menuBtn');
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', String(open));
+    const collapseBtn = document.getElementById('sidebarCollapse');
+    if (collapseBtn) collapseBtn.setAttribute('aria-expanded', String(!open));
+    if (open) closeRowMenu();   // the row menu is viewport-positioned
+}
+
+function toggleSidebar() {
+    if (MOBILE_LAYOUT.matches) {
+        // The panel can't show while focus mode is on, so leaving it comes first — which also
+        // makes the hamburger a guaranteed way out of focus mode on a phone.
+        if (document.body.classList.contains('focus-mode')) toggleFocus();
+        setPanelOpen(!document.body.classList.contains('panel-open'));
+        return;
+    }
+    const collapsed = document.body.classList.toggle('sidebar-collapsed');
+    const collapseBtn = document.getElementById('sidebarCollapse');
+    const expandBtn = document.getElementById('sidebarExpand');
+    if (collapseBtn) collapseBtn.setAttribute('aria-expanded', String(!collapsed));
+    if (expandBtn) expandBtn.setAttribute('aria-expanded', String(!collapsed));
+    if (collapsed) closeRowMenu();   // the row menu is viewport-positioned
+}
+
+// UI-14: below 1180px the Formatting section lives in the fixed bar under the top bar; above it,
+// it goes back into the panel in its original position (before Insert). One instance is moved
+// around rather than duplicated, so its ids and dropdown wiring stay single.
+function syncLayoutMode(isMobile) {
+    const section = document.getElementById('formatSection');
+    const bar = document.getElementById('mobileFmtBar');
+    const panel = document.getElementById('sidebarPanel');
+    if (!section || !bar || !panel) return;
+    if (isMobile) {
+        document.body.classList.remove('sidebar-collapsed');
+        if (section.parentNode !== bar) bar.appendChild(section);
+    } else {
+        setPanelOpen(false);
+        if (section.parentNode !== panel) {
+            const insert = document.getElementById('insertSection');
+            panel.insertBefore(section, insert && insert.parentNode === panel ? insert : null);
+        }
+    }
+}
+function syncModeButton() {
+    const btn = document.getElementById('modeBtn');
+    if (!btn) return;
+    const light = document.body.classList.contains('light-mode');
+    // The button shows the current mode as an icon (moon = dark, sun = light); its label, for
+    // screen readers and the tooltip, describes the action.
+    const label = light ? 'Switch to dark mode' : 'Switch to light mode';
+    btn.setAttribute('aria-pressed', String(light));
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+}
+function toggleMode() { 
+    document.body.classList.toggle('light-mode'); 
+    const light = document.body.classList.contains('light-mode');
+    localStorage.setItem('mode', light ? 'light' : 'dark');
+    syncModeButton();
+}
+// UI-15: the A−/A+ and ←/→ button pairs became numeric dropdowns, so these take an absolute
+// value. `resetFontSize` stays because Ctrl/Cmd+0 still uses it.
+function setFontSize(px) {
+    bodyFontSize = px;
+    document.documentElement.style.setProperty('--body-font-size', `${bodyFontSize}px`);
+}
+function resetFontSize() {
+    setFontSize(18);
+}
+function setWidth(px) {
+    editorWidth = Math.max(600, Math.min(1400, px));
+    document.documentElement.style.setProperty('--editor-width', `${editorWidth}px`);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    const isMod = e.metaKey || e.ctrlKey;
+    
+    if (!isMod) return;
+    
+    // Bold (Cmd/Ctrl + B)
+    if (e.key === 'b') {
+        e.preventDefault();
+        format('bold');
+    }
+    
+    // Italic (Cmd/Ctrl + I)
+    if (e.key === 'i') {
+        e.preventDefault();
+        format('italic');
+    }
+
+    // Underline (Cmd/Ctrl + U)
+    if (e.key === 'u') {
+        e.preventDefault();
+        format('underline');
+    }
+    
+    // Link (Cmd/Ctrl + K)
+    if (e.key === 'k') {
+        e.preventDefault();
+        format('link');
+    }
+    
+    // Save (Cmd/Ctrl + S)
+    if (e.key === 's') {
+        e.preventDefault();
+        syncNow();
+    }
+    
+    // Print/PDF (Cmd/Ctrl + P)
+    if (e.key === 'p') {
+        e.preventDefault();
+        window.print();
+    }
+    
+    // Focus Mode (Cmd/Ctrl + Shift + F)
+    if (e.key === 'f' && e.shiftKey) {
+        e.preventDefault();
+        toggleFocus();
+    }
+    
+    // Format shortcuts using number keys
+    // Ctrl/Cmd + 1 = Paragraph
+    if (e.key === '1') {
+        e.preventDefault();
+        format('p');
+    }
+    // Ctrl/Cmd + 2 = H2
+    if (e.key === '2') {
+        e.preventDefault();
+        format('h2');
+    }
+    // Ctrl/Cmd + 3 = H3
+    if (e.key === '3') {
+        e.preventDefault();
+        format('h3');
+    }
+    // Ctrl/Cmd + 4 = H4
+    if (e.key === '4') {
+        e.preventDefault();
+        format('h4');
+    }
+    
+    // Ctrl/Cmd + 0 = Reset font size to default
+    if (e.key === '0') {
+        e.preventDefault();
+        resetFontSize();
+    }
+});
+
+// Code syntax highlighting (CSS-based)
+function highlightCode(codeElement) {
+    let code = codeElement.textContent;
+    
+    // Escape markup first, so code containing HTML can't inject nodes when written back
+    code = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    
+    // JavaScript/General syntax highlighting
+    code = code
+        // Comments
+        .replace(/(\/\/.*$)/gm, '<span class="comment">$1</span>')
+        .replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="comment">$1</span>')
+        // Strings
+        .replace(/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)/g, '<span class="string">$1</span>')
+        // Numbers
+        .replace(/\b(\d+\.?\d*)\b/g, '<span class="number">$1</span>')
+        // Keywords
+        .replace(/\b(function|const|let|var|if|else|return|for|while|class|import|export|from|async|await|try|catch|throw|new|this|super|extends|static|get|set|break|continue|switch|case|default|do|typeof|instanceof|void|delete|in|of|yield|null|undefined|true|false|def|lambda|print|range|class|self|pass|raise|with|as)\b/g, '<span class="keyword">$1</span>')
+        // Functions
+        .replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g, '<span class="function">$1</span>(');
+    
+    codeElement.innerHTML = code;
+}
+
+// Apply syntax highlighting to all code blocks
+function applyCodeHighlighting() {
+    editBody.querySelectorAll('pre').forEach(pre => {
+        if (!pre.dataset.highlighted) {
+            highlightCode(pre);
+            pre.dataset.highlighted = 'true';
+        }
+    });
+}
+
+// Re-highlight on blur
+editBody.addEventListener('blur', (e) => {
+    if (e.target.tagName === 'PRE') {
+        highlightCode(e.target);
+    }
+}, true);
+
+// --- VERSION HISTORY ---
+
+function saveSnapshot() {
+    if (!currentId) return;
+    try {
+        let versions = readVersions();
+        const text = editBody.innerText || "";
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        
+        versions.push({
+            timestamp: Date.now(),
+            title: editTitle.textContent,
+            body: editBody.innerHTML,
+            titleImage: getTitleImageData(),
+            wordCount: words
+        });
+        
+        // Keep last 20 versions
+        if (versions.length > 20) versions.shift();
+        
+        // Snapshots embed images, so they can be large. Trim hard if the quota is hit.
+        const key = versionsKey(currentId);
+        if (!safeSetItem(key, JSON.stringify(versions))) {
+            versions = versions.slice(-5);
+            safeSetItem(key, JSON.stringify(versions));
+        }
+    } catch (err) {
+        console.warn('Could not save version snapshot', err);
+    }
+}
+
+function showHistory() {
+    const versions = readVersions();
+    const versionList = document.getElementById('versionList');
+    
+    versionList.textContent = '';
+    if (versions.length === 0) {
+        const p = document.createElement('p');
+        p.className = 'version-empty';
+        p.textContent = 'No version history for this document yet. Versions are saved when you sync to disk.';
+        versionList.appendChild(p);
+    } else {
+        // Build nodes with listeners (inline onclick is blocked by the CSP)
+        versions.slice().reverse().forEach((v, i) => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.addEventListener('click', () => restoreVersion(versions.length - 1 - i));
+
+            const time = document.createElement('div');
+            time.className = 'history-time';
+            time.textContent = new Date(v.timestamp).toLocaleString() + ' • ' + (v.wordCount || 0) + ' words';
+
+            const title = document.createElement('div');
+            title.className = 'history-title';
+            title.textContent = v.title;
+
+            const preview = document.createElement('div');
+            preview.className = 'history-preview';
+            preview.textContent = v.body.replace(/<[^>]*>/g, '').substring(0, 100) + '...';
+
+            item.append(time, title, preview);
+            versionList.appendChild(item);
+        });
+    }
+    
+    document.getElementById('historyOverlay').classList.add('active');
+    document.getElementById('historyModal').classList.add('active');
+}
+
+function closeHistory() {
+    document.getElementById('historyOverlay').classList.remove('active');
+    document.getElementById('historyModal').classList.remove('active');
+}
+
+function restoreVersion(index) {
+    if (!confirm('Restore this version? Current changes will be lost.')) return;
+    
+    const versions = readVersions();
+    const version = versions[index];
+    
+    editTitle.textContent = version.title;
+    editBody.innerHTML = sanitizeHTML(version.body);
+    
+    if (version.titleImage) {
+        setTitleImage(version.titleImage.src);
+        document.getElementById('titleImage').style.width = version.titleImage.width;
+    } else {
+        deleteTitleImage();
+    }
+    
+    saveToLocalStorage();
+    closeHistory();
+    
+    setTimeout(attachBodyImageDeleteButtons, 100);
+    setTimeout(applyCodeHighlighting, 100);
+}
+
+// --- WRITE-ASSIST removed: feature hidden. Restore from the original app if needed. ---
+
+function changeTypography(font) {
+    const fontMap = {
+        'Default': {
+            title: "'Montserrat', sans-serif",
+            body: "'Inter', system-ui, sans-serif"
+        },
+        'Lora': {
+            title: "'Lora', serif",
+            body: "'Lora', serif"
+        },
+        'Roboto': {
+            title: "'Roboto', sans-serif",
+            body: "'Roboto', sans-serif"
+        },
+        'Inter': {
+            title: "'Inter', system-ui, sans-serif",
+            body: "'Inter', system-ui, sans-serif"
+        }
+    };
+    document.documentElement.style.setProperty('--title-font', fontMap[font].title);
+    document.documentElement.style.setProperty('--body-font', fontMap[font].body);
+}
+
+// Title image management
+function attachTitleButton() {
+    const doc = document.querySelector('.doc');
+    if (!doc.querySelector('.title-add-btn')) {
+        const btn = document.createElement('div');
+        btn.className = 'title-add-btn';
+        btn.textContent = '+';
+        btn.contentEditable = 'false';
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const input = document.getElementById('fileInput');
+            input.onchange = (ev) => {
+                const file = ev.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (loadEvent) => {
+                    setTitleImage(loadEvent.target.result);
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        };
+        doc.appendChild(btn);
+    }
+}
+
+function setTitleImage(src) {
+    const container = document.getElementById('titleImageContainer');
+    const img = document.getElementById('titleImage');
+    img.src = src;
+    container.classList.add('has-image');
+    saveToLocalStorage();
+}
+
+function deleteTitleImage() {
+    const container = document.getElementById('titleImageContainer');
+    const img = document.getElementById('titleImage');
+    img.src = '';
+    container.classList.remove('has-image');
+    saveToLocalStorage();
+}
+
+function getTitleImageData() {
+    const container = document.getElementById('titleImageContainer');
+    const img = document.getElementById('titleImage');
+    if (container.classList.contains('has-image')) {
+        return {
+            src: img.src,
+            width: img.style.width || '700px'
+        };
+    }
+    return null;
+}
+
+// Title image resizing
+const titleImage = document.getElementById('titleImage');
+titleImage.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = titleImage.clientWidth;
+    
+    const onMouseMove = (ev) => {
+        const newWidth = startWidth + (ev.clientX - startX);
+        titleImage.style.width = Math.max(200, Math.min(1000, newWidth)) + 'px';
+    };
+    
+    const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        saveToLocalStorage();
+    };
+    
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+});
+
+editBody.addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'IMG') {
+        e.preventDefault(); // Prevent drag ghost image
+        const img = e.target;
+        const startX = e.clientX;
+        const startWidth = img.clientWidth;
+        const onMouseMove = (ev) => img.style.width = (startWidth + (ev.clientX - startX)) + 'px';
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            saveToLocalStorage();
+        };
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    }
+});
+
+// Esc toggles Focus Mode, but lets transient UI (command palette / version history) close first.
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (cmdPalette && cmdPalette.style.display === 'flex') {
+        cmdPalette.style.display = 'none';
+        return;
+    }
+    const historyModal = document.getElementById('historyModal');
+    if (historyModal && historyModal.classList.contains('active')) {
+        closeHistory();
+        return;
+    }
+    // UI-14: an open panel drawer is transient UI too — close it before focus mode.
+    if (document.body.classList.contains('panel-open')) {
+        setPanelOpen(false);
+        const menuBtn = document.getElementById('menuBtn');
+        if (menuBtn) menuBtn.focus();
+        return;
+    }
+    toggleFocus();
+});
+
+const debouncedLocalSave = debounce(saveToLocalStorage, 400);
+[editTitle, editBody].forEach(el => el.addEventListener('input', debouncedLocalSave));
+
+
+init();
+attachTitleButton(); // Add + button to title area
+
+// Shared close/reset for a dropdown root. A menu opened inside the mobile formatting bar is
+// positioned in fixed (viewport) coordinates, so its inline geometry has to be undone on close.
+function closeDropdownRoot(d) {
+    d.classList.remove('open');
+    const menu = d.querySelector('.dropdown-menu');
+    const toggle = d.querySelector('.dropdown-toggle');
+    if (menu) {
+        menu.hidden = true;
+        menu.classList.remove('dropdown-menu-fixed');
+        menu.style.removeProperty('left');
+        menu.style.removeProperty('top');
+        menu.style.removeProperty('width');
+    }
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+}
+
+// The mobile formatting bar scrolls horizontally, and a menu anchored to a control inside it would
+// be left behind by the scroll, so close whatever is open instead.
+function closeOpenDropdowns() {
+    document.querySelectorAll('.dropdown.open').forEach(closeDropdownRoot);
+}
+
+// A fixed-position menu resolves its `top`/`left` against the nearest ancestor that creates a
+// containing block for it — and the mobile bar does, because of its backdrop-filter. Measure that
+// origin with a throwaway probe so the menu can be placed from the toggle's viewport rect without
+// hard-coding the bar's geometry (and so it stays correct if the blur is ever removed).
+function fixedOrigin(host) {
+    const probe = document.createElement('div');
+    probe.style.setProperty('position', 'fixed');
+    probe.style.setProperty('top', '0');
+    probe.style.setProperty('left', '0');
+    probe.style.setProperty('width', '0');
+    probe.style.setProperty('height', '0');
+    host.appendChild(probe);
+    const rect = probe.getBoundingClientRect();
+    probe.remove();
+    return { x: rect.left, y: rect.top };
+}
+
+// Custom dropdown (replaces <select> so the open list can use our palette).
+// reset=true: the control is an action menu, so the label reverts to its placeholder.
+function initDropdown(root, onSelect, reset) {
+    const toggle = root.querySelector('.dropdown-toggle');
+    const menu = root.querySelector('.dropdown-menu');
+    const valueEl = root.querySelector('.dropdown-value');
+    if (!toggle || !menu || !valueEl) return;
+    const options = () => Array.from(menu.querySelectorAll('[role="option"]'));
+    const placeholder = root.getAttribute('data-placeholder') || '';
+
+    function close() {
+        closeDropdownRoot(root);
+    }
+    function closeOthers() {
+        document.querySelectorAll('.dropdown.open').forEach((d) => {
+            if (d !== root) closeDropdownRoot(d);
+        });
+    }
+    function open() {
+        closeOthers();
+        root.classList.add('open');
+        menu.hidden = false;
+        toggle.setAttribute('aria-expanded', 'true');
+        // Inside the mobile formatting bar an absolutely positioned menu would be clipped by the
+        // bar's `overflow-x: auto`, so anchor it to the toggle's viewport rect instead.
+        const host = root.closest('.mobile-fmtbar');
+        if (host) {
+            const o = fixedOrigin(host);
+            const r = toggle.getBoundingClientRect();
+            const w = Math.min(220, window.innerWidth - 24);
+            menu.classList.add('dropdown-menu-fixed');
+            menu.style.setProperty('width', `${w}px`);
+            menu.style.setProperty('left', `${Math.max(12, Math.min(r.left - o.x, window.innerWidth - w - 12))}px`);
+            menu.style.setProperty('top', `${r.bottom - o.y + 6}px`);
+        }
+    }
+    function choose(li) {
+        options().forEach((o) => o.setAttribute('aria-selected', String(o === li)));
+        onSelect(li.getAttribute('data-value'), li.textContent.trim());
+        if (reset) {
+            options().forEach((o) => o.setAttribute('aria-selected', 'false'));
+            valueEl.textContent = placeholder;
+        } else {
+            valueEl.textContent = li.textContent.trim();
+        }
+        close();
+        toggle.focus();
+    }
+
+    toggle.addEventListener('click', () => {
+        if (root.classList.contains('open')) close(); else open();
+    });
+
+    toggle.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { e.stopPropagation(); close(); return; }
+        if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            if (!root.classList.contains('open')) open();
+            const target = menu.querySelector('[aria-selected="true"]') || options()[0];
+            if (target) target.focus();
+        }
+    });
+
+    menu.addEventListener('click', (e) => {
+        const li = e.target.closest('[role="option"]');
+        if (li) choose(li);
+    });
+
+    menu.addEventListener('keydown', (e) => {
+        const list = options();
+        const i = list.indexOf(document.activeElement);
+        if (e.key === 'Escape') { e.stopPropagation(); close(); toggle.focus(); }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); (list[i + 1] || list[0]).focus(); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); (i <= 0 ? list[list.length - 1] : list[i - 1]).focus(); }
+        else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (i >= 0) choose(list[i]); }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!root.contains(e.target)) close();
+    });
+}
+
+// --- EVENT WIRING (replaces the inline handlers removed for the strict CSP) ---
+function wireUI() {
+    document.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            switch (btn.getAttribute('data-action')) {
+                case 'new-file': newFile(); break;
+                case 'open-file': openFile(); break;
+                case 'sync': syncNow(); break;
+                case 'export-md': exportMarkdown(); break;
+                case 'export-pdf': window.print(); break;
+                case 'export-txt': exportText(); break;
+                case 'copy-md': copyMarkdown(); break;
+                case 'history': showHistory(); break;
+                case 'toggle-focus': toggleFocus(); break;
+                case 'toggle-sidebar': toggleSidebar(); break;
+                case 'toggle-mode': toggleMode(); break;
+            }
+        });
+    });
+
+    const typoDrop = document.getElementById('typographyDropdown');
+    if (typoDrop) initDropdown(typoDrop, (value) => changeTypography(value));
+
+    const headingDrop = document.getElementById('headingDropdown');
+    if (headingDrop) initDropdown(headingDrop, (value) => applyHeading(value), true);
+
+    // UI-15: absolute text size and page width, replacing the ±/←→ button pairs.
+    const sizeDrop = document.getElementById('fontSizeDropdown');
+    if (sizeDrop) initDropdown(sizeDrop, (value) => setFontSize(Number(value)));
+
+    const widthDrop = document.getElementById('docWidthDropdown');
+    if (widthDrop) initDropdown(widthDrop, (value) => setWidth(Number(value)));
+
+    const recentsSearch = document.getElementById('recentsSearch');
+    if (recentsSearch) recentsSearch.addEventListener('input', renderRecents);
+
+    document.querySelectorAll('#commandPalette .cmd-item[data-cmd]').forEach(item => {
+        item.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            triggerCmd(item.getAttribute('data-cmd'));
+        });
+    });
+
+    document.querySelectorAll('[data-format]').forEach(btn => {
+        btn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            format(btn.getAttribute('data-format'));
+        });
+    });
+
+    document.querySelectorAll('[data-insert]').forEach(btn => {
+        btn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            const kind = btn.getAttribute('data-insert');
+            if (kind === 'image') insertImageSlot();
+            else if (kind === 'table') insertTable();
+            else if (kind === 'codeblock') { document.execCommand('formatBlock', false, 'pre'); saveToLocalStorage(); }
+            else if (kind === 'divider') insertDivider();
+        });
+    });
+
+    const tid = document.getElementById('titleImageDelete');
+    if (tid) tid.addEventListener('click', deleteTitleImage);
+
+
+    const hc = document.getElementById('historyClose');
+    if (hc) hc.addEventListener('click', closeHistory);
+    const ho = document.getElementById('historyOverlay');
+    if (ho) ho.addEventListener('click', closeHistory);
+
+    // UI-13: the Recents row-actions menu. One shared, body-level popover for every row.
+    const rowMenu = document.getElementById('rowMenu');
+    if (rowMenu) {
+        const del = document.getElementById('rowMenuDelete');
+        if (del) del.addEventListener('click', () => {
+            const id = rowMenuDocId;
+            closeRowMenu();
+            if (id) deleteRecent(id);
+        });
+        rowMenu.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { e.stopPropagation(); closeRowMenu(true); }
+        });
+        document.addEventListener('click', (e) => {
+            if (!rowMenu.hidden && !rowMenu.contains(e.target)) closeRowMenu();
+        });
+        // It is positioned in viewport coordinates, so it must not survive a scroll.
+        window.addEventListener('scroll', () => { closeRowMenu(); closeOpenDropdowns(); }, true);
+    }
+
+    window.addEventListener('resize', () => {
+        closeRowMenu();
+        closeOpenDropdowns();
+    });
+
+    // UI-14: the Formatting section lives in the panel above 1180px and in the fixed bar below it.
+    syncLayoutMode(MOBILE_LAYOUT.matches);
+    if (MOBILE_LAYOUT.addEventListener) {
+        MOBILE_LAYOUT.addEventListener('change', (e) => syncLayoutMode(e.matches));
+    }
+
+    const scrim = document.getElementById('panelScrim');
+    if (scrim) scrim.addEventListener('click', () => setPanelOpen(false));
+
+    const fmtBar = document.getElementById('mobileFmtBar');
+    if (fmtBar) fmtBar.addEventListener('scroll', closeOpenDropdowns, { passive: true });
+}
+
+wireUI();
+initConnectivityCue();
+registerServiceWorker();
+
+/**
+ * W-2: say so when the browser is offline. This is a local-first app, so being offline is
+ * not an error state — the reassurance is the point: the document keeps saving to this
+ * browser either way.
+ */
+function initConnectivityCue() {
+    const el = document.getElementById('netStatus');
+    if (!el) return;
+    const sync = () => {
+        const offline = navigator.onLine === false;
+        el.hidden = !offline;
+        el.textContent = offline ? 'Offline — saved in this browser' : '';
+    };
+    window.addEventListener('offline', sync);
+    window.addEventListener('online', () => {
+        const wasOffline = !el.hidden;
+        sync();
+        if (wasOffline) toast('Back online');
+    });
+    sync();
+}
+
+/**
+ * W-1: register the service worker. Deferred to `load` so it never competes with the first
+ * paint, and failures are swallowed on purpose — offline support is a bonus, and the editor
+ * is fully functional without a worker.
+ */
+function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
+        .catch(() => { /* never surface: the editor works without a worker */ });
+}

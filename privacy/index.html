@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Privacy — Quorly</title>
+<meta name="description" content="What Quorly stores, what it sends, and what it never sees. Quorly is a local-first writing app: your documents never leave your browser." />
+<link rel="canonical" href="https://quorly.pages.dev/privacy/" />
+<meta name="theme-color" content="#0e0e0e" />
+<link rel="icon" href="/favicon.png" type="image/png" />
+<link rel="stylesheet" href="/landing.css" />
+</head>
+<body>
+
+<header class="nav">
+  <a class="brand" href="/">
+    <img src="/quorly.png" alt="" width="30" height="30" />
+    <span>Quorly</span>
+  </a>
+  <nav class="nav-links">
+    <a href="/">Home</a>
+    <a class="nav-cta" href="/app/">Open editor</a>
+  </nav>
+</header>
+
+<main>
+  <section class="section prose">
+    <h1>Privacy</h1>
+    <p class="micro">Effective 16 October 2026</p>
+
+    <h2>The short version</h2>
+    <p>
+      Quorly is a writing app that runs entirely in your browser. We do not receive your
+      documents, your titles, your images, your keystrokes or your file names. There is no
+      server that stores your writing. The only thing we measure is anonymous page visits.
+    </p>
+
+    <h2>What never leaves your device</h2>
+    <ul class="checklist">
+      <li><strong>Your writing.</strong> Document titles and bodies, including embedded images, are stored in your browser's local storage on your own machine.</li>
+      <li><strong>Your versions.</strong> Local snapshots used by Version History are stored the same way.</li>
+      <li><strong>Your files.</strong> When you use <em>Save</em>, the file is written directly to your disk through the browser's file picker. It is never uploaded.</li>
+    </ul>
+
+    <h2>What we do measure</h2>
+    <p>
+      We use <strong>Cloudflare Web Analytics</strong> for anonymous visit counts. It is
+      cookieless and does not use fingerprinting or cross-site identifiers. It reports
+      aggregate information such as:
+    </p>
+    <ul class="checklist">
+      <li>Page URL and referring site</li>
+      <li>Coarse location (country) and browser, operating system and device type</li>
+      <li>Page-load performance metrics (Core Web Vitals)</li>
+    </ul>
+    <p>
+      It does not record what you type, and we never send document content to it. This
+      aggregate data is handled by Cloudflare under their
+      <a href="https://www.cloudflare.com/privacypolicy/">privacy policy</a>.
+    </p>
+
+    <h2>Local storage we set</h2>
+    <p>
+      Quorly keeps your document and its settings in your browser's local storage (keys such as
+      <code>doc_title_v13</code>, <code>doc_body_v13</code> and <code>doc_versions_v13</code>), so
+      your work survives a refresh. They never leave your device, and clearing your browser's
+      site data deletes them permanently — so export anything important.
+    </p>
+
+    <h2>No accounts, no email</h2>
+    <p>
+      Quorly has no sign-up, no login and no newsletter. We do not have a way to contact you
+      and you do not have a way to give us your email address.
+    </p>
+
+    <p class="micro"><a href="/">← Back to Quorly</a></p>
+  </section>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, follow" />
+<link rel="icon" href="/favicon.png" type="image/png" />
+<link rel="apple-touch-icon" href="/favicon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#0e0e0e" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>Editor — Quorly</title>
+<meta name="description" content="The Quorly editor. Private, local-first writing in your browser." />
+
+<!-- All asset URLs are absolute: this page is served from /app/ but shares assets with the landing page at /. -->
+<!-- Vendored locally (marked 15.0.12, DOMPurify 3.2.4) — no third-party requests.
+     The Content-Security-Policy is served as an HTTP header from /_headers. -->
+<script src="/vendor/marked.min.js"></script>
+<script src="/vendor/dompurify.min.js"></script>
+
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<div id="commandPalette">
+    <div class="cmd-item" data-cmd="image">@image — Insert Image</div>
+    <div class="cmd-item" data-cmd="rule">@rule — Horizontal Rule</div>
+</div>
+
+<div id="toolbar">
+  <button type="button" data-format="p">P</button>
+  <button type="button" data-format="h1">H1</button>
+  <button type="button" data-format="h2">H2</button>
+  <button type="button" data-format="h3">H3</button>
+  <button type="button" data-format="h4">H4</button>
+  <button type="button" data-format="bold">B</button>
+  <button type="button" data-format="italic">I</button>
+  <button type="button" data-format="underline">U</button>
+  <button type="button" data-format="blockquote">Quote</button>
+  <button type="button" data-format="insertUnorderedList">• List</button>
+  <button type="button" data-format="insertOrderedList">1. List</button>
+  <button type="button" data-format="link">Link</button>
+  <button type="button" data-format="code">Code</button>
+  <button type="button" data-format="justifyLeft">◧</button>
+  <button type="button" data-format="justifyCenter">▣</button>
+  <button type="button" data-format="justifyRight">◨</button>
+  <button type="button" data-format="justifyFull">☰</button>
+</div>
+
+<!-- UI-14: mobile chrome, shown only at ≤1180px. The hamburger opens the panel as a drawer; the
+     formatting section is moved into the bar below by app.js, so there is never a second copy of it
+     (which would duplicate ids and the dropdown wiring). -->
+<div class="mobile-topbar" id="mobileTopbar">
+  <button class="mobile-icon-btn" type="button" id="menuBtn" data-action="toggle-sidebar"
+          title="Show menu" aria-label="Show menu" aria-controls="sidebarPanel" aria-expanded="false">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/></svg>
+  </button>
+  <a class="mobile-brand" href="/" title="Quorly home" aria-label="Quorly home">
+    <img src="/quorly.png" alt="" width="30" height="30" />
+  </a>
+</div>
+
+<div class="mobile-fmtbar" id="mobileFmtBar" role="toolbar" aria-label="Formatting"></div>
+<div class="panel-scrim" id="panelScrim"></div>
+
+<div class="app">
+  <main class="reader">
+    <div class="doc">
+      <div class="title-image-container" id="titleImageContainer">
+        <img id="titleImage" alt="Header image">
+        <div class="title-image-delete" id="titleImageDelete" role="button" tabindex="0" aria-label="Delete header image">×</div>
+      </div>
+      
+      <div id="editTitle" contenteditable="true" data-placeholder="Document Title"></div>
+      <div class="meta" id="readTime"></div>
+      <div class="meta-divider"></div>
+      
+      <input type="file" id="fileInput" accept="image/*">
+      
+      <div id="editBody" contenteditable="true" data-placeholder="Start writing or type @ for commands..."></div>
+    </div>
+  </main>
+
+  <aside class="sidebar" id="sidebarPanel">
+    <div class="sidebar-head">
+      <a class="sidebar-brand" href="/" title="Quorly home">
+        <img class="brand-icon" src="/quorly.png" alt="" width="32" height="32" />
+        <span class="brand-name">Quorly</span>
+      </a>
+      <div class="sidebar-head-actions">
+        <button class="icon-btn" type="button" id="modeBtn" data-action="toggle-mode" title="Switch to light mode" aria-label="Switch to light mode" aria-pressed="false">
+          <svg class="icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        </button>
+        <button class="icon-btn" type="button" id="sidebarCollapse" data-action="toggle-sidebar" title="Hide panel" aria-label="Hide panel" aria-controls="sidebarPanel" aria-expanded="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Document -->
+    <div class="sidebar-section">
+      <div class="section-title">Document</div>
+      <div class="tile-grid cols-3">
+        <button class="tile-btn" type="button" data-action="new-file" title="New document">
+          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+          <span class="tile-label">New</span>
+        </button>
+        <button class="tile-btn" type="button" data-action="open-file" title="Open a file">
+          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7a2 2 0 0 1 2-2h3.2l1.8 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          <span class="tile-label">Open</span>
+        </button>
+        <button class="tile-btn" type="button" data-action="sync" title="Save to disk (Ctrl/Cmd+S)">
+          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M8 3v5h6V3"/></svg>
+          <span class="tile-label">Save</span>
+        </button>
+      </div>
+      <button class="row-btn" type="button" data-action="history" title="Version history">
+        <svg class="row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.05 11.5a9 9 0 1 0 2.4-6.1"/><path d="M3 3.5v5h5"/><path d="M12 8v4.2l2.6 1.6"/></svg>
+        <span class="row-label">Version History</span>
+        <svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+
+    <!-- Formatting — at ≤1180px app.js moves this whole section into #mobileFmtBar (UI-14). -->
+    <div class="sidebar-section" id="formatSection">
+      <div class="section-title">Formatting</div>
+      <div class="dropdown" id="typographyDropdown">
+        <button class="dropdown-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" title="Font">
+          <span class="dropdown-lead">
+            <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7V4.5h11V7"/><path d="M8.5 4.5V20"/><path d="M14 20v-6.5a1.5 1.5 0 0 1 1.5-1.5H20"/></svg>
+            <span class="dropdown-value">Default Font</span>
+          </span>
+          <span class="dropdown-caret" aria-hidden="true">▾</span>
+        </button>
+        <ul class="dropdown-menu" role="listbox" hidden>
+          <li role="option" tabindex="-1" data-value="Default" aria-selected="true">Default Font</li>
+          <li role="option" tabindex="-1" data-value="Lora" aria-selected="false">Lora</li>
+          <li role="option" tabindex="-1" data-value="Roboto" aria-selected="false">Roboto</li>
+          <li role="option" tabindex="-1" data-value="Inter" aria-selected="false">Inter</li>
+        </ul>
+      </div>
+      <div class="dropdown" id="headingDropdown" data-placeholder="Style" data-reset="true">
+        <button class="dropdown-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" title="Text style">
+          <span class="dropdown-lead">
+            <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg>
+            <span class="dropdown-value">Style</span>
+          </span>
+          <span class="dropdown-caret" aria-hidden="true">▾</span>
+        </button>
+        <ul class="dropdown-menu" role="listbox" hidden>
+          <li role="option" tabindex="-1" data-value="p">Paragraph</li>
+          <li role="option" tabindex="-1" data-value="h1">Heading 1</li>
+          <li role="option" tabindex="-1" data-value="h2">Heading 2</li>
+          <li role="option" tabindex="-1" data-value="h3">Heading 3</li>
+          <li role="option" tabindex="-1" data-value="h4">Heading 4</li>
+          <li role="option" tabindex="-1" data-value="blockquote">Quote</li>
+        </ul>
+      </div>
+      <!-- UI-15: text size and page width replaced the A−/A+ and ←/→ button pairs. -->
+      <div class="dropdown-row">
+        <div class="dropdown" id="fontSizeDropdown">
+          <button class="dropdown-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" title="Text size">
+            <span class="dropdown-lead">
+              <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 19L7.5 7l4.5 12"/><path d="M4.4 15.5h6.2"/><path d="M18 6.5v11"/><path d="M15.8 8.7L18 6.5l2.2 2.2"/><path d="M15.8 15.3L18 17.5l2.2-2.2"/></svg>
+              <span class="dropdown-value">18 px</span>
+            </span>
+            <span class="dropdown-caret" aria-hidden="true">▾</span>
+          </button>
+          <ul class="dropdown-menu" role="listbox" hidden>
+            <li role="option" tabindex="-1" data-value="12" aria-selected="false">12 px</li>
+            <li role="option" tabindex="-1" data-value="14" aria-selected="false">14 px</li>
+            <li role="option" tabindex="-1" data-value="16" aria-selected="false">16 px</li>
+            <li role="option" tabindex="-1" data-value="18" aria-selected="true">18 px</li>
+            <li role="option" tabindex="-1" data-value="20" aria-selected="false">20 px</li>
+            <li role="option" tabindex="-1" data-value="22" aria-selected="false">22 px</li>
+            <li role="option" tabindex="-1" data-value="24" aria-selected="false">24 px</li>
+            <li role="option" tabindex="-1" data-value="28" aria-selected="false">28 px</li>
+            <li role="option" tabindex="-1" data-value="32" aria-selected="false">32 px</li>
+          </ul>
+        </div>
+        <div class="dropdown" id="docWidthDropdown">
+          <button class="dropdown-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" title="Page width">
+            <span class="dropdown-lead">
+              <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5v14"/><path d="M20 5v14"/><path d="M7.5 12h9"/><path d="M10 9.5L7.5 12l2.5 2.5"/><path d="M14 9.5L16.5 12 14 14.5"/></svg>
+              <span class="dropdown-value">1080 px</span>
+            </span>
+            <span class="dropdown-caret" aria-hidden="true">▾</span>
+          </button>
+          <ul class="dropdown-menu" role="listbox" hidden>
+            <li role="option" tabindex="-1" data-value="720" aria-selected="false">720 px</li>
+            <li role="option" tabindex="-1" data-value="840" aria-selected="false">840 px</li>
+            <li role="option" tabindex="-1" data-value="960" aria-selected="false">960 px</li>
+            <li role="option" tabindex="-1" data-value="1080" aria-selected="true">1080 px</li>
+            <li role="option" tabindex="-1" data-value="1200" aria-selected="false">1200 px</li>
+            <li role="option" tabindex="-1" data-value="1320" aria-selected="false">1320 px</li>
+          </ul>
+        </div>
+      </div>
+      <div class="fmt-grid">
+        <button class="fmt-btn" type="button" data-format="bold" title="Bold (Ctrl/Cmd+B)" aria-label="Bold"><b>B</b></button>
+        <button class="fmt-btn" type="button" data-format="italic" title="Italic (Ctrl/Cmd+I)" aria-label="Italic"><i>I</i></button>
+        <button class="fmt-btn" type="button" data-format="underline" title="Underline (Ctrl/Cmd+U)" aria-label="Underline"><u>U</u></button>
+        <button class="fmt-btn" type="button" data-format="code" title="Inline code" aria-label="Inline code">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 7l-4 5 4 5"/><path d="M16 7l4 5-4 5"/><path d="M13.5 5.5l-3 13"/></svg>
+        </button>
+        <button class="fmt-btn" type="button" data-format="link" title="Link (Ctrl/Cmd+K)" aria-label="Link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.5 13.5a4.5 4.5 0 0 0 6.4 0l2.6-2.6a4.5 4.5 0 0 0-6.4-6.4l-1.5 1.5"/><path d="M13.5 10.5a4.5 4.5 0 0 0-6.4 0l-2.6 2.6a4.5 4.5 0 0 0 6.4 6.4l1.5-1.5"/></svg>
+        </button>
+        <button class="fmt-btn" type="button" data-format="blockquote" title="Quote" aria-label="Quote">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 17c-1.7 0-3-1.3-3-3.2C3 10.5 5.2 8 8.5 7l.5 1.8C7.5 9.3 6.4 10.3 6.1 11.6c.3-.1.6-.2.9-.2 1.3 0 2.3 1 2.3 2.3S7.9 17 6 17z"/><path d="M18 17c-1.7 0-3-1.3-3-3.2 0-3.3 2.2-5.8 5.5-6.8l.5 1.8c-1.5.5-2.6 1.5-2.9 2.8.3-.1.6-.2.9-.2 1.3 0 2.3 1 2.3 2.3S19.9 17 18 17z"/></svg>
+        </button>
+      </div>
+      <div class="fmt-grid">
+        <button class="fmt-btn" type="button" data-format="insertUnorderedList" title="Bulleted list" aria-label="Bulleted list">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6h12"/><path d="M9 12h12"/><path d="M9 18h12"/><path d="M4 6h.01"/><path d="M4 12h.01"/><path d="M4 18h.01"/></svg>
+        </button>
+        <button class="fmt-btn" type="button" data-format="insertOrderedList" title="Numbered list" aria-label="Numbered list">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 6h11"/><path d="M10 12h11"/><path d="M10 18h11"/><path d="M4 5h1.4v4"/><path d="M3.6 12.2a1.2 1.2 0 1 1 2.1.8L3.6 15h2.3"/><path d="M3.8 16.6h1.4V20"/><path d="M3.8 20h2"/></svg>
+        </button>
+        <button class="fmt-btn" type="button" data-format="justifyLeft" title="Align left" aria-label="Align left">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h16"/><path d="M4 10h10"/><path d="M4 14h16"/><path d="M4 18h10"/></svg>
+        </button>
+        <button class="fmt-btn" type="button" data-format="justifyCenter" title="Align center" aria-label="Align center">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h16"/><path d="M7 10h10"/><path d="M4 14h16"/><path d="M7 18h10"/></svg>
+        </button>
+        <button class="fmt-btn" type="button" data-format="justifyRight" title="Align right" aria-label="Align right">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h16"/><path d="M10 10h10"/><path d="M4 14h16"/><path d="M10 18h10"/></svg>
+        </button>
+        <button class="fmt-btn" type="button" data-format="justifyFull" title="Justify" aria-label="Justify">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h16"/><path d="M4 10h16"/><path d="M4 14h16"/><path d="M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Insert (the anchor app.js restores the Formatting section before, UI-14) -->
+    <div class="sidebar-section" id="insertSection">
+      <div class="section-title">Insert</div>
+      <div class="tile-grid cols-2">
+        <button class="tile-btn tile-inline" type="button" data-insert="image" title="Insert an image">
+          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M20.5 16l-4.2-4.2-6 6-2.6-2.6L3.5 19.4"/></svg>
+          <span class="tile-label">Image</span>
+        </button>
+        <button class="tile-btn tile-inline" type="button" data-insert="table" title="Insert a table">
+          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9.5h18"/><path d="M3 15h18"/><path d="M9.5 4v16"/><path d="M15 4v16"/></svg>
+          <span class="tile-label">Table</span>
+        </button>
+        <button class="tile-btn tile-inline" type="button" data-insert="codeblock" title="Insert a code block">
+          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 7l-4 5 4 5"/><path d="M16 7l4 5-4 5"/><path d="M13.5 5.5l-3 13"/></svg>
+          <span class="tile-label">Code Block</span>
+        </button>
+        <button class="tile-btn tile-inline" type="button" data-insert="divider" title="Insert a divider">
+          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16"/></svg>
+          <span class="tile-label">Divider</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Export -->
+    <div class="sidebar-section">
+      <div class="section-title">Export</div>
+      <div class="tile-grid cols-2">
+        <button class="tile-btn tile-inline" type="button" data-action="export-pdf" title="Export PDF">
+          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>
+          <span class="tile-label">Export PDF</span>
+        </button>
+        <button class="tile-btn tile-inline" type="button" data-action="export-md" title="Export Markdown">
+          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M6.5 15.5v-7l2.75 3.5L12 8.5v7"/><path d="M17 9v5.5"/><path d="M15 12.5l2 2 2-2"/></svg>
+          <span class="tile-label">Export Markdown</span>
+        </button>
+        <button class="tile-btn tile-inline" type="button" data-action="export-txt" title="Export plain text">
+          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
+          <span class="tile-label">Export Text</span>
+        </button>
+        <button class="tile-btn tile-inline" type="button" data-action="copy-md" title="Copy the document as Markdown">
+          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>
+          <span class="tile-label">Copy as MD</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Recents -->
+    <div class="sidebar-section sidebar-recents">
+      <div class="section-title">Recents</div>
+      <div class="recents-search-wrap">
+        <svg class="recents-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+        <input class="recents-search" id="recentsSearch" type="search" placeholder="Search documents" autocomplete="off" aria-label="Search documents">
+      </div>
+      <div class="recents-list" id="recentsList"></div>
+    </div>
+
+    <!-- Focus mode — full-width, last -->
+    <div class="sidebar-section">
+      <button class="row-btn" type="button" id="focusModeBtn" data-action="toggle-focus" title="Toggle Focus Mode (Esc)" aria-pressed="false">
+        <svg class="row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 7.5v13"/><path d="M3 17.5A1.5 1.5 0 0 1 1.5 16V4.5A1.5 1.5 0 0 1 3 3h4.5A3.5 3.5 0 0 1 12 5.5 3.5 3.5 0 0 1 16.5 3H21a1.5 1.5 0 0 1 1.5 1.5V16a1.5 1.5 0 0 1-1.5 1.5h-5.5a2.5 2.5 0 0 0-3.5 2.4 2.5 2.5 0 0 0-3.5-2.4z"/></svg>
+        <span class="row-label">Focus Mode (Esc)</span>
+      </button>
+    </div>
+  </aside>
+</div>
+
+<!-- UI-13: re-open the panel after the header chevron collapses it. -->
+<button class="icon-btn sidebar-expand" type="button" id="sidebarExpand" data-action="toggle-sidebar" title="Show panel" aria-label="Show panel" aria-controls="sidebarPanel" aria-expanded="false">
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6"/></svg>
+</button>
+
+<!-- UI-13: Recents row actions. Body-level so no scroll container can clip it. -->
+<div id="rowMenu" role="menu" hidden>
+  <button type="button" class="row-menu-item" id="rowMenuDelete" role="menuitem">Delete from this browser</button>
+</div>
+
+<div class="footer-stats">
+    <span id="wordCount">0 words</span>
+    <span id="charCount">0 chars</span>
+    <span id="netStatus" hidden></span>
+</div>
+
+<div id="appToast" role="status" aria-live="polite"></div>
+
+<!-- Version History Modal -->
+<div id="historyOverlay"></div>
+<div id="historyModal">
+  <h2>Version History</h2>
+  <div id="versionList"></div>
+  <button type="button" id="historyClose" class="modal-close">Close</button>
+</div>
+
+<script src="/app.js" defer></script>
+</body>
+</html>

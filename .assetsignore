@@ -1,0 +1,5 @@
+# Kept in the repo but not published with the static site.
+README.md
+smoke.mjs
+wrangler.jsonc
+wrangler.toml

@@ -1,0 +1,2035 @@
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('fonts/inter.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('fonts/inter-italic.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('fonts/lora.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('fonts/lora-italic.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('fonts/roboto.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('fonts/roboto-italic.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('fonts/montserrat.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Fira Code';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('fonts/fira-code.woff2') format('woff2');
+}
+
+:root{
+  --bg:#0e0e0e;
+  --viewer:#000000;
+  --glass:rgba(255,255,255,0.06);
+  --border:rgba(255,255,255,0.1);
+  --text:#f5f6f7;
+  --muted:#9aa0a6;
+  --accent:#3b82f6;
+  --radius:20px;
+  --body-font-size: 18px;
+  --editor-width: 1080px;
+  --sidebar-width: 400px;
+  --app-gap: 28px;
+  --focus-dur: 0.42s;
+  --title-font: 'Montserrat', sans-serif;
+  --body-font: 'Inter', system-ui, sans-serif;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+
+body{
+  margin:0;
+  background: #0e0e0e;
+  color:var(--text);
+  font-family:'Inter',system-ui;
+  padding:32px;
+  transition: background-color 0.3s ease;
+}
+
+body.focus-mode {
+  background: #000000;
+}
+
+/* Light Mode */
+body.light-mode {
+  background: #f5f5f5;
+}
+
+body.light-mode .reader {
+  background: #ffffff;
+  color: #1a1a1a;
+}
+
+body.light-mode #editTitle,
+body.light-mode #editBody,
+body.light-mode .meta {
+  color: #1a1a1a;
+}
+
+body.light-mode .meta {
+  color: #666666;
+}
+
+body.light-mode .meta-divider,
+body.light-mode .content-divider {
+  background: rgba(0,0,0,0.12);
+}
+
+body.light-mode .sidebar {
+  background: rgba(255,255,255,0.8);
+  border-color: rgba(0,0,0,0.08);
+}
+
+/* UI-13: the panel's icon / tile / row / format buttons in light mode. */
+body.light-mode .icon-btn,
+body.light-mode .tile-btn,
+body.light-mode .row-btn,
+body.light-mode .fmt-btn {
+  background: rgba(0,0,0,0.03);
+  border-color: rgba(0,0,0,0.08);
+  color: rgba(0,0,0,0.72);
+}
+
+body.light-mode .icon-btn:hover,
+body.light-mode .tile-btn:hover,
+body.light-mode .row-btn:hover,
+body.light-mode .fmt-btn:hover {
+  background: rgba(0,0,0,0.08);
+  border-color: rgba(0,0,0,0.2);
+  color: #000000;
+}
+
+body.light-mode .section-title {
+  color: rgba(0,0,0,0.56);
+}
+
+body.light-mode .divider {
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.1), transparent);
+}
+
+body.light-mode .footer-stats {
+  background: rgba(255,255,255,0.8);
+  border-color: rgba(0,0,0,0.08);
+  color: rgba(0,0,0,0.6);
+}
+
+body.light-mode #toolbar {
+  background: rgba(255,255,255,0.95);
+  border-color: rgba(0,0,0,0.15);
+}
+
+body.light-mode #toolbar button {
+  color: rgba(0,0,0,0.6);
+}
+
+body.light-mode #toolbar button:hover {
+  color: rgba(0,0,0,0.9);
+  background: rgba(0,0,0,0.08);
+}
+
+body.light-mode #commandPalette {
+  background: rgba(255,255,255,0.95);
+  border-color: rgba(0,0,0,0.1);
+}
+
+body.light-mode .cmd-item {
+  color: rgba(0,0,0,0.6);
+}
+
+body.light-mode .cmd-item:hover {
+  background: rgba(0,0,0,0.1);
+  color: rgba(0,0,0,0.9);
+}
+
+body.light-mode .inline-dropzone {
+  border-color: rgba(59,130,246,0.4);
+  background: rgba(59,130,246,0.05);
+  color: rgba(59,130,246,0.9);
+}
+
+body.light-mode.focus-mode {
+  background: #ffffff;
+}
+
+/* Version History Modal */
+#historyModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 16px;
+  padding: 30px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 70vh;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+}
+
+body.light-mode #historyModal {
+  background: rgba(255,255,255,0.95);
+  border-color: rgba(0,0,0,0.2);
+}
+
+#historyModal.active {
+  display: block;
+}
+
+#historyOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 999;
+  display: none;
+}
+
+#historyOverlay.active {
+  display: block;
+}
+
+.history-item {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.history-item:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+}
+
+body.light-mode .history-item {
+  background: rgba(0,0,0,0.03);
+  border-color: rgba(0,0,0,0.1);
+}
+
+body.light-mode .history-item:hover {
+  background: rgba(0,0,0,0.08);
+  border-color: rgba(0,0,0,0.2);
+}
+
+.history-time {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.history-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.history-preview {
+  font-size: 13px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* WriteAssist in Sidebar */
+.assist-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+body.light-mode .assist-header {
+  border-bottom-color: rgba(0,0,0,0.1);
+}
+
+.assist-header h3 {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(255,255,255,0.6);
+  font-weight: 600;
+}
+
+body.light-mode .assist-header h3 {
+  color: rgba(0,0,0,0.6);
+}
+
+.assist-model-select {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.6);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+.assist-model-select:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.8);
+}
+
+body.light-mode .assist-model-select {
+  background: rgba(0,0,0,0.03);
+  border-color: rgba(0,0,0,0.08);
+  color: rgba(0,0,0,0.6);
+}
+
+body.light-mode .assist-model-select:hover {
+  background: rgba(0,0,0,0.08);
+  border-color: rgba(0,0,0,0.2);
+  color: rgba(0,0,0,0.9);
+}
+
+.assist-model-select option {
+  background: #1a1a1a;
+  color: var(--text);
+}
+
+#chatHistory {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  min-height: 0;
+}
+
+/* Scrollbar styling for chat history - Dark Mode */
+#chatHistory::-webkit-scrollbar {
+  width: 6px;
+}
+
+#chatHistory::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.05);
+  border-radius: 3px;
+}
+
+#chatHistory::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 3px;
+}
+
+#chatHistory::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+/* Scrollbar styling for chat history - Light Mode */
+body.light-mode #chatHistory::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.05);
+}
+
+body.light-mode #chatHistory::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.15);
+}
+
+body.light-mode #chatHistory::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.25);
+}
+
+.chat-message {
+  margin-bottom: 12px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-message.user {
+  text-align: right;
+}
+
+.message-bubble {
+  display: inline-block;
+  max-width: 90%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  position: relative;
+}
+
+/* Fixed: User message bubble now uses glass style matching the UI */
+.chat-message.user .message-bubble {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.chat-message.assistant .message-bubble {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+body.light-mode .chat-message.user .message-bubble {
+  background: rgba(0,0,0,0.06);
+  border-color: rgba(0,0,0,0.1);
+}
+
+body.light-mode .chat-message.assistant .message-bubble {
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.08);
+}
+
+.message-text {
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+
+body.light-mode .message-text {
+  color: #1a1a1a;
+}
+
+.message-actions {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* Icon buttons for message actions */
+.message-btn {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 28px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.message-btn:hover {
+  background: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.9);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.message-btn.success {
+  color: #4ade80;
+}
+
+body.light-mode .message-btn {
+  background: rgba(0,0,0,0.05);
+  border-color: rgba(0,0,0,0.08);
+  color: rgba(0,0,0,0.5);
+}
+
+body.light-mode .message-btn:hover {
+  background: rgba(0,0,0,0.1);
+  color: rgba(0,0,0,0.9);
+  border-color: rgba(0,0,0,0.15);
+}
+
+body.light-mode .message-btn.success {
+  color: #16a34a;
+}
+
+.assist-input-area {
+  padding: 16px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
+}
+
+body.light-mode .assist-input-area {
+  border-top-color: rgba(0,0,0,0.1);
+}
+
+/* Quick actions - always visible, styled for UI */
+.quick-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.quick-action-btn {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.6);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+.quick-action-btn:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.9);
+}
+
+/* BUG FIX: Active/pressed state for glass UI */
+.quick-action-btn:active {
+  background: rgba(255,255,255,0.2);
+  border-color: rgba(255,255,255,0.35);
+  transform: scale(0.97);
+  box-shadow: 0 2px 8px rgba(255,255,255,0.1);
+}
+
+/* Active state when button is toggled on */
+.quick-action-btn.active {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
+  color: rgba(255,255,255,0.95);
+}
+
+.quick-action-btn.active:hover {
+  background: rgba(59, 130, 246, 0.25);
+  border-color: rgba(59, 130, 246, 0.6);
+}
+
+/* Light mode quick action buttons */
+body.light-mode .quick-action-btn {
+  background: rgba(0,0,0,0.05);
+  border-color: rgba(0,0,0,0.1);
+  color: rgba(0,0,0,0.6);
+}
+
+body.light-mode .quick-action-btn:hover {
+  background: rgba(0,0,0,0.1);
+  border-color: rgba(0,0,0,0.2);
+  color: rgba(0,0,0,0.9);
+}
+
+body.light-mode .quick-action-btn:active {
+  background: rgba(0,0,0,0.15);
+  border-color: rgba(0,0,0,0.25);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+body.light-mode .quick-action-btn.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: rgba(0,0,0,0.85);
+}
+
+body.light-mode .quick-action-btn.active:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+#chatInput {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 10px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  resize: vertical;
+  min-height: 60px;
+  max-height: 120px;
+}
+
+body.light-mode #chatInput {
+  background: rgba(0,0,0,0.03);
+  border-color: rgba(0,0,0,0.1);
+  color: #1a1a1a;
+}
+
+#chatInput::placeholder {
+  color: rgba(255,255,255,0.3);
+}
+
+body.light-mode #chatInput::placeholder {
+  color: rgba(0,0,0,0.3);
+}
+
+#chatInput:focus {
+  outline: none;
+  border-color: rgba(59,130,246,0.5);
+}
+
+/* Send button removed - using Enter key instead */
+.assist-send {
+  display: none;
+}
+
+.loading-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.6);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+
+/* --- UPDATED APP LAYOUT --- */
+.app {
+  max-width: calc(var(--editor-width) + var(--app-gap) + var(--sidebar-width));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, var(--editor-width)) var(--sidebar-width);
+  gap: var(--app-gap);
+  justify-content: center;
+  /* Focus mode animates the grid tracks (not the container), so the whole layout
+     re-centres smoothly instead of jumping once the max-width finally shrinks. */
+  transition:
+    grid-template-columns var(--focus-dur) cubic-bezier(0.4, 0, 0.2, 1),
+    gap var(--focus-dur) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- UPDATED FOCUS MODE --- */
+/* The panel's width is driven by the grid track only, so it can never snap:
+   it fades + slides while the track closes underneath it. */
+body.focus-mode .sidebar {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(24px);
+  transition:
+    opacity 0.2s ease,
+    transform var(--focus-dur) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.focus-mode .app {
+  grid-template-columns: minmax(0, var(--editor-width)) 0px;
+  gap: 0;
+}
+
+/* Ensure the reader itself doesn't overflow */
+.reader {
+  width: 100%;
+  max-width: var(--editor-width);
+  background: var(--viewer);
+  border-radius: var(--radius);
+  padding: 70px;
+  min-height: 85vh;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+.doc{max-width:940px;margin:0 auto}
+
+#editTitle {
+  font-family: var(--title-font);
+  font-weight:700;
+  font-size:46px;
+  margin-bottom:22px;
+  border: none;
+  outline: none;
+  width: 100%;
+  background: transparent;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.meta{font-size:13px;color:var(--muted);margin-bottom:34px; letter-spacing: 0.5px;}
+
+.meta-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.12);
+  margin: 32px 0;
+}
+
+.content-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.12);
+  margin: 32px 0;
+  width: 100%;
+}
+
+#editBody {
+  font-family: var(--body-font);
+  font-size: var(--body-font-size);
+  line-height: 1.67;
+  outline: none;
+  min-height: 500px;
+}
+
+/* Images & Command UI */
+.img-container { 
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+    margin: 30px 0; 
+    width: 100%;
+    position: relative;
+}
+.img-container img { 
+    max-width: 100%; 
+    border-radius: 8px; 
+    cursor: nwse-resize; 
+    display: block;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.img-container .img-delete {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: rgba(255,255,255,0.8);
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.img-container:hover .img-delete {
+  display: flex;
+}
+
+.img-container .img-delete:hover {
+  background: rgba(220,38,38,0.9);
+  color: white;
+  transform: scale(1.1);
+}
+
+/* Title Image - Core Structure */
+.title-image-container {
+  display: none;
+  position: relative;
+  width: 100%;
+  margin-bottom: 30px;
+  justify-content: center;
+  align-items: center;
+}
+
+.title-image-container.has-image {
+  display: flex;
+}
+
+.title-image-container img {
+  max-width: 100%;
+  border-radius: 12px;
+  cursor: nwse-resize;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.title-image-delete {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: rgba(255,255,255,0.8);
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.title-image-container:hover .title-image-delete {
+  display: flex;
+}
+
+.title-image-delete:hover {
+  background: rgba(220,38,38,0.9);
+  color: white;
+  transform: scale(1.1);
+}
+
+/* Title Image Insert Button - Floating Above Center */
+.title-add-btn {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 28px;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: rgba(255,255,255,0.8);
+  cursor: pointer;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.title-add-btn:hover {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  transform: translateX(-50%) scale(1.1);
+}
+
+/* Show button when hovering near the title area (top 100px) */
+#editTitle:hover ~ .title-add-btn,
+.title-add-btn:hover {
+  display: flex !important;
+}
+
+/* Hide + button if title image exists */
+.title-image-container.has-image ~ .title-add-btn {
+  display: none !important;
+}
+
+.doc {
+  position: relative;
+}
+
+#editBody h2, #editBody h3, #editBody h4 {
+  position: relative;
+  font-family: var(--body-font);
+  font-weight: 700;
+}
+
+#editBody h2 {
+  font-size: 1.56em;
+  margin: 32px 0 16px 0;
+}
+
+#editBody h3 {
+  font-size: 1.33em;
+  margin: 28px 0 14px 0;
+}
+
+#editBody h4 {
+  font-size: 1.11em;
+  margin: 24px 0 12px 0;
+}
+
+#editBody a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+body.light-mode #editBody a {
+  color: #2563eb;
+}
+
+#editBody pre {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 20px;
+  overflow-x: auto;
+  font-family: 'Fira Code', monospace;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #e8e8e8;
+  position: relative;
+}
+
+body.light-mode #editBody pre {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  color: #2d2d2d;
+}
+
+#editBody h1 {
+  font-family: var(--body-font);
+  font-weight: 700;
+  font-size: 1.9em;
+  margin: 36px 0 18px 0;
+}
+
+#editBody code {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.9em;
+  background: rgba(255,255,255,0.08);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+#editBody pre code {
+  background: none;
+  padding: 0;
+  font-size: 15px;
+}
+
+body.light-mode #editBody code {
+  background: rgba(0,0,0,0.06);
+}
+
+/* Editable tables */
+#editBody table.editor-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 24px 0;
+}
+
+#editBody table.editor-table th,
+#editBody table.editor-table td {
+  border: 1px solid rgba(255,255,255,0.15);
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+#editBody table.editor-table th {
+  background: rgba(255,255,255,0.06);
+  font-weight: 600;
+  font-family: var(--body-font);
+}
+
+body.light-mode #editBody table.editor-table th,
+body.light-mode #editBody table.editor-table td {
+  border-color: rgba(0,0,0,0.15);
+}
+
+body.light-mode #editBody table.editor-table th {
+  background: rgba(0,0,0,0.04);
+}
+
+/* Syntax highlighting classes */
+#editBody pre .keyword { color: #ff79c6; font-weight: 500; }
+#editBody pre .string { color: #50fa7b; }
+#editBody pre .number { color: #bd93f9; }
+#editBody pre .comment { color: #6272a4; font-style: italic; }
+#editBody pre .function { color: #8be9fd; }
+#editBody pre .operator { color: #ff79c6; }
+
+body.light-mode #editBody pre .keyword { color: #d73a49; }
+body.light-mode #editBody pre .string { color: #22863a; }
+body.light-mode #editBody pre .number { color: #005cc5; }
+body.light-mode #editBody pre .comment { color: #6a737d; }
+body.light-mode #editBody pre .function { color: #6f42c1; }
+body.light-mode #editBody pre .operator { color: #d73a49; }
+
+#commandPalette {
+    position: absolute; 
+    background: rgba(0, 0, 0, 0.7); 
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; 
+    padding: 6px; 
+    display: none; 
+    flex-direction: column;
+    min-width: 200px; 
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05); 
+    z-index: 3000;
+}
+.cmd-item { 
+  padding: 10px 14px; 
+  cursor: pointer; 
+  border-radius: 6px; 
+  font-size: 13px; 
+  color: rgba(255,255,255,0.6); 
+  transition: all 0.2s ease;
+}
+.cmd-item:hover { 
+  background: rgba(255,255,255,0.1); 
+  color: white; 
+}
+
+.inline-dropzone {
+    border: 2px dashed rgba(59, 130, 246, 0.4);
+    background: rgba(59, 130, 246, 0.03);
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    color: rgba(59, 130, 246, 0.8);
+    margin: 20px 0;
+    cursor: pointer;
+}
+
+.inline-dropzone.dragover {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.8);
+    color: rgba(59, 130, 246, 1);
+}
+
+/* Sidebar */
+.sidebar{
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+  padding: 16px;
+  position: sticky;
+  top: 32px;
+  height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+  /* Collapse/expand: fade + slide. The fade-in on expand is slightly delayed so the
+     panel doesn't appear while it is still squeezed. */
+  transition:
+    opacity 0.3s ease 0.08s,
+    transform var(--focus-dur) cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+body.light-mode .sidebar {
+  background: rgba(255,255,255,0.8);
+  border-color: rgba(0,0,0,0.08);
+}
+
+/* While the panel collapses, keep its contents at full width so they clip rather than
+   re-flow (re-wrapping buttons mid-animation looked janky). Desktop grid only. */
+@media (min-width: 1181px) {
+  .sidebar > * {
+    min-width: calc(var(--sidebar-width) - 32px);
+  }
+}
+
+/* UI-13: the header chevron hides the panel; a fixed button brings it back. Unlike focus
+   mode (immersive, Esc to leave) this only affects the panel — the reader keeps its
+   layout. Not persisted: a reload starts with the panel open. */
+body.sidebar-collapsed .sidebar { display: none; }
+body.sidebar-collapsed .app {
+  grid-template-columns: minmax(0, var(--editor-width)) 0px;
+  gap: 0;
+}
+
+/* Sidebar header: brand on the left, panel controls on the right (UI-13). */
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  flex: 0 0 auto;
+}
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+.sidebar-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+/* Header icon buttons (theme toggle, hide panel). */
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 9px;
+  color: rgba(255,255,255,0.65);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.icon-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+  color: #ffffff;
+}
+.icon-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+/* The floating re-open button (UI-13). Declared after `.icon-btn` so its `display: none`
+   wins over `.icon-btn`'s `display: flex` — same specificity, so source order decides. */
+.sidebar-expand {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1500;
+  display: none;
+}
+body.sidebar-collapsed .sidebar-expand { display: flex; }
+.brand-icon {
+  width: 32px;
+  height: 32px;
+  display: block;
+  flex: 0 0 auto;
+}
+.brand-name {
+  font-family: var(--title-font);
+  font-weight: 700;
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  line-height: 1;
+}
+body.light-mode .sidebar-head {
+  border-bottom-color: rgba(0,0,0,0.1);
+}
+body.light-mode .brand-icon {
+  filter: invert(1);
+}
+body.light-mode .brand-name {
+  color: #1a1a1a;
+}
+
+.sidebar-section {
+  margin-bottom: 8px;
+  flex: 0 0 auto;
+}
+
+.sidebar-section:last-of-type {
+  margin-bottom: 0;
+}
+
+/* Recents is the panel's give: on a short window it is the only section that shrinks
+   (its list scrolls internally), so the panel itself doesn't grow a scrollbar. */
+.sidebar-recents {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+/* Recents (document library) */
+.recents-search-wrap {
+  position: relative;
+  margin-bottom: 6px;
+  flex: 0 0 auto;
+}
+.recents-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  color: rgba(255,255,255,0.45);
+  pointer-events: none;
+}
+.recents-search {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 0;
+  padding: 7px 10px 7px 32px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  color: rgba(255,255,255,0.75);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.recents-search::placeholder { color: rgba(255,255,255,0.45); }
+.recents-search:focus { border-color: rgba(255,255,255,0.25); }
+.recents-search::-webkit-search-cancel-button { filter: invert(1) opacity(0.4); }
+
+.recents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 190px;
+  min-height: 0;
+  flex: 0 1 auto;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.recents-empty {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.5);
+}
+
+.recent-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0 4px 0 8px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.recent-item:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.08);
+}
+
+.recent-item.is-current {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.14);
+}
+
+/* Leading document glyph — decoration; the row's button carries the accessible name. */
+.recent-icon {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  color: rgba(255,255,255,0.55);
+}
+
+.recent-icon svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+}
+
+.recent-open {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 4px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+}
+
+.recent-title {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: rgba(255,255,255,0.78);
+}
+
+/* The current document is marked by the row background only — its title is not bolder. */
+.recent-item.is-current .recent-title {
+  color: #ffffff;
+}
+
+.recent-meta {
+  font-size: 10px;
+  color: rgba(255,255,255,0.5);
+}
+
+/* Row actions (⋮): always visible, so the affordance does not depend on hover. */
+.recent-menu-btn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.recent-menu-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.recent-menu-btn:hover {
+  color: #ffffff;
+  background: rgba(255,255,255,0.12);
+}
+
+/* The row-actions menu lives at the end of <body>, not inside the panel, so neither the
+   Recents list nor the sidebar's own scroll box can clip it (UI-13). JS positions it. */
+#rowMenu {
+  position: fixed;
+  z-index: 3000;
+  min-width: 176px;
+  padding: 4px;
+  background: #141414;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+}
+
+#rowMenu[hidden] { display: none; }
+
+.row-menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: rgba(255,255,255,0.8);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row-menu-item:hover,
+.row-menu-item:focus {
+  background: rgba(255,255,255,0.1);
+  color: #ffffff;
+  outline: none;
+}
+
+body.light-mode #rowMenu {
+  background: #ffffff;
+  border-color: rgba(0,0,0,0.12);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+}
+
+body.light-mode .row-menu-item { color: rgba(0,0,0,0.8); }
+body.light-mode .row-menu-item:hover,
+body.light-mode .row-menu-item:focus { background: rgba(0,0,0,0.08); color: #000000; }
+
+/* Off-screen buffer used by the "Copy MD" clipboard fallback. */
+.copy-buffer {
+  position: fixed;
+  top: -1000px;
+  left: -1000px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+body.light-mode .recents-search { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.08); color: rgba(0,0,0,0.75); }
+body.light-mode .recents-search::placeholder { color: rgba(0,0,0,0.5); }
+body.light-mode .recents-search:focus { border-color: rgba(0,0,0,0.25); }
+body.light-mode .recents-search::-webkit-search-cancel-button { filter: opacity(0.4); }
+body.light-mode .recents-search-icon { color: rgba(0,0,0,0.45); }
+body.light-mode .recents-empty { color: rgba(0,0,0,0.56); }
+body.light-mode .recent-item:hover { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); }
+body.light-mode .recent-item.is-current { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.12); }
+body.light-mode .recent-icon { color: rgba(0,0,0,0.5); }
+body.light-mode .recent-title { color: rgba(0,0,0,0.7); }
+body.light-mode .recent-item.is-current .recent-title { color: #000000; }
+body.light-mode .recent-meta { color: rgba(0,0,0,0.56); }
+body.light-mode .recent-menu-btn { color: rgba(0,0,0,0.45); }
+body.light-mode .recent-menu-btn:hover { color: #000000; background: rgba(0,0,0,0.08); }
+
+/* --- Panel controls (UI-13) ---------------------------------------------------
+   One visual language for every button in the panel: a soft grey tile that lifts on
+   hover. `.tile-btn` stacks icon-over-label; `.tile-inline` lays them out left-aligned. */
+.tile-grid {
+  display: grid;
+  gap: 8px;
+}
+.tile-grid + .tile-grid {
+  margin-top: 6px;
+}
+.tile-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+.tile-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.tile-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+.tile-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 9px 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  color: rgba(255,255,255,0.72);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.1;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.tile-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+  color: #ffffff;
+}
+.tile-btn.tile-inline {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+}
+.tile-btn .tile-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+.tile-btn .tile-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tile-label-md { font-size: 14px; font-weight: 600; }
+
+/* A full-width row button: leading icon, label, optional trailing chevron. */
+.row-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  color: rgba(255,255,255,0.72);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.row-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+  color: #ffffff;
+}
+.row-btn .row-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+.row-btn .row-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row-btn .row-chevron {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  opacity: 0.6;
+}
+.tile-grid + .row-btn,
+.fmt-grid + .row-btn {
+  margin-top: 6px;
+}
+
+/* Formatting: two 6-up icon grids that mirror the floating selection toolbar. */
+.fmt-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+.fmt-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  color: rgba(255,255,255,0.72);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.fmt-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+  color: #ffffff;
+}
+.fmt-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+/* Theme toggle: an icon only — moon while dark, sun while light. The static pages are dark-first
+   too, so the brand never turns light unless the user chooses it here. */
+#modeBtn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+#modeBtn .icon-sun { display: none; }
+
+body.light-mode #modeBtn .icon-moon { display: none; }
+body.light-mode #modeBtn .icon-sun { display: block; }
+
+/* The old stacked `.btn-row` rows are gone — replaced by the UI-13 tile/grid components. */
+
+/* Custom dropdown — replaces the native <select> so the open list can be themed with the
+   black/white/grey palette (a native option's hover highlight is OS-coloured blue). */
+.dropdown {
+  position: relative;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.dropdown-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.72);
+  padding: 9px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+/* Leading glyph + current value (UI-13): the label group flexes, the caret stays put. */
+.dropdown-lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dropdown-icon {
+  display: block;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  opacity: 0.85;
+}
+
+.dropdown-toggle:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.8);
+}
+
+.dropdown-caret {
+  font-size: 9px;
+  opacity: 0.6;
+  transition: transform 0.2s ease;
+}
+
+.dropdown.open .dropdown-caret {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: #141414;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.dropdown-menu[hidden] {
+  display: none;
+}
+
+.dropdown-menu li {
+  padding: 7px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  outline: none;
+}
+
+.dropdown-menu li:hover,
+.dropdown-menu li:focus,
+.dropdown-menu li.active {
+  background: rgba(255,255,255,0.1);
+  color: #ffffff;
+}
+
+.dropdown-menu li[aria-selected="true"] {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+body.light-mode .dropdown-toggle {
+  background: rgba(0,0,0,0.03);
+  border-color: rgba(0,0,0,0.08);
+  color: rgba(0,0,0,0.7);
+}
+
+body.light-mode .dropdown-toggle:hover {
+  background: rgba(0,0,0,0.08);
+  border-color: rgba(0,0,0,0.2);
+  color: rgba(0,0,0,0.9);
+}
+
+body.light-mode .dropdown-menu {
+  background: #ffffff;
+  border-color: rgba(0,0,0,0.12);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+}
+
+body.light-mode .dropdown-menu li {
+  color: rgba(0,0,0,0.7);
+}
+
+body.light-mode .dropdown-menu li:hover,
+body.light-mode .dropdown-menu li:focus,
+body.light-mode .dropdown-menu li.active {
+  background: rgba(0,0,0,0.08);
+  color: #000000;
+}
+
+body.light-mode .dropdown-menu li[aria-selected="true"] {
+  color: #000000;
+}
+
+.sidebar-writeassist {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  min-height: 0;
+  margin-bottom: 20px;
+  margin-top: 8px;
+}
+
+body.light-mode .sidebar-writeassist {
+  border-top-color: rgba(0,0,0,0.1);
+}
+
+.section-title{
+  font-weight: 600;
+  font-size: 9px;
+  text-transform: uppercase;
+  /* 0.5 keeps the 9px labels at ~5.3:1 on the sidebar (WCAG AA needs 4.5:1). */
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 4px;
+  letter-spacing: 1.5px;
+}
+
+body.light-mode .section-title {
+  color: rgba(0,0,0,0.56);
+}
+
+.btn-group {
+  display: grid;
+  gap: 6px;
+}
+
+.btn-group.grid-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.btn-group.grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* `.btn` / `.btn-block` / `.btn.wide` were removed with the UI-13 redesign; every panel
+   control now uses `.tile-btn`, `.row-btn` or `.fmt-btn` (defined above). */
+
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  margin: 2px 0;
+}
+
+/* Floating Selection Toolbar */
+#toolbar {
+  position: absolute;
+  background: rgba(15, 15, 15, 0.9);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 5px;
+  display: none;
+  z-index: 1000;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06);
+  white-space: nowrap;
+}
+#toolbar button { 
+  background: transparent; 
+  border: none; 
+  color: rgba(255,255,255,0.5); 
+  padding: 8px 9px; 
+  cursor: pointer; 
+  font-size: 11px; 
+  font-weight: 600;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+}
+#toolbar button:hover { 
+  color: white; 
+  background: rgba(255,255,255,0.08); 
+}
+
+.footer-stats {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.3); 
+    backdrop-filter: blur(20px);
+    padding: 10px 24px; 
+    border-radius: 30px; 
+    border: 1px solid rgba(255,255,255,0.08);
+    display: flex; gap: 24px; font-size: 12px; 
+    color: rgba(255,255,255,0.5); 
+    z-index: 2000;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+/* W-2: offline status chip. Hidden unless the browser is offline, and it inherits the
+   footer's colour so it needs no light-mode variant. */
+#netStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#netStatus[hidden] { display: none; }
+
+#netStatus::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
+}
+
+blockquote { border-left: 2px solid #444; padding-left: 24px; margin: 32px 0; color: #e0e0e0; font-style: italic; }
+
+body.light-mode blockquote { border-left-color: #c4c4c4; color: #333333; }
+
+/* contenteditable placeholders (the old `placeholder` attribute is ignored on divs) */
+[data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* Transient toast / storage warning */
+#appToast {
+  position: fixed;
+  bottom: 76px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  max-width: min(520px, 90vw);
+  background: rgba(20,20,20,0.96);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #f5f6f7;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  z-index: 5000;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+}
+#appToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rgba(0,0,0,0.15); color: #1a1a1a; }
+
+/* UI-15: text size and page width share one row in the Formatting section (they replaced the
+   A−/A+ and ←/→ button pairs that used to sit in Document). */
+.dropdown-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.dropdown-row .dropdown { width: 100%; margin-bottom: 0; }
+
+/* A dropdown opened inside a scroll container (the mobile formatting bar) would be clipped by
+   `overflow-x: auto`, so app.js switches it to viewport-anchored fixed positioning. Declared
+   after `.dropdown-menu` so the single-class override wins on source order. */
+.dropdown-menu-fixed {
+  position: fixed;
+  top: auto;
+  left: auto;
+  right: auto;
+  width: auto;
+  z-index: 1500;
+}
+
+/* --- UI-14: mobile chrome ---------------------------------------------------------------------
+   Everything below is display:none above 1180px, so the desktop grid is untouched. At ≤1180px
+   the app is: a fixed top bar (hamburger + brand), a fixed formatting bar under it, and the
+   reader. The side panel becomes a drawer opened by the hamburger. */
+.mobile-topbar,
+.mobile-fmtbar,
+.panel-scrim { display: none; }
+
+/* The formatting bar holds the real #formatSection (moved in by app.js), re-laid out as a single
+   horizontal row. There is only ever one copy of it, so ids and dropdown wiring are never
+   duplicated. */
+.mobile-fmtbar .sidebar-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  margin: 0;
+  padding: 0 12px;
+  min-width: max-content;
+}
+.mobile-fmtbar .section-title { display: none; }
+.mobile-fmtbar .dropdown { width: auto; flex: 0 0 auto; margin-bottom: 0; }
+.mobile-fmtbar .dropdown-toggle { width: auto; min-width: 132px; padding: 8px 10px; }
+.mobile-fmtbar .dropdown-row { display: flex; gap: 8px; margin-bottom: 0; flex: 0 0 auto; }
+.mobile-fmtbar .dropdown-row .dropdown { width: auto; }
+.mobile-fmtbar .fmt-grid { display: flex; gap: 8px; margin-top: 0; flex: 0 0 auto; }
+.mobile-fmtbar .fmt-btn { width: 38px; flex: 0 0 auto; }
+
+/* --- Responsive layout (the original had none outside of print) --- */
+@media (max-width: 1180px) {
+  :root {
+    --mobile-topbar-h: 52px;
+    --mobile-fmtbar-h: 48px;
+  }
+
+  /* Content starts below the two fixed bars. */
+  body { padding: calc(var(--mobile-topbar-h) + var(--mobile-fmtbar-h) + 16px) 16px 80px; }
+
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 100%;
+    gap: 0;
+  }
+  .reader { padding: 32px 24px; }
+
+  /* Top bar: hamburger on the left, brand on the right. */
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--mobile-topbar-h);
+    padding: 0 14px;
+    z-index: 1450;
+    background: rgba(10,10,10,0.92);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .mobile-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    color: rgba(255,255,255,0.8);
+    cursor: pointer;
+  }
+  .mobile-icon-btn:hover { background: rgba(255,255,255,0.08); }
+  .mobile-icon-btn svg { display: block; }
+  .mobile-brand { display: flex; align-items: center; padding: 4px; border-radius: 10px; }
+  .mobile-brand img { display: block; }
+
+  /* Formatting bar: one scrollable row, permanently under the top bar. */
+  .mobile-fmtbar {
+    display: flex;
+    align-items: center;
+    position: fixed;
+    top: var(--mobile-topbar-h);
+    left: 0;
+    right: 0;
+    height: var(--mobile-fmtbar-h);
+    z-index: 1440;
+    background: rgba(10,10,10,0.92);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .mobile-fmtbar::-webkit-scrollbar { display: none; }
+
+  /* The drawer's scrim. */
+  body.panel-open .panel-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1490;
+    background: rgba(0,0,0,0.55);
+  }
+
+  /* The panel becomes a drawer above the chrome, so it never fights the grid. */
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    height: auto;
+    width: min(340px, 86vw);
+    z-index: 1500;
+    border-radius: 0 16px 16px 0;
+    border-left: 0;
+    transform: translateX(-102%);
+    visibility: hidden;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.28s;
+  }
+  body.panel-open .sidebar { transform: none; visibility: visible; }
+
+  /* The floating re-open button is desktop-only; the hamburger replaces it. */
+  .sidebar-expand { display: none !important; }
+
+  body.light-mode .mobile-topbar,
+  body.light-mode .mobile-fmtbar {
+    background: rgba(255,255,255,0.92);
+    border-bottom-color: rgba(0,0,0,0.08);
+  }
+  body.light-mode .mobile-icon-btn { color: rgba(0,0,0,0.75); }
+  body.light-mode .mobile-icon-btn:hover { background: rgba(0,0,0,0.06); }
+  body.light-mode .mobile-brand img { filter: invert(1); }
+
+  /* Focus mode: the formatting bar goes away and the reader goes full-bleed. The top bar stays,
+     so the hamburger (which also leaves focus mode) is always reachable. */
+  body.focus-mode { padding-top: calc(var(--mobile-topbar-h) + 16px); }
+  body.focus-mode .mobile-fmtbar { display: none; }
+  body.focus-mode .app { grid-template-columns: minmax(0, 1fr); max-width: 100%; }
+  body.focus-mode .sidebar { display: none; }
+}
+
+@media (max-width: 720px) {
+  body { padding: calc(var(--mobile-topbar-h) + var(--mobile-fmtbar-h) + 12px) 12px 72px; }
+  body.focus-mode { padding-top: calc(var(--mobile-topbar-h) + 12px); }
+  .reader { padding: 22px 18px; border-radius: 14px; min-height: auto; }
+  #editTitle { font-size: 30px; margin-bottom: 14px; }
+  #editBody { font-size: 17px; }
+  .footer-stats { gap: 12px; padding: 8px 14px; font-size: 11px; bottom: 12px; }
+  .sidebar { padding: 14px; }
+}
+
+@media print{
+  .sidebar, #toolbar, .footer-stats, .meta, .inline-dropzone, .title-add-btn, .title-image-delete, .img-delete,
+  .mobile-topbar, .mobile-fmtbar, .panel-scrim {display:none !important}
+  body{padding:0 !important; margin:0;}
+  
+  /* Dark mode print */
+  body:not(.light-mode) {background:white !important;}
+  body:not(.light-mode) .reader{background: white !important; color: #000 !important; box-shadow: none;}
+  body:not(.light-mode) #editTitle,
+  body:not(.light-mode) #editBody {color: #000 !important;}
+  body:not(.light-mode) .content-divider {background: rgba(0,0,0,0.12);}
+  body:not(.light-mode) #editBody pre {background: #f5f5f5 !important; border-color: #e0e0e0 !important; color: #2d2d2d !important;}
+  body:not(.light-mode) #editBody a {color: #2563eb !important;}
+  
+  /* Light mode print - preserve existing styles */
+  body.light-mode .reader {box-shadow: none;}
+  
+  .reader{box-shadow: none; padding: 20px; border-radius: 0; min-height: auto; margin: 0; max-width: 100%;}
+  .app{display: block; max-width: 100%; grid-template-columns: none;}
+  .doc{max-width: 100%;}
+}
+
+/* --- Added for strict CSP: replaces former inline style attributes --- */
+#fileInput { display: none; }
+#titleImage { width: 700px; }
+#historyModal h2 { margin-top: 0; }
+.modal-close {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+}
+body.light-mode .modal-close { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.15); color: #1a1a1a; }
+.version-empty { color: var(--muted); }

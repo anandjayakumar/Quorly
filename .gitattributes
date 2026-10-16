@@ -1,0 +1,18 @@
+# `git archive <sha>` is how the release runner builds a deployable stage, so `export-ignore`
+# is the single source of truth for "not part of the artifact". This replaces the old
+# robocopy /XF /XD flags, which had to be remembered on every deploy.
+#
+# Everything not listed here is deployed, including _headers and .assetsignore's targets.
+
+# Every source file here is LF-only; core.autocrlf is true globally on this machine, so
+# pin LF explicitly and the working tree, the blob and the archived artifact stay byte-identical.
+# (PNG / WOFF2 are auto-detected as binary and left alone.)
+* text=auto eol=lf
+
+README.md        export-ignore
+smoke.mjs        export-ignore
+.assetsignore    export-ignore
+.gitignore       export-ignore
+.gitattributes   export-ignore
+.githooks/       export-ignore
+tools/           export-ignore

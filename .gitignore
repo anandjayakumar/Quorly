@@ -1,0 +1,11 @@
+# Local dev / release artifacts. Never committed, never deployed.
+# `git archive` only ever packs tracked files, so export-ignore in .gitattributes is what
+# actually keeps tooling out of the upload; this list keeps it out of the history too.
+.wrangler/
+node_modules/
+.release/
+
+# OS noise
+Thumbs.db
+Desktop.ini
+.DS_Store
