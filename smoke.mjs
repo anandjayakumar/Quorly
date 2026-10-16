@@ -98,6 +98,9 @@ try {
     'function registerServiceWorker',
     "serviceWorker.register('/sw.js'",
     'function initConnectivityCue',
+    // UI-17: alignment is a class. execCommand's inline style is blocked by `style-src 'self'`.
+    'function applyAlignment',
+    'q-align-center',
   ];
   for (const marker of markers) {
     record(`/app.js has ${marker}`, body.includes(marker), 'missing');

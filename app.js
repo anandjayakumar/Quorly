@@ -239,6 +239,7 @@ function loadMarkdown(markdownText) {
     if(h1) h1.remove();
     isLoading = true;
     editBody.innerHTML = temp.innerHTML;
+    migrateAlignment();
     updateStats();
     saveToLocalStorage(); // Save the imported content
     isLoading = false;
@@ -545,6 +546,7 @@ function deleteRecent(id) {
 function restoreLiveDocument() {
     editTitle.textContent = localStorage.getItem("doc_title_v13") || DEFAULT_TITLE;
     editBody.innerHTML = sanitizeHTML(localStorage.getItem("doc_body_v13") || DEFAULT_BODY);
+    migrateAlignment();
     loadStoredTitleImage();
 }
 
@@ -616,6 +618,7 @@ function openRecent(id) {
     isLoading = true;
     editTitle.textContent = snapshot.title || 'Untitled';
     editBody.innerHTML = sanitizeHTML(snapshot.body || '');
+    migrateAlignment();
     if (snapshot.titleImage) {
         // Set the width before setTitleImage so the write it triggers records the real width.
         document.getElementById('titleImage').style.width = snapshot.titleImage.width || '700px';
@@ -874,6 +877,7 @@ function loadHTML(htmlContent) {
     editTitle.textContent = title;
     isLoading = true;
     editBody.innerHTML = temp.innerHTML;
+    migrateAlignment();
     updateStats();
     saveToLocalStorage();
     isLoading = false;
@@ -1128,7 +1132,7 @@ function generateHTMLFile() {
 <body>
     ${titleImageHTML}
     <h1>${safeTitle}</h1>
-    ${editBody.innerHTML}
+    ${exportBodyHTML()}
 </body>
 </html>`;
 }
@@ -1241,10 +1245,84 @@ function format(cmd) {
         return; // formatInlineCode saves the document itself
     } else if (cmd === 'codeblock') {
         document.execCommand('formatBlock', false, 'pre');
+    } else if (ALIGN_BY_CMD[cmd]) {
+        applyAlignment(cmd); // UI-17: a class, not execCommand's blocked inline style
     } else {
         document.execCommand(cmd, false, null);
     }
     saveToLocalStorage();
+}
+
+// --- UI-17: alignment ---------------------------------------------------------------
+//
+// `document.execCommand('justify*')` writes an inline `style="text-align:…"`, and the strict
+// `style-src 'self'` blocks style attributes: the attribute landed in the DOM but was never
+// applied (getComputedStyle stayed `start`), print lost it, and every click logged a CSP
+// violation. CSSOM writes (`el.style.x = …`) are exempt from that check, but a stored attribute
+// would be blocked again on the next load — so alignment is carried by a class the stylesheet
+// defines, and is converted back to an inline style only in the exported file, which is opened
+// outside our origin.
+const ALIGN_CLASSES = ['q-align-left', 'q-align-center', 'q-align-right', 'q-align-justify'];
+const ALIGN_BY_CMD = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right', justifyFull: 'justify' };
+const ALIGN_TAGS = 'p,h1,h2,h3,h4,h5,h6,blockquote,pre,li,td,th,table,div';
+
+// The deepest block-level elements the selection touches: a caret inside a paragraph aligns that
+// paragraph; a selection across two list items aligns both. Heading/quote/code blocks and table
+// cells are blocks in their own right, so a wrapping <div> never wins over them.
+function alignmentTargets() {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return [];
+    const range = sel.getRangeAt(0);
+    if (!editBody.contains(range.commonAncestorContainer)) return [];
+    const hits = Array.from(editBody.querySelectorAll(ALIGN_TAGS)).filter(el => range.intersectsNode(el));
+    return hits.filter(el => !hits.some(other => other !== el && el.contains(other)));
+}
+
+function applyAlignment(cmd) {
+    const value = ALIGN_BY_CMD[cmd];
+    if (!value) return;
+    const targets = alignmentTargets();
+    if (!targets.length) {
+        toast('Click into the document first, then choose an alignment.');
+        return;
+    }
+    targets.forEach(el => {
+        el.classList.remove(...ALIGN_CLASSES);
+        if (value !== 'left') el.classList.add('q-align-' + value);
+    });
+}
+
+// Documents saved before UI-17 hold `style="text-align:…"` that the CSP refuses to apply. Move it
+// onto the class so existing documents show the alignment they always had on disk. The dead
+// attribute is dropped whole: rewriting a style attribute is itself blocked, and any other
+// declaration in it was inert under the same rule.
+function migrateAlignment() {
+    editBody.querySelectorAll('[style*="text-align"]').forEach(el => {
+        const decl = (el.getAttribute('style') || '').split(';')
+            .map(s => s.trim()).filter(Boolean)
+            .find(p => /^text-align\s*:/i.test(p));
+        if (!decl) return;
+        const value = decl.split(':')[1].trim().toLowerCase();
+        if (!['left', 'right', 'center', 'justify'].includes(value)) return;
+        el.classList.remove(...ALIGN_CLASSES);
+        if (value !== 'left') el.classList.add('q-align-' + value);
+        el.removeAttribute('style');
+    });
+}
+
+// The export is opened outside our origin, so an inline style is allowed there and is the most
+// portable form (it survives being pasted into another tool). Turn the classes back into inline
+// styles in the export only — the editor keeps the class.
+function exportBodyHTML() {
+    const clone = editBody.cloneNode(true);
+    clone.querySelectorAll(ALIGN_CLASSES.map(c => '.' + c).join(',')).forEach(el => {
+        const cls = ALIGN_CLASSES.find(c => el.classList.contains(c));
+        if (!cls) return;
+        el.classList.remove(...ALIGN_CLASSES);
+        if (!el.classList.length) el.removeAttribute('class'); // don't leave class=""
+        el.style.textAlign = cls.slice('q-align-'.length);
+    });
+    return clone.innerHTML;
 }
 
 // Toggle inline <code> around the current selection
@@ -1600,6 +1678,7 @@ function restoreVersion(index) {
     
     editTitle.textContent = version.title;
     editBody.innerHTML = sanitizeHTML(version.body);
+    migrateAlignment();
     
     if (version.titleImage) {
         setTitleImage(version.titleImage.src);

@@ -45,7 +45,7 @@ const NODE = `"${process.execPath}"`;
 const NPX_BIN = path.join(path.dirname(process.execPath), process.platform === 'win32' ? 'npx.cmd' : 'npx');
 const WRANGLER = fs.existsSync(NPX_BIN) ? `"${NPX_BIN}" --yes wrangler@3` : 'npx --yes wrangler@3';
 const KEEP_PREVIEWS = 3;
-const SMOKE_TOTAL = 104;
+const SMOKE_MIN_TOTAL = 104; // the suite may grow; this floor is what must never be dropped
 const DEV_READY_MS = 150_000;
 
 // ---------------------------------------------------------------------------------
@@ -205,10 +205,10 @@ function runSmoke(base, { label, cwd = REPO } = {}) {
   const m = r.out.match(/(\d+)\/(\d+) passed/);
   const passed = m ? Number(m[1]) : -1;
   const total = m ? Number(m[2]) : -1;
-  const ok = r.code === 0 && passed === SMOKE_TOTAL && total === SMOKE_TOTAL;
+  const ok = r.code === 0 && total >= SMOKE_MIN_TOTAL && passed === total;
   if (!ok) {
     const tail = r.out.split('\n').filter((l) => l.startsWith('FAIL')).slice(0, 12).join('\n');
-    throw new Error(`${label}: expected ${SMOKE_TOTAL}/${SMOKE_TOTAL}, got ${passed}/${total}\n${tail || r.out.slice(-400)}`);
+    throw new Error(`${label}: expected all of ${SMOKE_MIN_TOTAL}+ checks to pass, got ${passed}/${total}\n${tail || r.out.slice(-400)}`);
   }
   return `${passed}/${total} passed`;
 }

@@ -889,6 +889,16 @@ body.light-mode #editBody a {
   color: #2563eb;
 }
 
+/* UI-17: alignment rides on a class, not on an inline `style` attribute.
+   `style-src 'self'` blocks style attributes, so the `style="text-align:…"` that
+   execCommand('justify*') writes landed in the DOM but was never applied — the text did not
+   move, print lost it, and every click logged a CSP violation. Left is the default, so
+   choosing it clears the class rather than adding one. */
+#editBody .q-align-left    { text-align: left; }
+#editBody .q-align-center  { text-align: center; }
+#editBody .q-align-right   { text-align: right; }
+#editBody .q-align-justify { text-align: justify; }
+
 #editBody pre {
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.1);
