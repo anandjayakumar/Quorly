@@ -57,18 +57,34 @@ prompt, and no model IDs anywhere in the shipped code.
 
 ### Cloudflare Pages (current production)
 
+The app is a git repo, and deploys go through `tools/release/release.mjs`. Commits on `dev` run the
+smoke gate and, if it passes, deploy a preview automatically — detached, so committing is never
+blocked. Production is **only** ever promoted by hand. Design and rationale:
+`docs/QUORLY_RELEASE_PIPELINE.md` in the project docs.
+
 ```sh
-npx wrangler@3 pages deploy . --project-name=quorly --branch=main
+node tools/release/release.mjs run                     # snapshot HEAD -> gate -> preview -> verify alias -> prune
+node tools/release/release.mjs run --dry-run           # gate only, deploy nothing
+node tools/release/release.mjs status                  # the last run's result (.release/status.json)
+node tools/release/release.mjs promote --commit <sha>  # production; manual, and only for a commit that passed
 ```
+
+The stage is built with `git archive <sha>`: `.gitattributes` marks `README.md`, `smoke.mjs`,
+`.assetsignore`, `.gitignore`, `.gitattributes`, `.githooks/` and `tools/` as `export-ignore`, so
+exactly the deployable tree is uploaded and nothing private can leak. (This replaces the old
+`robocopy /XF` recipe, which had to be remembered on every deploy and could capture a half-written
+file.)
+
+Enabling it in a fresh clone:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+Prefer a scoped `CLOUDFLARE_API_TOKEN` for unattended runs; the cached wrangler OAuth token expires
+in about an hour, and the runner reports which one it used in `authWarning`.
 
 Production URL: <https://quorly.pages.dev> (reserved by the `quorly` Pages project).
-
-When deploying by hand, upload a **clean copy** so the non-public files stay private:
-
-```powershell
-robocopy . .\_stage /E /XF README.md .assetsignore smoke.mjs
-npx wrangler@3 pages deploy .\_stage --project-name=quorly --branch=main
-```
 
 ### Verify after every deploy
 
