@@ -1,0 +1,20 @@
+#!/bin/sh
+# Quorly post-commit hook.
+#
+# A commit on `dev` runs the smoke gate and, if it passes, deploys a preview. This returns
+# immediately: release.mjs re-launches itself detached, so committing is never blocked waiting
+# on a build. `main` is the promoted branch and must not trigger anything, or promotion would
+# loop back into a run.
+#
+# Never fail the commit — a broken pipeline must not stop you from committing.
+# Result of the run: .release/status.json  (and a per-run log in .release/runs/).
+
+branch=$(git rev-parse --abbrev-ref HEAD)
+[ "$branch" = "dev" ] || exit 0
+
+# Git for Windows runs this under its bundled sh, which does not always see nvm4w's node.
+command -v node >/dev/null 2>&1 || PATH="$PATH:/c/nvm4w/nodejs"
+
+repo=$(git rev-parse --show-toplevel)
+node "$repo/tools/release/release.mjs" launch >/dev/null 2>&1
+exit 0
