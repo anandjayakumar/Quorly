@@ -1841,11 +1841,18 @@ const debouncedLocalSave = debounce(saveToLocalStorage, 400);
 init();
 attachTitleButton(); // Add + button to title area
 
-// Shared close/reset for a dropdown root. A menu opened inside the mobile formatting bar is
-// positioned in fixed (viewport) coordinates, so its inline geometry has to be undone on close.
+// A menu normally lives inside its root — except while it is open in the mobile formatting bar,
+// when open() moves it to <body>. Find it in either place.
+function dropdownMenuOf(d) {
+    return d.querySelector('.dropdown-menu') ||
+        (d.id ? document.querySelector(`.dropdown-menu[data-owner="${d.id}"]`) : null);
+}
+
+// Shared close/reset for a dropdown root. Undoes the open() positioning and returns a menu that was
+// moved to <body> to its root, so the DOM is only perturbed while a menu is actually open.
 function closeDropdownRoot(d) {
     d.classList.remove('open');
-    const menu = d.querySelector('.dropdown-menu');
+    const menu = dropdownMenuOf(d);
     const toggle = d.querySelector('.dropdown-toggle');
     if (menu) {
         menu.hidden = true;
@@ -1853,6 +1860,7 @@ function closeDropdownRoot(d) {
         menu.style.removeProperty('left');
         menu.style.removeProperty('top');
         menu.style.removeProperty('width');
+        if (menu.parentElement !== d) d.appendChild(menu);
     }
     if (toggle) toggle.setAttribute('aria-expanded', 'false');
 }
@@ -1863,23 +1871,6 @@ function closeOpenDropdowns() {
     document.querySelectorAll('.dropdown.open').forEach(closeDropdownRoot);
 }
 
-// A fixed-position menu resolves its `top`/`left` against the nearest ancestor that creates a
-// containing block for it — and the mobile bar does, because of its backdrop-filter. Measure that
-// origin with a throwaway probe so the menu can be placed from the toggle's viewport rect without
-// hard-coding the bar's geometry (and so it stays correct if the blur is ever removed).
-function fixedOrigin(host) {
-    const probe = document.createElement('div');
-    probe.style.setProperty('position', 'fixed');
-    probe.style.setProperty('top', '0');
-    probe.style.setProperty('left', '0');
-    probe.style.setProperty('width', '0');
-    probe.style.setProperty('height', '0');
-    host.appendChild(probe);
-    const rect = probe.getBoundingClientRect();
-    probe.remove();
-    return { x: rect.left, y: rect.top };
-}
-
 // Custom dropdown (replaces <select> so the open list can use our palette).
 // reset=true: the control is an action menu, so the label reverts to its placeholder.
 function initDropdown(root, onSelect, reset) {
@@ -1887,6 +1878,7 @@ function initDropdown(root, onSelect, reset) {
     const menu = root.querySelector('.dropdown-menu');
     const valueEl = root.querySelector('.dropdown-value');
     if (!toggle || !menu || !valueEl) return;
+    if (root.id) menu.setAttribute('data-owner', root.id);
     const options = () => Array.from(menu.querySelectorAll('[role="option"]'));
     const placeholder = root.getAttribute('data-placeholder') || '';
 
@@ -1900,21 +1892,26 @@ function initDropdown(root, onSelect, reset) {
     }
     function open() {
         closeOthers();
-        root.classList.add('open');
-        menu.hidden = false;
-        toggle.setAttribute('aria-expanded', 'true');
-        // Inside the mobile formatting bar an absolutely positioned menu would be clipped by the
-        // bar's `overflow-x: auto`, so anchor it to the toggle's viewport rect instead.
+        // Inside the mobile formatting bar the menu cannot simply sit next to its toggle: the bar
+        // sets `backdrop-filter`, which makes it the containing block for fixed-position
+        // descendants, and its `overflow-x: auto` then clips the menu to the 48px bar — it opened
+        // but was invisible and untappable. Moving it to <body>, outside every filtered/scrolled
+        // ancestor, lets `position: fixed` resolve against the viewport, so the bar serves neither
+        // as a clipping box nor as an offset origin, and its horizontal scroll cannot drag the menu
+        // out from under the toggle.
         const host = root.closest('.mobile-fmtbar');
-        if (host) {
-            const o = fixedOrigin(host);
+        if (host && root.id) {
             const r = toggle.getBoundingClientRect();
             const w = Math.min(220, window.innerWidth - 24);
             menu.classList.add('dropdown-menu-fixed');
             menu.style.setProperty('width', `${w}px`);
-            menu.style.setProperty('left', `${Math.max(12, Math.min(r.left - o.x, window.innerWidth - w - 12))}px`);
-            menu.style.setProperty('top', `${r.bottom - o.y + 6}px`);
+            menu.style.setProperty('left', `${Math.max(12, Math.min(r.left, window.innerWidth - w - 12))}px`);
+            menu.style.setProperty('top', `${r.bottom + 6}px`);
+            document.body.appendChild(menu);
         }
+        root.classList.add('open');
+        menu.hidden = false;
+        toggle.setAttribute('aria-expanded', 'true');
     }
     function choose(li) {
         options().forEach((o) => o.setAttribute('aria-selected', String(o === li)));
