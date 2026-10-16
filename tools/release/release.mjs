@@ -12,8 +12,9 @@
  * `launch`   what the post-commit hook calls: spawns `run` detached and returns immediately.
  * `promote`  deploy a commit that already passed the gate to production. Manual only.
  *
- * The gate is the same suite in both places: smoke.mjs must report 104/104. A failure before
- * the deploy stage deploys nothing. Everything is recorded in .release/ (git-ignored).
+ * The gate is the same suite in both places: smoke.mjs must report every check (the floor is
+ * SMOKE_MIN_TOTAL). A failure before the deploy stage deploys nothing. Everything is recorded
+ * in .release/ (git-ignored).
  */
 import { execSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -45,7 +46,7 @@ const NODE = `"${process.execPath}"`;
 const NPX_BIN = path.join(path.dirname(process.execPath), process.platform === 'win32' ? 'npx.cmd' : 'npx');
 const WRANGLER = fs.existsSync(NPX_BIN) ? `"${NPX_BIN}" --yes wrangler@3` : 'npx --yes wrangler@3';
 const KEEP_PREVIEWS = 3;
-const SMOKE_MIN_TOTAL = 104; // the suite may grow; this floor is what must never be dropped
+const SMOKE_MIN_TOTAL = 117; // the suite may grow; this floor is what must never be dropped
 const DEV_READY_MS = 150_000;
 
 // ---------------------------------------------------------------------------------
@@ -194,6 +195,16 @@ function snapshot(sha, runDir, stage) {
   sh(`git archive --format=tar -o "${tar}" ${sha}`, { cwd: REPO });
   sh('tar -xf snapshot.tar -C stage', { cwd: runDir });
   fs.rmSync(tar, { force: true });
+
+  // Pages Functions are resolved from the command's working directory, not from the static
+  // stage, so a `functions/` directory has to sit beside `stage` — never inside it, where it
+  // would be uploaded and served as a static asset. Both `pages dev` and `pages deploy` run
+  // with cwd = runDir, which is where wrangler looks. (M-1)
+  const fnSrc = path.join(stage, 'functions');
+  if (fs.existsSync(fnSrc)) {
+    fs.renameSync(fnSrc, path.join(runDir, 'functions'));
+  }
+
   return countFiles(stage);
 }
 

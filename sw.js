@@ -45,6 +45,7 @@ const PRECACHE_FRESH = [
   '/app/',
   '/styles.css',
   '/landing.css',
+  '/landing.js',
   '/app.js',
   '/vendor/marked.min.js',
   '/vendor/dompurify.min.js',
@@ -107,6 +108,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return; // the analytics beacon and anything else
   if (req.headers.has('range')) return;            // let range requests reach the network
   if (url.pathname === SW_PATH) return;            // the worker script is the browser's own job
+  if (url.pathname === '/e') return;               // funnel counter: always live, never cached
 
   if (req.mode === 'navigate') {
     event.respondWith(networkFirst(req));

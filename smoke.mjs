@@ -51,6 +51,7 @@ const assets = [
   ['/styles.css', 'text/css'],
   ['/landing.css', 'text/css'],
   ['/app.js', 'text/javascript'],
+  ['/landing.js', 'text/javascript'],
   ['/sw.js', 'text/javascript'],
   ['/vendor/marked.min.js', 'text/javascript'],
   ['/vendor/dompurify.min.js', 'text/javascript'],
@@ -101,6 +102,16 @@ try {
     // UI-17: alignment is a class. execCommand's inline style is blocked by `style-src 'self'`.
     'function applyAlignment',
     'q-align-center',
+    // UI-19: the welcome sample ends with a plain "Start writing.." line.
+    'Start writing..',
+    // S-2b: images are downscaled and re-encoded on the way in, and oversized ones refused.
+    'const MAX_IMAGE_EDGE',
+    'const MAX_IMAGE_BYTES',
+    'function downscaleImage',
+    // M-1: anonymous funnel counters (sendBeacon to /e).
+    'const FUNNEL_EVENTS',
+    'function track',
+    'navigator.sendBeacon',
   ];
   for (const marker of markers) {
     record(`/app.js has ${marker}`, body.includes(marker), 'missing');
@@ -196,6 +207,38 @@ try {
     `referrer-policy=${headers.get('referrer-policy')}`);
 } catch (e) {
   record('security headers', false, String(e.message || e));
+}
+
+// --- funnel endpoint (M-1): same-origin, anonymous, fail-open ------------------------
+
+// POST a valid event -> 204. Unbound locally (the Analytics Engine binding cannot be used with
+// `wrangler pages dev`), which is exactly the no-write case the handler must tolerate.
+try {
+  const res = await fetch(BASE + '/e', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    body: JSON.stringify({ e: 'first_keystroke' }),
+  });
+  record('POST /e accepts an event', res.status === 204, `status=${res.status}`);
+  record('/e is not cached', /no-store/i.test(res.headers.get('cache-control') || ''),
+    `cache-control=${res.headers.get('cache-control') || '(none)'}`);
+} catch (e) {
+  record('POST /e', false, String(e.message || e));
+}
+
+try {
+  const { status } = await get('/e');
+  record('GET /e is refused', status === 405, `status=${status} (expected 405)`);
+} catch (e) {
+  record('GET /e', false, String(e.message || e));
+}
+
+// The Function source is not an asset; it must never be downloadable.
+try {
+  const { status } = await get('/functions/e.js');
+  record('/functions/e.js is not public', status === 404, `status=${status} (expected 404)`);
+} catch (e) {
+  record('/functions/e.js is not public', false, String(e.message || e));
 }
 
 // --- metafiles and unknown paths must NOT be public -------------------------------

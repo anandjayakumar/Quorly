@@ -2,15 +2,16 @@
 #
 # Third-party requests: exactly one, and only for anonymous visit counts.
 # Cloudflare Web Analytics loads beacon.min.js from static.cloudflareinsights.com and
-# beacons to cloudflareinsights.com. Nothing else leaves the origin, and no document
-# content is ever transmitted (the app itself makes no requests at all).
+# beacons to cloudflareinsights.com. The only first-party request is a cookieless POST /e
+# that counts a named event — never document content, never an identifier. Nothing else
+# leaves the origin.
 #
 # script-src stays free of 'unsafe-inline': no inline <script>, no inline styles and no
 # inline event handlers anywhere in the markup.
 #
-# connect-src keeps 'self'. The app makes no requests of its own, but without 'self' the
-# browser refuses even to read our own /robots.txt and /sitemap.xml, which breaks
-# same-origin tooling (Lighthouse reports "robots.txt is not valid").
+# connect-src keeps 'self'. The funnel counter posts to our own /e with sendBeacon, and
+# without 'self' the browser refuses even to read our own /robots.txt and /sitemap.xml,
+# which breaks same-origin tooling (Lighthouse reports "robots.txt is not valid").
 #
 # manifest-src and worker-src have to be named explicitly. Both fall back to default-src,
 # which is 'none', so the web app manifest would be blocked and the service worker could not
@@ -55,6 +56,8 @@
 /landing.css
   Content-Type: text/css; charset=utf-8
 /app.js
+  Content-Type: text/javascript; charset=utf-8
+/landing.js
   Content-Type: text/javascript; charset=utf-8
 
 # The service worker must never be answered from a stale cache — that is the one failure

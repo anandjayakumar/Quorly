@@ -24,7 +24,7 @@ const sessionHandles = new Map();
 
 // Default document shown on first load and when starting a new file.
 const DEFAULT_TITLE = "Welcome to Quorly";
-const DEFAULT_BODY = "<h2>Overview</h2><p>Quorly is a quiet, local-first writing space. Select any text to format it, or use the panel on the right.</p><blockquote>Everything stays on your device.</blockquote>";
+const DEFAULT_BODY = "<h2>Overview</h2><p>Quorly is a quiet, local-first writing space. Select any text to format it, or use the panel on the right.</p><blockquote>Everything stays on your device.</blockquote><p>Start writing..</p>";
 
 // --- SAFETY & UTILITIES ---
 
@@ -85,6 +85,7 @@ function safeSetItem(key, value) {
         return true;
     } catch (err) {
         if (err && (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014)) {
+            track('storage_quota_exceeded');
             toast('Storage full — this document (or its images) is too large to save locally. Try removing images or exporting to disk.');
         } else {
             console.warn('localStorage write failed', err);
@@ -100,6 +101,104 @@ function debounce(fn, wait) {
         clearTimeout(t);
         t = setTimeout(() => fn.apply(this, args), wait);
     };
+}
+
+// --- FUNNEL COUNTERS (M-1) ---
+// Anonymous, cookieless, fail-open. A counter sends only an event name and, at most, one short
+// coarse property — never document content, never an identifier, never a cookie. It is a
+// same-origin beacon (`connect-src 'self'`), the endpoint answers 204 and never blocks, and a
+// dropped beacon (offline, blocked, unbound) is simply lost. Nothing here may affect the editor.
+const FUNNEL_EVENTS = new Set(['landing_cta', 'first_keystroke', 'export', 'storage_quota_exceeded', 'returning_writer']);
+let firstKeystrokeTracked = false; // one `first_keystroke` per document that gets worked on
+
+function track(event, props) {
+    try {
+        if (!navigator.sendBeacon || !FUNNEL_EVENTS.has(event)) return;
+        const payload = { e: event };
+        if (props && typeof props.format === 'string') payload.format = props.format.slice(0, 32);
+        navigator.sendBeacon('/e', JSON.stringify(payload));
+    } catch (err) {
+        // Analytics must never be able to break the editor or delay a navigation.
+    }
+}
+
+// --- IMAGE INTAKE (S-2b) ---
+// localStorage is this app's only storage, so every image is decoded, downscaled and re-encoded
+// on the way in: one unprocessed phone photo can fill the whole origin quota. Longest edge is
+// capped per use; opaque images become WebP (JPEG where WebP is unsupported), images with
+// transparency stay PNG. Anything past MAX_IMAGE_BYTES is refused before it is decoded.
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // refuse before decoding anything larger
+const MAX_IMAGE_EDGE = 1600;              // body / inline images
+const MAX_TITLE_EDGE = 1000;              // header (title) image
+const IMAGE_QUALITY = 0.85;
+
+function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || new Error('read failed'));
+        reader.readAsDataURL(file);
+    });
+}
+
+function loadImageElement(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('decode failed'));
+        img.src = src;
+    });
+}
+
+// True if any pixel is not fully opaque. Sampled across the whole image: guessing from the MIME
+// type would keep a large PNG that should have become WebP.
+function hasTransparency(ctx, w, h) {
+    const data = ctx.getImageData(0, 0, w, h).data;
+    for (let i = 3; i < data.length; i += 4) {
+        if (data[i] < 255) return true;
+    }
+    return false;
+}
+
+// Decode, downscale so the longest edge is `maxEdge`, then re-encode. Returns a data URL, or
+// null when the file was refused or is not an image (the user is told why in that case).
+async function downscaleImage(file, maxEdge) {
+    if (!file || file.type.indexOf('image/') !== 0) return null;
+    if (file.size > MAX_IMAGE_BYTES) {
+        toast('That image is larger than 10 MB. Please resize it before inserting.');
+        return null;
+    }
+
+    let img;
+    try {
+        img = await loadImageElement(await readFileAsDataURL(file));
+    } catch (err) {
+        console.warn('Image could not be decoded', err);
+        toast('That image could not be read. Try a different file.');
+        return null;
+    }
+
+    const sw = img.naturalWidth || img.width;
+    const sh = img.naturalHeight || img.height;
+    if (!sw || !sh) {
+        toast('That image has no readable dimensions. Try a different file.');
+        return null;
+    }
+
+    const scale = Math.min(1, maxEdge / Math.max(sw, sh));
+    const w = Math.max(1, Math.round(sw * scale));
+    const h = Math.max(1, Math.round(sh * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+
+    if (hasTransparency(ctx, w, h)) return canvas.toDataURL('image/png');
+    const webp = canvas.toDataURL('image/webp', IMAGE_QUALITY);
+    // toDataURL silently falls back to PNG when the requested type is unsupported.
+    return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', IMAGE_QUALITY);
 }
 
 const editTitle = document.getElementById('editTitle');
@@ -179,6 +278,9 @@ function init() {
     }
     touchCurrentDocument(); // make sure this document has an index entry
     renderRecents();
+    // M-1: a returning writer is simply someone whose live keys already existed on load. Coarse
+    // by design — there is no identifier to be more precise with, and none is wanted.
+    if (hasLiveDoc) track('returning_writer');
     setTimeout(attachTitleButton, 100);
     setTimeout(attachBodyImageDeleteButtons, 100);
     setTimeout(applyCodeHighlighting, 100);
@@ -240,6 +342,7 @@ function loadMarkdown(markdownText) {
     isLoading = true;
     editBody.innerHTML = temp.innerHTML;
     migrateAlignment();
+    firstKeystrokeTracked = false; // an imported document starts its own count
     updateStats();
     saveToLocalStorage(); // Save the imported content
     isLoading = false;
@@ -548,6 +651,7 @@ function restoreLiveDocument() {
     editBody.innerHTML = sanitizeHTML(localStorage.getItem("doc_body_v13") || DEFAULT_BODY);
     migrateAlignment();
     loadStoredTitleImage();
+    firstKeystrokeTracked = false;
 }
 
 function loadStoredTitleImage() {
@@ -584,6 +688,7 @@ function startCleanDocument(blank) {
     safeSetItem("doc_title_v13", editTitle.textContent);
     safeSetItem("doc_body_v13", editBody.innerHTML);
     localStorage.removeItem("doc_title_image_v13");
+    firstKeystrokeTracked = false;
 }
 
 function openRecent(id) {
@@ -627,6 +732,7 @@ function openRecent(id) {
         deleteTitleImage();
     }
     isLoading = false;
+    firstKeystrokeTracked = false; // a freshly opened document starts its own count
 
     // Point the stored id at the document only now that its content is in the live keys, so an
     // interrupted switch cannot leave the id pointing at a different document's content.
@@ -1036,34 +1142,35 @@ function insertTable() {
     saveToLocalStorage();
 }
 
-function handleImage(file, target) {
+async function handleImage(file, target) {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const container = document.createElement('div');
-        container.className = 'img-container';
-        container.contentEditable = "false";
-        const img = document.createElement('img');
-        img.src = e.target.result;
-        img.style.width = "450px";
-        container.appendChild(img);
-        
-        // Add delete button
-        const deleteBtn = document.createElement('div');
-        deleteBtn.className = 'img-delete';
-        deleteBtn.textContent = '×';
-        deleteBtn.contentEditable = "false";
-        deleteBtn.onclick = (ev) => {
-            ev.stopPropagation();
-            container.remove();
-            saveToLocalStorage();
-        };
-        container.appendChild(deleteBtn);
-        
-        target.replaceWith(container);
+    // S-2b: downscale and re-encode before it ever reaches the document or localStorage.
+    const src = await downscaleImage(file, MAX_IMAGE_EDGE);
+    if (!src) return;
+    if (!target.isConnected) return; // the dropzone was removed while the image was decoding
+
+    const container = document.createElement('div');
+    container.className = 'img-container';
+    container.contentEditable = "false";
+    const img = document.createElement('img');
+    img.src = src;
+    img.style.width = "450px";
+    container.appendChild(img);
+
+    // Add delete button
+    const deleteBtn = document.createElement('div');
+    deleteBtn.className = 'img-delete';
+    deleteBtn.textContent = '×';
+    deleteBtn.contentEditable = "false";
+    deleteBtn.onclick = (ev) => {
+        ev.stopPropagation();
+        container.remove();
         saveToLocalStorage();
     };
-    reader.readAsDataURL(file);
+    container.appendChild(deleteBtn);
+
+    target.replaceWith(container);
+    saveToLocalStorage();
 }
 
 // Attach delete buttons to existing body images
@@ -1730,14 +1837,12 @@ function attachTitleButton() {
         btn.onclick = (e) => {
             e.stopPropagation();
             const input = document.getElementById('fileInput');
-            input.onchange = (ev) => {
+            input.onchange = async (ev) => {
                 const file = ev.target.files[0];
                 if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (loadEvent) => {
-                    setTitleImage(loadEvent.target.result);
-                };
-                reader.readAsDataURL(file);
+                // S-2b: the header image is capped tighter than body images.
+                const src = await downscaleImage(file, MAX_TITLE_EDGE);
+                if (src) setTitleImage(src);
             };
             input.click();
         };
@@ -1836,6 +1941,13 @@ document.addEventListener('keydown', (e) => {
 
 const debouncedLocalSave = debounce(saveToLocalStorage, 400);
 [editTitle, editBody].forEach(el => el.addEventListener('input', debouncedLocalSave));
+
+// M-1: the first keystroke of each document that actually gets worked on.
+[editTitle, editBody].forEach(el => el.addEventListener('input', () => {
+    if (firstKeystrokeTracked) return;
+    firstKeystrokeTracked = true;
+    track('first_keystroke');
+}));
 
 
 init();
@@ -1967,10 +2079,11 @@ function wireUI() {
                 case 'new-file': newFile(); break;
                 case 'open-file': openFile(); break;
                 case 'sync': syncNow(); break;
-                case 'export-md': exportMarkdown(); break;
-                case 'export-pdf': window.print(); break;
-                case 'export-txt': exportText(); break;
-                case 'copy-md': copyMarkdown(); break;
+                // M-1: which export paths people actually use (a click counts, not a completed write).
+                case 'export-md': track('export', { format: 'md' }); exportMarkdown(); break;
+                case 'export-pdf': track('export', { format: 'pdf' }); window.print(); break;
+                case 'export-txt': track('export', { format: 'txt' }); exportText(); break;
+                case 'copy-md': track('export', { format: 'copy' }); copyMarkdown(); break;
                 case 'history': showHistory(); break;
                 case 'toggle-focus': toggleFocus(); break;
                 case 'toggle-sidebar': toggleSidebar(); break;
