@@ -1168,13 +1168,18 @@ body.light-mode .brand-name {
   margin-bottom: 0;
 }
 
-/* Recents is the panel's give: on a short window it is the only section that shrinks
-   (its list scrolls internally), so the panel itself doesn't grow a scrollbar. */
+/* Recents is the panel's give — but only down to its own content, never past it.
+   `min-height: 0` used to let flex shrink this section below the height of the things inside it
+   that cannot shrink (the search row and the library footer), and the children then spilled out of
+   the section's box and were drawn over the Focus Mode row. The list is still the part that gives
+   way — it has `min-height: 0` and `overflow-y: auto` of its own, so it scrolls internally once it
+   hits its max-height — but the section as a whole is now content-sized, so when the panel really
+   is too short for everything, the panel scrolls and every control stays reachable. A scrollbar on
+   the drawer beats a Recents list that has collapsed to nothing with the footer painted over it. */
 .sidebar-recents {
   display: flex;
   flex-direction: column;
-  flex: 0 1 auto;
-  min-height: 0;
+  flex: 0 0 auto;
 }
 
 /* Recents (document library) */
@@ -1292,6 +1297,14 @@ body.light-mode .storage-track { background: rgba(0,0,0,0.1); }
 body.light-mode .storage-track > i { background: rgba(0,0,0,0.45); }
 body.light-mode .storage-meter.is-tight .storage-track > i { background: rgba(0,0,0,0.85); }
 body.light-mode .storage-note { color: rgba(0,0,0,0.5); }
+
+/* Short windows. The storage meter adds ~77 px of non-shrinking footer, which is the difference
+   between fitting and not fitting on a phone. The meter keeps its numbers — they are the whole
+   information — and gives up its bars, which are decoration next to them. */
+@media (max-height: 700px) {
+  .storage-track { display: none; }
+  .storage-meter { gap: 2px; margin-bottom: 8px; }
+}
 .mini-btn {
   flex: 1 1 0;
   min-width: 0;

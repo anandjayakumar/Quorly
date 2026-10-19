@@ -915,9 +915,20 @@ async function restoreBackup(file) {
 // what is left after subtracting localStorage is relabelled "Library & app" rather than quietly
 // presented as the library.
 //
+// The two rows are measured in different units, and each is compared against a budget in its own
+// unit, which is all the ratios need:
+//   - localStorage in UTF-16 code units, against the quota browsers really enforce — see below.
+//   - the library in bytes, against the byte quota `estimate()` reports.
+//
 // The point of showing this at all is that eviction is survivable (DD-01 §5.4): the number exists
 // so the user can see the headroom, not so they can manage it byte by byte.
-const LOCAL_BUDGET_BYTES = 5 * 1024 * 1024; // the cap Chrome, Firefox and Safari all enforce
+//
+// The quota is 5 x 1024 x 1024 UTF-16 code units, not bytes. Measured directly against Chromium by
+// filling localStorage until it threw: the exact refusal point is 5,242,880 code units summed over
+// every key and value, which is where the "5 MB" every browser documents comes from. Counting bytes
+// (doubling) instead would put the warning at 80% of *half* the real budget and tell a user with
+// room to spare that they were nearly full.
+const LOCAL_BUDGET_UNITS = 5 * 1024 * 1024;
 const STORAGE_TIGHT = 0.8; // past this, say so and point at the backup button
 const META_KEY = 'quorly_meta_v1';
 
@@ -931,23 +942,26 @@ function writeMeta(patch) {
     return meta;
 }
 
-// UTF-16 code units, which is how browsers count localStorage, so the ratio matches the real cap.
-function localStorageBytes() {
+// UTF-16 code units, keys included, which is exactly what the browser counts against the quota.
+function localStorageUsed() {
     let total = 0;
     try {
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             if (key === null) continue;
-            total += (key.length + (localStorage.getItem(key) || '').length) * 2;
+            total += key.length + (localStorage.getItem(key) || '').length;
         }
     } catch (err) { /* report nothing rather than break the panel */ }
     return total;
 }
 
-function formatBytes(bytes) {
-    if (!bytes) return '0 KB';
-    if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + ' KB';
-    const mb = bytes / (1024 * 1024);
+// One display formatter for both rows. The unit it is handed is code units for localStorage and
+// bytes for the library; to a reader both are "MB", and each row is only ever compared against a
+// budget in its own unit.
+function formatSize(units) {
+    if (!units) return '0 KB';
+    if (units < 1024 * 1024) return Math.max(1, Math.round(units / 1024)) + ' KB';
+    const mb = units / (1024 * 1024);
     if (mb >= 1024) return (mb / 1024).toFixed(1).replace(/\.0$/, '') + ' GB';
     return (mb >= 100 ? String(Math.round(mb)) : mb.toFixed(1).replace(/\.0$/, '')) + ' MB';
 }
@@ -959,7 +973,7 @@ function setStorageRow(prefix, used, budget) {
     const num = document.getElementById(prefix + 'Num');
     const ratio = budget > 0 ? Math.min(1, used / budget) : 0;
     if (bar) bar.style.width = (ratio * 100).toFixed(1) + '%';
-    if (num) num.textContent = formatBytes(used) + ' / ' + formatBytes(budget);
+    if (num) num.textContent = formatSize(used) + ' / ' + formatSize(budget);
     return ratio;
 }
 
@@ -983,8 +997,8 @@ async function updateStorageMeter() {
     if (!meter) return;
     meter.hidden = false;
 
-    const localBytes = localStorageBytes();
-    let pressure = setStorageRow('storageLocal', localBytes, LOCAL_BUDGET_BYTES);
+    const localUnits = localStorageUsed();
+    let pressure = setStorageRow('storageLocal', localUnits, LOCAL_BUDGET_UNITS);
 
     const estimate = await QuorlyStore.estimate();
     const devTrack = document.getElementById('storageDevTrack');
@@ -1000,8 +1014,9 @@ async function updateStorageMeter() {
         } else if (estimate.usage) {
             // Firefox and Safari report one number for the whole origin, which also covers the
             // offline shell cache. Subtracting localStorage is the closest available answer, and
-            // the label says so rather than pretending to be exact.
-            libraryBytes = Math.max(0, estimate.usage - localBytes);
+            // the label says so rather than pretending to be exact. `estimate()` counts bytes, so
+            // the code units have to be doubled to be subtracted from the same thing.
+            libraryBytes = Math.max(0, estimate.usage - localUnits * 2);
             if (devName) devName.textContent = 'Library & app';
         }
     }

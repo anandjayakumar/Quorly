@@ -130,8 +130,11 @@ try {
     'QuorlyStore.listVersions',
     'QuorlyStore.appendVersion',
     // DD-03 (IDB-4): two budgets and a persistence request.
-    'const LOCAL_BUDGET_BYTES',
-    'function localStorageBytes',
+    'const LOCAL_BUDGET_UNITS',
+    'function localStorageUsed',
+    // The quota is in UTF-16 code units, so the sum must not be doubled: counting bytes would put
+    // the warning at 80% of half the real budget. This marker is the expression itself.
+    "key.length + (localStorage.getItem(key) || '').length",
     'function updateStorageMeter',
     'QuorlyStore.persisted',
     'function maybeRequestPersistence',
