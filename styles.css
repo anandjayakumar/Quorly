@@ -681,6 +681,29 @@ body.q-app .app {
   padding: 16px;
 }
 
+.focus-back-btn {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.9);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.focus-back-btn:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.25); }
+
+@media (max-width: 1180px) {
+  body.focus-mode .focus-back-btn { display: flex; }
+}
+
 /* Mobile: the offset measures from the .app scrollport, which already sits inside the body
    padding — 32px would double-count and drift the panel down. Desktop re-adds the 32px
    offset in the min-width block below, where the body has no vertical padding. */
@@ -1971,10 +1994,29 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
 .mobile-fmtbar .section-title { display: none; }
 .mobile-fmtbar .dropdown { width: auto; flex: 0 0 auto; margin-bottom: 0; }
 .mobile-fmtbar .dropdown-toggle { width: auto; min-width: 100px; padding: 8px 10px; }
-.mobile-fmtbar .dropdown-row { display: flex; gap: 8px; margin-bottom: 0; flex: 0 0 auto; }
-.mobile-fmtbar .dropdown-row .dropdown { width: auto; }
-.mobile-fmtbar .fmt-grid { display: flex; gap: 8px; margin-top: 0; flex: 0 0 auto; }
+.mobile-fmtbar .dropdown-row { display: contents; margin-bottom: 0; }
+.mobile-fmtbar .dropdown-row .dropdown { width: auto; flex: 0 0 auto; margin-bottom: 0; }
+.mobile-fmtbar .fmt-grid { display: contents; gap: 0; margin-top: 0; flex: 0 0 auto; }
 .mobile-fmtbar .fmt-btn { width: 38px; flex: 0 0 auto; }
+
+/* Mobile formatting bar order: Theme, B, I, U, Paragraph, rest */
+.mobile-fmtbar .dropdown { order: 10; }
+.mobile-fmtbar .fmt-btn { order: 20; }
+.mobile-fmtbar #typographyDropdown { order: 1; }
+.mobile-fmtbar .fmt-btn[data-format="bold"] { order: 2; }
+.mobile-fmtbar .fmt-btn[data-format="italic"] { order: 3; }
+.mobile-fmtbar .fmt-btn[data-format="underline"] { order: 4; }
+.mobile-fmtbar #headingDropdown { order: 5; }
+.mobile-fmtbar #insertDropdown { order: 6; }
+.mobile-fmtbar .fmt-btn[data-format="code"] { order: 7; }
+.mobile-fmtbar .fmt-btn[data-format="link"] { order: 8; }
+.mobile-fmtbar .fmt-btn[data-format="blockquote"] { order: 9; }
+.mobile-fmtbar .fmt-btn[data-format="insertUnorderedList"] { order: 10; }
+.mobile-fmtbar .fmt-btn[data-format="insertOrderedList"] { order: 11; }
+.mobile-fmtbar .fmt-btn[data-format="justifyLeft"] { order: 12; }
+.mobile-fmtbar .fmt-btn[data-format="justifyCenter"] { order: 13; }
+.mobile-fmtbar .fmt-btn[data-format="justifyRight"] { order: 14; }
+.mobile-fmtbar .fmt-btn[data-format="justifyFull"] { order: 15; }
 
 /* --- Responsive layout (the original had none outside of print) --- */
 @media (max-width: 1180px) {
@@ -2104,6 +2146,7 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
      so the hamburger (which also leaves focus mode) is always reachable. */
   body.focus-mode { padding-top: calc(var(--mobile-topbar-h) + 16px); }
   body.focus-mode .mobile-fmtbar { display: none; }
+  body.focus-mode .mobile-topbar { display: none; }
   body.focus-mode .app { grid-template-columns: minmax(0, 1fr); max-width: 100%; }
   body.focus-mode .sidebar { display: none; }
 }
@@ -2116,6 +2159,8 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
   #editBody { font-size: 14px; }
   .footer-stats { gap: 12px; padding: 8px 14px; font-size: 11px; bottom: 12px; }
   .sidebar { padding: 14px; }
+  #historyModal h2 { font-size: 18px; }
+  #historyModal .version-empty { font-size: 12px; }
 }
 
 @media print{
@@ -2155,6 +2200,10 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
   color: #fff;
   border-radius: 8px;
   cursor: pointer;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
 }
 body.light-mode .modal-close { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.15); color: #1a1a1a; }
 .version-empty { color: var(--muted); }
