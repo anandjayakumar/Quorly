@@ -83,16 +83,13 @@
 *{box-sizing:border-box}
 html,body{height:100%}
 
-/* --- App shell, /app/ only (the q-app class is set on the app page's html and body) ---
-   The editor is not a document: the page itself must never scroll (that is what produced
-   the double-scrollbar class of bugs). The scroll owners are the panel (.sidebar), the
-   recents list (.recents-list) and the main column (.app).
-   `overflow: clip` rather than `hidden` so the page cannot scroll even programmatically;
-   do not "fix" this back to visible/hidden without reading that comment. */
+/* --- App shell (updated): body scrolls with the document; internal .app scroll removed. --- */
+   The browser scrollbar handles long content (at viewport edge). `.app` grows with content,
+   and `.reader` has equal shadows on all sides (no clipping container). */
 html.q-app,
 body.q-app{
-  height: 100%;
-  overflow: clip;
+  height: auto;
+  overflow: visible;
 }
 
 body{
@@ -682,12 +679,6 @@ body.q-app .app {
   /* Let the body scroll (browser scrollbar at viewport edge) and the reader grow with
      content. No internal scrollbar, so shadows aren't clipped horizontally. */
   padding: 0;
-}
-
-/* Unlock body scroll so the browser's own scrollbar handles long documents. */
-html.q-app, body.q-app {
-  height: auto;
-  overflow: visible;
 }
 
 /* Mobile: the offset measures from the .app scrollport, which already sits inside the body
