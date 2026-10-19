@@ -15,7 +15,6 @@ let isLoading = false; // True while importing a file (prevents auto-rewriting i
 // document gets its own snapshot so it can be reopened from the Recents list later.
 const FILES_INDEX_KEY = 'quorly_files_v1';
 const CURRENT_ID_KEY = 'quorly_current_id_v1';
-const FILE_KEY_PREFIX = 'quorly_file_';
 const MAX_RECENTS = 10;
 // Version history is capped per document. One name for it, because the backup/restore path has
 // to agree with saveSnapshot() about how many versions a document keeps.
@@ -72,13 +71,13 @@ function sanitizeHTML(html) {
 
 // Transient on-screen notice (replaces silent failures)
 let toastTimer = null;
-function toast(message) {
+function toast(message, ms) {
     let el = document.getElementById('appToast');
     if (!el) { el = document.createElement('div'); el.id = 'appToast'; document.body.appendChild(el); }
     el.textContent = message;
     el.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show'), 4000);
+    toastTimer = setTimeout(() => el.classList.remove('show'), ms || 4000);
 }
 
 // localStorage write that can't crash the app when the quota is exceeded
@@ -209,7 +208,16 @@ const editBody = document.getElementById('editBody');
 const cmdPalette = document.getElementById('commandPalette');
 const toolbar = document.getElementById('toolbar');
 
-function init() {
+// DD-03: say so if the library could not be opened. Falling back to localStorage keeps the editor
+// working, but it is a limited mode — reads cannot see anything already in IndexedDB — and quietly
+// pretending otherwise is how someone loses trust in the app.
+async function announceBackend() {
+    const backend = await QuorlyStore.open();
+    if (backend === 'idb') return;
+    toast('This browser could not open the document library. Documents still autosave, but Recents may be incomplete.', 8000);
+}
+
+async function init() {
     // Load mode preference
     if (localStorage.getItem("mode") === 'light') {
         document.body.classList.add('light-mode');
@@ -236,7 +244,7 @@ function init() {
         legacyOwnerId = savedId;
         // Its latest content is in the live keys (the open document's only storage), so park it
         // under its own id before startCleanDocument overwrites those keys.
-        if (writeSnapshot(savedId, snapshotFromLiveKeys())) {
+        if (await writeSnapshot(savedId, snapshotFromLiveKeys())) {
             currentId = newDocId();
             safeSetItem(CURRENT_ID_KEY, currentId);
             startCleanDocument(false);
@@ -261,26 +269,42 @@ function init() {
     updateStats();
     // One-time upgrade: adopt version history written before it became per-document, then drop the
     // legacy global key — once the per-document copy exists it is dead weight (and can be
-    // image-sized). If it cannot be written (quota), the legacy key is left alone, never discarded.
+    // image-sized). The copy is written through the storage layer, so it lands in the library, and
+    // the legacy key is only removed once the new copy is durable: if a write fails, the legacy key
+    // is left alone, never discarded.
     if (legacyOwnerId) {
         const legacy = localStorage.getItem('doc_versions_v13');
         if (legacy) {
-            if (localStorage.getItem(versionsKey(legacyOwnerId)) !== null) {
-                localStorage.removeItem('doc_versions_v13'); // already migrated in an earlier session
-            } else {
-                try {
-                    const list = JSON.parse(legacy);
-                    if (Array.isArray(list) && list.length && writeRaw(versionsKey(legacyOwnerId), JSON.stringify(list))) {
-                        localStorage.removeItem('doc_versions_v13');
+            try {
+                const list = JSON.parse(legacy);
+                const existing = await QuorlyStore.listVersions(legacyOwnerId);
+                if (existing.length) {
+                    localStorage.removeItem('doc_versions_v13'); // already migrated in an earlier session
+                } else if (Array.isArray(list) && list.length) {
+                    const tail = list.slice(-MAX_VERSIONS);
+                    let ok = tail.length > 0;
+                    for (const version of tail) {
+                        if (!await QuorlyStore.appendVersion(legacyOwnerId, version, MAX_VERSIONS)) { ok = false; break; }
                     }
-                } catch (err) {
-                    console.warn('Could not migrate legacy version history', err);
+                    if (ok) localStorage.removeItem('doc_versions_v13');
                 }
+            } catch (err) {
+                console.warn('Could not migrate legacy version history', err);
             }
         }
     }
     touchCurrentDocument(); // make sure this document has an index entry
     renderRecents();
+
+    // DD-03: open the library and move anything still parked in localStorage into it. Not required
+    // for correctness — a read adopts on its own — but it is what empties localStorage of the
+    // library, and it does that in the background rather than holding up the editor.
+    announceBackend();
+    const indexIds = readIndex().map((entry) => entry.id);
+    QuorlyStore.migrate(indexIds).then((result) => {
+        if (result.adopted) console.info('Quorly: moved ' + result.adopted + ' localStorage records into the library.');
+    }).catch((err) => console.warn('Quorly: could not move the library.', err));
+
     // M-1: a returning writer is simply someone whose live keys already existed on load. Coarse
     // by design — there is no identifier to be more precise with, and none is wanted.
     if (hasLiveDoc) track('returning_writer');
@@ -289,13 +313,13 @@ function init() {
     setTimeout(applyCodeHighlighting, 100);
 }
 
-function newFile() {
+async function newFile() {
     // No confirmation dialog: the current document is parked into Recents automatically, so
     // starting a new one cannot lose it. Flush the editor into the live keys, then park that
     // copy — the live keys are the open document's only storage and startCleanDocument is
     // about to overwrite them.
     saveToLocalStorage();
-    if (!parkCurrentDocument()) return; // never switch away from a document we could not keep
+    if (!await parkCurrentDocument()) return; // never switch away from a document we could not keep
 
     currentId = newDocId();
     safeSetItem(CURRENT_ID_KEY, currentId);
@@ -360,8 +384,8 @@ function newDocId() {
     return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
 }
 
-function fileKey(id) { return FILE_KEY_PREFIX + id; }
-
+// The keys for parked snapshots and version history belong to the storage layer (stories.js),
+// which owns them for both backends. Nothing else in this file should name them.
 function readIndex() {
     try {
         const list = JSON.parse(localStorage.getItem(FILES_INDEX_KEY) || '[]');
@@ -372,39 +396,25 @@ function readIndex() {
     }
 }
 
-// localStorage write that reports failure instead of toasting (the caller decides).
-function writeRaw(key, value) {
-    try { localStorage.setItem(key, value); return true; }
-    catch (err) { return false; }
-}
-
-// Version history is per document, so opening a different document doesn't show someone
-// else's snapshots. (The legacy global key `doc_versions_v13` is read once for migration.)
-function versionsKey(id) { return 'quorly_versions_' + id; }
-
-function readVersions() {
+// Version history is per document, so opening a different document doesn't show someone else's
+// snapshots. The storage layer owns both the key and the IndexedDB store behind it; the legacy
+// global key `doc_versions_v13` is read once, for migration.
+async function readVersions() {
     if (!currentId) return [];
-    try {
-        const list = JSON.parse(localStorage.getItem(versionsKey(currentId)) || '[]');
-        return Array.isArray(list) ? list : [];
-    } catch (err) {
-        console.warn('Version history was unreadable.', err);
-        return [];
-    }
+    return QuorlyStore.listVersions(currentId);
 }
 
-// Keep only the newest MAX_RECENTS entries, deleting the snapshot and version history of anything
-// dropped. The document that is currently open is never evicted.
+// Keep only the newest MAX_RECENTS entries. The document that is currently open is never evicted.
+// Anything that falls off goes with its version history: the storage layer deletes both, and a
+// document whose snapshot is gone would be unreachable from Recents anyway.
 function trimIndex(list) {
     if (list.length <= MAX_RECENTS) return list;
-    list.slice(MAX_RECENTS).forEach((entry) => {
-        if (entry.id !== currentId) {
-            localStorage.removeItem(fileKey(entry.id));
-            // Version history belongs to its document, so it goes with it. Without this the
-            // history of every evicted document was orphaned in storage forever.
-            localStorage.removeItem(versionsKey(entry.id));
-        }
-    });
+    const evicted = list.slice(MAX_RECENTS).filter((entry) => entry.id !== currentId);
+    if (evicted.length) {
+        QuorlyStore.evict(evicted.map((entry) => entry.id)).catch((err) => {
+            console.warn('Recents: could not clean up evicted documents.', err);
+        });
+    }
     return list.slice(0, MAX_RECENTS);
 }
 
@@ -443,31 +453,24 @@ function snapshotFromLiveKeys() {
     };
 }
 
-// Write a snapshot for `id`. If storage is full, evict the oldest parked documents and retry.
-// Returns true only when the snapshot actually reached the disk.
-function writeSnapshot(id, snapshot) {
-    const payload = JSON.stringify({
-        title: snapshot.title,
-        body: snapshot.body,
-        titleImage: snapshot.titleImage,
-        updatedAt: Date.now()
-    });
-    if (writeRaw(fileKey(id), payload)) return true;
+// Write a snapshot for `id` through the storage layer. If storage is full, evict the oldest parked
+// documents and retry. Resolves true only when the snapshot is actually durable.
+async function writeSnapshot(id, snapshot) {
+    if (await QuorlyStore.putSnapshot(id, snapshot)) return true;
 
     const victims = readIndex().filter((e) => e.id !== id && e.id !== currentId).slice(-3);
     for (const v of victims) {
-        localStorage.removeItem(fileKey(v.id));
-        localStorage.removeItem(versionsKey(v.id));
-        if (writeRaw(fileKey(id), payload)) return true;
+        await QuorlyStore.evict([v.id]);
+        if (await QuorlyStore.putSnapshot(id, snapshot)) return true;
     }
     return false;
 }
 
 // Park the open document before anything overwrites the live keys. Callers must NOT switch
-// documents when this returns false: at that moment the live keys hold the only copy.
-function parkCurrentDocument() {
+// documents when this resolves false: at that moment the live keys hold the only copy.
+async function parkCurrentDocument() {
     if (!currentId) return true;
-    if (!writeSnapshot(currentId, snapshotFromLiveKeys())) {
+    if (!await writeSnapshot(currentId, snapshotFromLiveKeys())) {
         toast('Storage is full — this document could not be kept in Recents. Export it to disk, then try again.');
         return false;
     }
@@ -624,13 +627,16 @@ function renderRecents() {
     });
 }
 
-function deleteRecent(id) {
+async function deleteRecent(id) {
     const entry = readIndex().find((e) => e.id === id);
     if (!entry) return;
     if (!confirm('Delete "' + entry.title + '" from this browser? This cannot be undone.')) return;
 
-    localStorage.removeItem(fileKey(id));
-    localStorage.removeItem(versionsKey(id));
+    // The open document's content is in the live keys, so deleting its index entry alone would
+    // leave it alive; the branch below gives it a fresh id instead. Either way the parked copy
+    // and the version history go.
+    await QuorlyStore.deleteSnapshot(id);
+    await QuorlyStore.deleteVersions(id);
     sessionHandles.delete(id);
     safeSetItem(FILES_INDEX_KEY, JSON.stringify(readIndex().filter((e) => e.id !== id)));
 
@@ -668,25 +674,28 @@ function backupFileName() {
     return `quorly-backup-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`;
 }
 
-// The stored snapshot / version list for one document. Async from the start so that moving the
-// library to IndexedDB (IDB-2) changes only these two bodies, not their callers.
+// The stored snapshot / version list for one document, read through the storage layer — so a
+// backup always sees exactly what the editor would, whichever backend is in use, and any image
+// that is stored as a blob reference comes back as an inline `data:` URL.
 async function readSnapshotForBackup(id) {
-    try { return JSON.parse(localStorage.getItem(fileKey(id)) || 'null'); } catch (err) { return null; }
+    return QuorlyStore.getSnapshot(id);
 }
 
 async function readVersionsForBackup(id) {
-    try {
-        const list = JSON.parse(localStorage.getItem(versionsKey(id)) || '[]');
-        return Array.isArray(list) ? list : [];
-    } catch (err) { return []; }
+    return QuorlyStore.listVersions(id);
 }
 
 async function writeSnapshotForRestore(id, snapshot) {
-    return writeRaw(fileKey(id), JSON.stringify(snapshot));
+    return QuorlyStore.putSnapshot(id, snapshot);
 }
 
+// A restore replaces a document's history rather than appending to it, so the old list goes first.
 async function writeVersionsForRestore(id, list) {
-    return writeRaw(versionsKey(id), JSON.stringify(list));
+    await QuorlyStore.deleteVersions(id);
+    for (const version of list) {
+        if (!await QuorlyStore.appendVersion(id, version, MAX_VERSIONS)) return false;
+    }
+    return true;
 }
 
 // One document's entry in the bundle. The open document has no parked snapshot to read (S-2a:
@@ -922,7 +931,7 @@ function startCleanDocument(blank) {
     firstKeystrokeTracked = false;
 }
 
-function openRecent(id) {
+async function openRecent(id) {
     if (id === currentId) {
         toast('That document is already open.');
         return;
@@ -930,14 +939,11 @@ function openRecent(id) {
     // Flush the editor into the live keys, then park that copy before switching: the live keys
     // are the open document's only storage.
     saveToLocalStorage();
-    if (!parkCurrentDocument()) return;
+    if (!await parkCurrentDocument()) return;
 
-    let snapshot = null;
-    try {
-        snapshot = JSON.parse(localStorage.getItem(fileKey(id)) || 'null');
-    } catch (err) {
-        snapshot = null;
-    }
+    // Read-through: a document parked before the library moved is in localStorage, and the
+    // storage layer adopts it on the way past.
+    const snapshot = await QuorlyStore.getSnapshot(id);
     if (!snapshot) {
         toast('That document is no longer stored in this browser.');
         renderRecents();
@@ -1016,7 +1022,7 @@ async function syncNow() {
 
             fileDisplayEl().textContent = fileHandle.name;
             await saveToDisk();
-            saveSnapshot(); // Save version history
+            await saveSnapshot(); // Save version history
             const display = fileDisplayEl();
             display.textContent = "Saved ✓";
             setTimeout(() => display.textContent = fileHandle.name, 1500);
@@ -1048,7 +1054,7 @@ async function syncNow() {
         }
         
         await saveToDisk();
-        saveSnapshot(); // Save version history
+        await saveSnapshot(); // Save version history
         
         const display = fileDisplayEl();
         const originalName = fileHandle.name;
@@ -1936,37 +1942,31 @@ editBody.addEventListener('blur', (e) => {
 
 // --- VERSION HISTORY ---
 
-function saveSnapshot() {
+async function saveSnapshot() {
     if (!currentId) return;
     try {
-        let versions = readVersions();
         const text = editBody.innerText || "";
         const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-        
-        versions.push({
+        const version = {
             timestamp: Date.now(),
             title: editTitle.textContent,
             body: editBody.innerHTML,
             titleImage: getTitleImageData(),
             wordCount: words
-        });
-        
-        // Keep the newest MAX_VERSIONS versions.
-        if (versions.length > MAX_VERSIONS) versions.shift();
-        
-        // Snapshots embed images, so they can be large. Trim hard if the quota is hit.
-        const key = versionsKey(currentId);
-        if (!safeSetItem(key, JSON.stringify(versions))) {
-            versions = versions.slice(-5);
-            safeSetItem(key, JSON.stringify(versions));
-        }
+        };
+
+        // The storage layer keeps the newest MAX_VERSIONS. A version embeds its images, so it can
+        // be large: if the write fails, drop most of the history and try once more.
+        if (await QuorlyStore.appendVersion(currentId, version, MAX_VERSIONS)) return;
+        await QuorlyStore.pruneVersions(currentId, 5);
+        await QuorlyStore.appendVersion(currentId, version, 5);
     } catch (err) {
         console.warn('Could not save version snapshot', err);
     }
 }
 
-function showHistory() {
-    const versions = readVersions();
+async function showHistory() {
+    const versions = await readVersions();
     const versionList = document.getElementById('versionList');
     
     versionList.textContent = '';
@@ -2008,11 +2008,12 @@ function closeHistory() {
     document.getElementById('historyModal').classList.remove('active');
 }
 
-function restoreVersion(index) {
+async function restoreVersion(index) {
     if (!confirm('Restore this version? Current changes will be lost.')) return;
-    
-    const versions = readVersions();
+
+    const versions = await readVersions();
     const version = versions[index];
+    if (!version) return;
     
     editTitle.textContent = version.title;
     editBody.innerHTML = sanitizeHTML(version.body);

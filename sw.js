@@ -46,6 +46,7 @@ const PRECACHE_FRESH = [
   '/styles.css',
   '/landing.css',
   '/landing.js',
+  '/stories.js',
   '/app.js',
   '/vendor/marked.min.js',
   '/vendor/dompurify.min.js',

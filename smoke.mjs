@@ -37,6 +37,8 @@ await checkDocument('/app/', {
     'id="recentsSearch"', 'data-action="export-txt"', 'data-action="copy-md"',
     // DD-03 (IDB-0): the library's backup/restore pair, and the picker it needs.
     'data-action="backup-all"', 'data-action="restore-backup"', 'id="backupInput"',
+    // DD-03: the storage layer must be in the document, and before /app.js.
+    '/stories.js',
     // W-1 / W-2: installable, and the offline cue has somewhere to render.
     'rel="manifest"', 'id="netStatus"', 'apple-touch-icon'],
 });
@@ -53,6 +55,7 @@ const assets = [
   ['/styles.css', 'text/css'],
   ['/landing.css', 'text/css'],
   ['/app.js', 'text/javascript'],
+  ['/stories.js', 'text/javascript'],
   ['/landing.js', 'text/javascript'],
   ['/sw.js', 'text/javascript'],
   ['/vendor/marked.min.js', 'text/javascript'],
@@ -90,7 +93,6 @@ try {
   const markers = [
     'function deleteRecent',
     'function readVersions',
-    "quorly_versions_",
     'function copyMarkdown',
     'function exportText',
     // S-2a: the open document is stored once (live keys) and snapshotted only when parked.
@@ -119,12 +121,54 @@ try {
     'function backupAll',
     'function restoreBackup',
     'quorly-backup-',
+    // DD-03 (IDB-1/2/3): storage goes through the adapter, so a backend swap changes no caller.
+    // These four are the read paths the library actually depends on.
+    'QuorlyStore.putSnapshot',
+    'QuorlyStore.getSnapshot',
+    'QuorlyStore.listVersions',
+    'QuorlyStore.appendVersion',
   ];
   for (const marker of markers) {
     record(`/app.js has ${marker}`, body.includes(marker), 'missing');
   }
 } catch (e) {
   record('/app.js library markers', false, String(e.message || e));
+}
+
+// --- the storage layer (DD-03): the library is in IndexedDB, images are content-addressed ----
+
+try {
+  const { status, body } = await get('/stories.js');
+  record('GET /stories.js', status === 200, `status=${status}`);
+
+  const markers = [
+    'indexedDB.open',
+    'STORE_BLOBS',
+    'STORE_SNAPSHOTS',
+    'STORE_VERSIONS',
+    // One name for every key this module owns, so app.js never has to know them.
+    'LS_SNAPSHOT_PREFIX',
+    'LS_VERSIONS_PREFIX',
+    // Images: a data URL becomes a content-addressed blob, and comes back as a data URL.
+    'quorly-blob:',
+    'window.crypto.subtle',
+    'function refsToDataURLs',
+    'function dataURLsToRefs',
+    // Nothing is deleted before its replacement is durable, and reads adopt on their own.
+    'function adoptSnapshot',
+    'function adoptVersions',
+    'function sweepBlobs',
+    'window.QuorlyStore',
+  ];
+  for (const marker of markers) {
+    record(`/stories.js has ${marker}`, body.includes(marker), 'missing');
+  }
+
+  // The one rule the DOM depends on: a blob reference must never reach a caller.
+  record('/stories.js hydrates before returning', body.includes('return await hydrateImages(rec)'),
+    'a stored blob reference could reach the DOM, where img-src has no blob:');
+} catch (e) {
+  record('/stories.js', false, String(e.message || e));
 }
 
 // --- service worker (W-1): it has to be loadable and keep the agreed strategies ----
@@ -153,6 +197,9 @@ try {
     'an origin or proxy 5xx would replace a working offline shell with an error page');
   record('/sw.js leaves its own script alone', body.includes('url.pathname === SW_PATH'),
     'the worker script must be left to the browser, never served from its own cache');
+  // DD-03: without this, an offline first paint has the editor but not its storage layer.
+  record('/sw.js precaches the storage layer', body.includes("'/stories.js'"),
+    'an offline session would load /app.js against a missing QuorlyStore');
 } catch (e) {
   record('/sw.js', false, String(e.message || e));
 }

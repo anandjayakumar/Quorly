@@ -335,6 +335,10 @@
   <button type="button" id="historyClose" class="modal-close">Close</button>
 </div>
 
+<!-- DD-03: the storage layer. It has to run before /app.js, because app.js reaches for
+     window.QuorlyStore at parse time and never waits for it. Deferred scripts run in document
+     order, so this ordering is what guarantees that. -->
+<script src="/stories.js" defer></script>
 <script src="/app.js" defer></script>
 </body>
 </html>

@@ -59,6 +59,10 @@
   Content-Type: text/javascript; charset=utf-8
 /landing.js
   Content-Type: text/javascript; charset=utf-8
+# DD-03: the storage layer, loaded before /app.js. Same reason /app.js is pinned: under
+# `nosniff`, an upload that records application/octet-stream would stop the editor dead.
+/stories.js
+  Content-Type: text/javascript; charset=utf-8
 
 # The service worker must never be answered from a stale cache — that is the one failure
 # mode that can outlive a deploy — and it must keep a pinned type: a worker fetched as
