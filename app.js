@@ -874,6 +874,41 @@ async function exportMarkdown() {
     }
 }
 
+async function exportQuorly() {
+    if (!FSA_SUPPORTED) {
+        toast('Exporting files requires a Chromium-based browser (Chrome, Edge, Brave, Opera).');
+        return;
+    }
+    const slug = editTitle.textContent.toLowerCase().trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .substring(0, 50);
+    try {
+        const handle = await window.showSaveFilePicker({
+            suggestedName: `${slug || 'document'}.quorly`,
+            types: [{ description: 'Quorly document', accept: { 'application/json': ['.quorly'] } }]
+        });
+        const writable = await handle.createWritable();
+        const titleImageData = getTitleImageData();
+        const payload = JSON.stringify({
+            version: 1,
+            title: editTitle.textContent,
+            body: editBody.innerHTML,
+            titleImage: titleImageData
+        }, null, 2);
+        await writable.write(payload);
+        await writable.close();
+        const display = fileDisplayEl();
+        const originalName = fileHandle ? fileHandle.name : 'Local Storage';
+        display.textContent = "Exported ✓";
+        setTimeout(() => display.textContent = originalName, 1500);
+    } catch (err) {
+        if (err && err.name !== 'AbortError') {
+            toast('Export failed: ' + (err.message || err.name));
+        }
+    }
+}
+
 // Plain-text download (same File System Access path as the .MD export).
 async function exportText() {
     if (!FSA_SUPPORTED) {
@@ -1490,7 +1525,8 @@ function applyHeading(value) {
 }
 
 function handleExport(value) {
-    if (value === 'pdf') { track('export', { format: 'pdf' }); window.print(); }
+    if (value === 'quorly') { track('export', { format: 'quorly' }); exportQuorly(); }
+    else if (value === 'pdf') { track('export', { format: 'pdf' }); window.print(); }
     else if (value === 'md') { track('export', { format: 'md' }); exportMarkdown(); }
     else if (value === 'txt') { track('export', { format: 'txt' }); exportText(); }
 }
@@ -1675,10 +1711,10 @@ document.addEventListener('keydown', (e) => {
         format('link');
     }
     
-    // Save (Cmd/Ctrl + S)
+    // Save / Export .quorly (Cmd/Ctrl + S)
     if (e.key === 's') {
         e.preventDefault();
-        syncNow();
+        exportQuorly();
     }
     
     // Print/PDF (Cmd/Ctrl + P)
@@ -2146,8 +2182,6 @@ function wireUI() {
             switch (btn.getAttribute('data-action')) {
                 case 'new-file': newFile(); break;
                 case 'open-file': openFile(); break;
-                case 'sync': syncNow(); break;
-                // M-1: which export paths people actually use (a click counts, not a completed write).
                 case 'export-md': track('export', { format: 'md' }); exportMarkdown(); break;
                 case 'export-pdf': track('export', { format: 'pdf' }); window.print(); break;
                 case 'export-txt': track('export', { format: 'txt' }); exportText(); break;

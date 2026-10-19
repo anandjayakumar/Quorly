@@ -109,13 +109,9 @@
           <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
           <span class="tile-label">New</span>
         </button>
-        <button class="tile-btn" type="button" data-action="open-file" title="Open a file">
+        <button class="tile-btn" type="button" data-action="open-file" title="Import a file">
           <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7a2 2 0 0 1 2-2h3.2l1.8 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-          <span class="tile-label">Open</span>
-        </button>
-        <button class="tile-btn" type="button" data-action="sync" title="Save to disk (Ctrl/Cmd+S)">
-          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M8 3v5h6V3"/></svg>
-          <span class="tile-label">Save</span>
+          <span class="tile-label">Import</span>
         </button>
         <div class="dropdown dropdown-tile" id="exportDropdown">
           <button class="dropdown-toggle tile-btn" type="button" aria-haspopup="listbox" aria-expanded="false" title="Export">
@@ -125,9 +121,10 @@
             <span class="dropdown-caret tile-caret" aria-hidden="true">▾</span>
           </button>
           <ul class="dropdown-menu" role="listbox" hidden>
-            <li role="option" tabindex="-1" data-value="pdf">Export as PDF</li>
-            <li role="option" tabindex="-1" data-value="md">Export as Markdown</li>
-            <li role="option" tabindex="-1" data-value="txt">Export as Text</li>
+            <li role="option" tabindex="-1" data-value="quorly">.quorly</li>
+            <li role="option" tabindex="-1" data-value="pdf">.pdf</li>
+            <li role="option" tabindex="-1" data-value="md">.md</li>
+            <li role="option" tabindex="-1" data-value="txt">.txt</li>
           </ul>
         </div>
       </div>
