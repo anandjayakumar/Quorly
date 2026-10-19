@@ -1218,7 +1218,7 @@ function insertDivider() {
             sel.removeAllRanges();
             sel.addRange(lastSelectionRange);
         }
-        const ruleHtml = `<div class="content-divider" contenteditable="false"></div><p><br></p>`;
+        const ruleHtml = `<div class="content-divider" contenteditable="false"></div>`;
         document.execCommand('insertHTML', false, ruleHtml);
         saveToLocalStorage();
     });
