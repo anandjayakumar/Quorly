@@ -52,7 +52,7 @@ await checkDocument('/privacy/', {
 
 await checkDocument('/llms.txt', {
   type: 'text/plain',
-  contains: ['# Quorly', '](/agent-skill.md)', 'WebMCP'],
+  contains: ['# Quorly', '](https://quorly.pages.dev/agent-skill.md)', 'WebMCP'],
 });
 await checkDocument('/agent-skill.md', {
   type: 'text/markdown',
