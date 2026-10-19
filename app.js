@@ -1144,20 +1144,46 @@ function triggerCmd(type) {
 }
 
 // Insert an inline image dropzone at the caret
-function insertImageSlot() {
-    if (lastSelectionRange) {
-        editBody.focus();
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(lastSelectionRange);
+// Focusing the editor or inserting at the caret makes browsers scroll the caret into view,
+// which yanks the page to the top. Capture and restore every scroll owner around the insert.
+function preserveScroll(fn) {
+    const x = window.scrollX;
+    const y = window.scrollY;
+    const se = document.scrollingElement;
+    const seTop = se ? se.scrollTop : 0;
+    const scrollers = [];
+    [editBody, document.querySelector('.reader'), document.querySelector('.app')].forEach(el => {
+        if (el && el.scrollHeight > el.clientHeight + 1) scrollers.push([el, el.scrollTop]);
+    });
+    const restore = () => {
+        scrollers.forEach(([el, top]) => { el.scrollTop = top; });
+        if (se) se.scrollTop = seTop;
+        window.scrollTo(x, y);
+    };
+    try {
+        fn();
+    } finally {
+        restore();
+        requestAnimationFrame(restore);
     }
-    const id = 'dz-' + Date.now();
-    const dzHtml = `<div id="${id}" class="inline-dropzone" contenteditable="false">Click or Drop Image Here</div><p><br></p>`;
-    document.execCommand('insertHTML', false, dzHtml);
+}
 
-    const dz = document.getElementById(id);
-    if (dz) wireDropzone(dz);
-    saveToLocalStorage();
+function insertImageSlot() {
+    preserveScroll(() => {
+        if (lastSelectionRange) {
+            editBody.focus();
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(lastSelectionRange);
+        }
+        const id = 'dz-' + Date.now();
+        const dzHtml = `<div id="${id}" class="inline-dropzone" contenteditable="false">Click or Drop Image Here</div><p><br></p>`;
+        document.execCommand('insertHTML', false, dzHtml);
+
+        const dz = document.getElementById(id);
+        if (dz) wireDropzone(dz);
+        saveToLocalStorage();
+    });
 }
 
 // Make a dropzone accept a click or a dragged file
@@ -1185,50 +1211,54 @@ function pickImageInto(target) {
 
 // Insert a horizontal divider
 function insertDivider() {
-    if (lastSelectionRange) {
-        editBody.focus();
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(lastSelectionRange);
-    }
-    const ruleHtml = `<div class="content-divider" contenteditable="false"></div><p><br></p>`;
-    document.execCommand('insertHTML', false, ruleHtml);
-    saveToLocalStorage();
+    preserveScroll(() => {
+        if (lastSelectionRange) {
+            editBody.focus();
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(lastSelectionRange);
+        }
+        const ruleHtml = `<div class="content-divider" contenteditable="false"></div><p><br></p>`;
+        document.execCommand('insertHTML', false, ruleHtml);
+        saveToLocalStorage();
+    });
 }
 
 // Insert an editable table
 function insertTable() {
     const rows = 3;
     const cols = 3;
-    if (lastSelectionRange) {
-        editBody.focus();
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(lastSelectionRange);
-    }
-    let tableHtml = '<table class="editor-table"><thead><tr>';
-    for (let c = 0; c < cols; c++) tableHtml += '<th><br></th>';
-    tableHtml += '</tr></thead><tbody>';
-    for (let r = 1; r < rows; r++) {
-        tableHtml += '<tr>';
-        for (let c = 0; c < cols; c++) tableHtml += '<td><br></td>';
-        tableHtml += '</tr>';
-    }
-    tableHtml += '</tbody></table>';
-    const html = `<div class="table-wrapper">${tableHtml}<button class="table-menu-btn" contenteditable="false" aria-label="Table options" title="Table options">\u22ee</button><div class="table-menu-dropdown" contenteditable="false"><button data-action="insert-row-above">Insert row above</button><button data-action="insert-row-below">Insert row below</button><button data-action="insert-col-left">Insert column left</button><button data-action="insert-col-right">Insert column right</button><button data-action="delete-row">Delete row</button><button data-action="delete-col">Delete column</button></div></div><p><br></p>`;
-    document.execCommand('insertHTML', false, html);
-    // Default column width (50px) is applied through CSSOM — inline style attributes are
-    // blocked by the strict CSP, but property writes are not.
-    const wrappers = editBody.querySelectorAll('.table-wrapper');
-    const inserted = wrappers[wrappers.length - 1];
-    const insertedTable = inserted && inserted.querySelector('table.editor-table');
-    if (insertedTable) {
-        insertedTable.querySelectorAll('th, td').forEach(cell => {
-            cell.setAttribute('data-w', '150');
-            cell.style.width = '150px';
-        });
-    }
-    saveToLocalStorage();
+    preserveScroll(() => {
+        if (lastSelectionRange) {
+            editBody.focus();
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(lastSelectionRange);
+        }
+        let tableHtml = '<table class="editor-table"><thead><tr>';
+        for (let c = 0; c < cols; c++) tableHtml += '<th><br></th>';
+        tableHtml += '</tr></thead><tbody>';
+        for (let r = 1; r < rows; r++) {
+            tableHtml += '<tr>';
+            for (let c = 0; c < cols; c++) tableHtml += '<td><br></td>';
+            tableHtml += '</tr>';
+        }
+        tableHtml += '</tbody></table>';
+        const html = `<div class="table-wrapper">${tableHtml}<button class="table-menu-btn" contenteditable="false" aria-label="Table options" title="Table options">\u22ee</button><div class="table-menu-dropdown" contenteditable="false"><button data-action="insert-row-above">Insert row above</button><button data-action="insert-row-below">Insert row below</button><button data-action="insert-col-left">Insert column left</button><button data-action="insert-col-right">Insert column right</button><button data-action="delete-row">Delete row</button><button data-action="delete-col">Delete column</button></div></div><p><br></p>`;
+        document.execCommand('insertHTML', false, html);
+        // Column widths are applied through CSSOM — inline style attributes are blocked by the
+        // strict CSP, but property writes are not.
+        const wrappers = editBody.querySelectorAll('.table-wrapper');
+        const inserted = wrappers[wrappers.length - 1];
+        const insertedTable = inserted && inserted.querySelector('table.editor-table');
+        if (insertedTable) {
+            insertedTable.querySelectorAll('th, td').forEach(cell => {
+                cell.setAttribute('data-w', '150');
+                cell.style.width = '150px';
+            });
+        }
+        saveToLocalStorage();
+    });
 }
 
 async function handleImage(file, target) {
@@ -1646,21 +1676,23 @@ function handleInsert(value) {
     // Restore the caret/selection that lived in the editor before focus moved to the dropdown.
     // Fall back to the end of the document when there is no remembered selection (e.g. the
     // welcome sample is on screen and the user never clicked into the editor).
-    editBody.focus();
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    if (lastSelectionRange) {
-        sel.addRange(lastSelectionRange);
-    } else {
-        const r = document.createRange();
-        r.selectNodeContents(editBody);
-        r.collapse(false);
-        sel.addRange(r);
-    }
-    if (value === 'image') insertImageSlot();
-    else if (value === 'table') insertTable();
-    else if (value === 'codeblock') { document.execCommand('formatBlock', false, 'pre'); saveToLocalStorage(); }
-    else if (value === 'divider') insertDivider();
+    preserveScroll(() => {
+        editBody.focus();
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        if (lastSelectionRange) {
+            sel.addRange(lastSelectionRange);
+        } else {
+            const r = document.createRange();
+            r.selectNodeContents(editBody);
+            r.collapse(false);
+            sel.addRange(r);
+        }
+        if (value === 'image') insertImageSlot();
+        else if (value === 'table') insertTable();
+        else if (value === 'codeblock') { document.execCommand('formatBlock', false, 'pre'); saveToLocalStorage(); }
+        else if (value === 'divider') insertDivider();
+    });
 }
 
 function syncHeadingDropdown() {
