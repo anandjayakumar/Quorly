@@ -37,7 +37,9 @@ await checkDocument('/app/', {
     'id="recentsSearch"',    // DD-03: the storage layer must be in the document, and before /app.js.
     '/stories.js',
     // W-1 / W-2: installable, and the offline cue has somewhere to render.
-    'rel="manifest"', 'id="netStatus"', 'apple-touch-icon'],
+    'rel="manifest"', 'id="netStatus"', 'apple-touch-icon',
+    // WebMCP: the tool layer must ship, and after /app.js so its globals exist.
+    '/webmcp.js'],
 });
 
 await checkDocument('/privacy/', {
@@ -53,6 +55,7 @@ const assets = [
   ['/landing.css', 'text/css'],
   ['/app.js', 'text/javascript'],
   ['/stories.js', 'text/javascript'],
+  ['/webmcp.js', 'text/javascript'],
   ['/landing.js', 'text/javascript'],
   ['/sw.js', 'text/javascript'],
   ['/vendor/marked.min.js', 'text/javascript'],
@@ -117,12 +120,41 @@ try {
     'QuorlyStore.getSnapshot',
     'QuorlyStore.listVersions',
     'QuorlyStore.appendVersion',
+    // WebMCP shares the import pipeline; agent text is sanitized the same way.
+    'function markdownToClean',
   ];
   for (const marker of markers) {
     record(`/app.js has ${marker}`, body.includes(marker), 'missing');
   }
 } catch (e) {
   record('/app.js library markers', false, String(e.message || e));
+}
+
+// --- WebMCP tool layer (W3C CG draft) -------------------------------------------
+
+try {
+  const { status, body } = await get('/webmcp.js');
+  record('GET /webmcp.js', status === 200, `status=${status}`);
+
+  const markers = [
+    // Both entry points: spec draft on `document`, legacy on `navigator`.
+    'document.modelContext',
+    'navigator.modelContext',
+    'registerTool',
+    // Tools are torn down with a signal — the draft has no unregisterTool.
+    'AbortController',
+    // Safety annotations the spec defines.
+    'readOnlyHint',
+    'untrustedContentHint',
+    'consequentialHint',
+    // Destructive paths keep a human confirmation step in the page.
+    'window.confirm',
+  ];
+  for (const marker of markers) {
+    record(`/webmcp.js has ${marker}`, body.includes(marker), 'missing');
+  }
+} catch (e) {
+  record('/webmcp.js markers', false, String(e.message || e));
 }
 
 // --- the storage layer (DD-03): the library is in IndexedDB, images are content-addressed ----

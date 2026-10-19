@@ -20,6 +20,7 @@ const EVENTS = new Set([
   'export',
   'storage_quota_exceeded',
   'returning_writer',
+  'webmcp_tool',
 ]);
 
 const MAX_BODY = 512; // a real payload is < 60 bytes; anything larger is not ours
@@ -54,9 +55,10 @@ export async function onRequest(context) {
       // The allowlist is the schema: unknown events are dropped, never stored.
       if (typeof event === 'string' && EVENTS.has(event) && env.ANALYTICS) {
         const format = typeof data.format === 'string' ? data.format.slice(0, MAX_PROP) : '';
+        const tool = typeof data.tool === 'string' ? data.tool.slice(0, MAX_PROP) : '';
         env.ANALYTICS.writeDataPoint({
           indexes: [event],
-          blobs: [event, format],
+          blobs: [event, format, tool],
           doubles: [1],
         });
       }

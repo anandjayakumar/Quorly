@@ -48,6 +48,7 @@ const PRECACHE_FRESH = [
   '/landing.js',
   '/stories.js',
   '/app.js',
+  '/webmcp.js',
   '/vendor/marked.min.js',
   '/vendor/dompurify.min.js',
   '/manifest.webmanifest',

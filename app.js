@@ -109,7 +109,7 @@ function debounce(fn, wait) {
 // coarse property — never document content, never an identifier, never a cookie. It is a
 // same-origin beacon (`connect-src 'self'`), the endpoint answers 204 and never blocks, and a
 // dropped beacon (offline, blocked, unbound) is simply lost. Nothing here may affect the editor.
-const FUNNEL_EVENTS = new Set(['landing_cta', 'first_keystroke', 'export', 'storage_quota_exceeded', 'returning_writer']);
+const FUNNEL_EVENTS = new Set(['landing_cta', 'first_keystroke', 'export', 'storage_quota_exceeded', 'returning_writer', 'webmcp_tool']);
 let firstKeystrokeTracked = false; // one `first_keystroke` per document that gets worked on
 
 function track(event, props) {
@@ -117,6 +117,7 @@ function track(event, props) {
         if (!navigator.sendBeacon || !FUNNEL_EVENTS.has(event)) return;
         const payload = { e: event };
         if (props && typeof props.format === 'string') payload.format = props.format.slice(0, 32);
+        if (props && typeof props.tool === 'string') payload.tool = props.tool.slice(0, 32);
         navigator.sendBeacon('/e', JSON.stringify(payload));
     } catch (err) {
         // Analytics must never be able to break the editor or delay a navigation.
@@ -341,16 +342,14 @@ async function newFile() {
     touchCurrentDocument();
 }
 
-// Load markdown file (import only)
-function loadMarkdown(markdownText) {
-    if (typeof marked === 'undefined') {
-        toast('Markdown renderer failed to load. Check your connection and try again.');
-        return;
-    }
+// Parse Markdown into a sanitized DOM fragment. Shared by the import path and the WebMCP
+// append/replace tools so agent-written text goes through exactly the same pipeline.
+function markdownToClean(markdownText) {
+    if (typeof marked === 'undefined') return null;
     const html = marked.parse(markdownText);
     const temp = document.createElement('div');
     temp.innerHTML = sanitizeHTML(html); // sanitize BEFORE building interactive nodes
-    
+
     // Convert MD images to interactive containers
     temp.querySelectorAll('img').forEach(img => {
         const container = document.createElement('div');
@@ -360,7 +359,7 @@ function loadMarkdown(markdownText) {
         container.appendChild(newImg);
         img.replaceWith(container);
     });
-    
+
     // Clean up list items - remove wrapping paragraphs that marked.js adds
     temp.querySelectorAll('li > p').forEach(p => {
         if (p.parentElement.childNodes.length === 1) {
@@ -371,6 +370,16 @@ function loadMarkdown(markdownText) {
             p.remove();
         }
     });
+    return temp;
+}
+
+// Load markdown file (import only)
+function loadMarkdown(markdownText) {
+    const temp = markdownToClean(markdownText);
+    if (!temp) {
+        toast('Markdown renderer failed to load. Check your connection and try again.');
+        return;
+    }
 
     const h1 = temp.querySelector('h1');
     editTitle.textContent = h1 ? h1.textContent : "Untitled Document";
@@ -1225,9 +1234,9 @@ function insertDivider() {
 }
 
 // Insert an editable table
-function insertTable() {
-    const rows = 3;
-    const cols = 3;
+function insertTable(rowsWanted = 3, colsWanted = 3) {
+    const rows = Math.max(1, Math.min(20, Math.trunc(Number(rowsWanted)) || 3));
+    const cols = Math.max(1, Math.min(20, Math.trunc(Number(colsWanted)) || 3));
     preserveScroll(() => {
         if (lastSelectionRange) {
             editBody.focus();

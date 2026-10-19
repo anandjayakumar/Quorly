@@ -280,5 +280,8 @@
      order, so this ordering is what guarantees that. -->
 <script src="/stories.js" defer></script>
 <script src="/app.js" defer></script>
+<!-- WebMCP (W3C CG draft): agent tools registered against the same handlers as the UI.
+     A no-op everywhere the API is missing. Loaded last so every global it binds exists. -->
+<script src="/webmcp.js" defer></script>
 </body>
 </html>
