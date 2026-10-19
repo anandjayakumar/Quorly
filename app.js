@@ -2040,7 +2040,7 @@ function initDropdown(root, onSelect, reset, keepSelected) {
         const host = root.closest('.mobile-fmtbar');
         if (host && root.id) {
             const r = toggle.getBoundingClientRect();
-            const w = Math.min(220, window.innerWidth - 24);
+            const w = Math.min(Math.max(toggle.offsetWidth || 120, 120), window.innerWidth - 24);
             menu.classList.add('dropdown-menu-fixed');
             menu.style.setProperty('width', `${w}px`);
             menu.style.setProperty('left', `${Math.max(12, Math.min(r.left, window.innerWidth - w - 12))}px`);

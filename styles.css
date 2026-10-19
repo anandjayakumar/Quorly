@@ -1700,12 +1700,16 @@ body.light-mode #modeBtn .icon-sun { display: block; }
 .width-menu li { display: flex; justify-content: center; padding: 10px; }
 
 .dropdown-menu li {
-  padding: 7px 9px;
+  padding: 8px 12px;
   border-radius: 6px;
-  font-size: 11px;
-  color: rgba(255,255,255,0.7);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Inter', system-ui, sans-serif;
+  letter-spacing: 0.2px;
+  color: rgba(255,255,255,0.78);
   cursor: pointer;
   outline: none;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .dropdown-menu li:hover,
