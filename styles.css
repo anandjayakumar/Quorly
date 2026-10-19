@@ -1672,7 +1672,7 @@ body.light-mode #modeBtn .icon-sun { display: block; }
 .dropdown-tile .dropdown-toggle .tile-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dropdown-tile .tile-caret { position: absolute; bottom: 4px; right: 6px; font-size: 9px; opacity: 0.6; }
 
-.fmt-btn.dropdown-toggle { width: 38px; padding: 8px 0; min-width: 0; }
+.fmt-btn.dropdown-toggle { padding: 8px 0; min-width: 0; }
 .dropdown-toggle {
   width: 100%;
   display: flex;
@@ -1727,7 +1727,9 @@ body.light-mode #modeBtn .icon-sun { display: block; }
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  right: 0;
+  z-index: 50;
+  min-width: 160px;
+  width: auto;
   z-index: 50;
   margin: 0;
   padding: 4px;
