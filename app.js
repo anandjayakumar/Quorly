@@ -2278,41 +2278,49 @@ function wireUI() {
     }
     initTableFeatures();
 
-    // Active cell resize handles: inject visible bars when cell clicked
+    // Show resize sliders around the active/focused cell
     document.querySelectorAll('.table-wrapper table.editor-table').forEach(table => {
         table.addEventListener('click', (e) => {
             const cell = e.target.closest('th, td');
-            if (!cell) return;
             const wrapper = table.closest('.table-wrapper');
-            if (!wrapper) return;
-            wrapper.querySelectorAll('.resize-v, .resize-h').forEach(el => el.remove());
+            if (!cell || !wrapper) return;
             wrapper.querySelectorAll('th, td').forEach(c => c.classList.remove('resize-active'));
             cell.classList.add('resize-active');
-            const v = document.createElement('span'); v.className = 'resize-v'; cell.appendChild(v);
-            const h = document.createElement('span'); h.className = 'resize-h'; cell.appendChild(h);
         });
     });
 
-    // Resize drag using the injected handle elements directly
+    // Simple resize drag for table rows/columns via mouse on borders
     (function setupTableResize() {
         let isResizing = false, resizeMode = null, startX = 0, startY = 0, startW = 0, startH = 0, targetCol = null, targetRow = null;
-        document.addEventListener('mousedown', (e) => {
-            const handle = e.target.closest('.resize-v, .resize-h');
-            if (!handle) return;
-            const cell = handle.closest('th, td');
-            if (!cell) return;
-            const rect = cell.getBoundingClientRect();
-            if (handle.classList.contains('resize-v')) {
-                isResizing = true; resizeMode = 'col'; startX = e.clientX;
-                targetCol = cell; startW = cell.offsetWidth;
-                document.body.style.userSelect = 'none'; document.body.style.cursor = 'col-resize';
-                e.preventDefault();
-            } else if (handle.classList.contains('resize-h')) {
-                isResizing = true; resizeMode = 'row'; startY = e.clientY;
-                targetRow = cell.parentNode; startH = targetRow ? targetRow.offsetHeight : cell.offsetHeight;
-                document.body.style.userSelect = 'none'; document.body.style.cursor = 'row-resize';
-                e.preventDefault();
-            }
+        document.querySelectorAll('.table-wrapper table.editor-table').forEach(table => {
+            table.addEventListener('mousedown', (e) => {
+                const th = e.target.closest('th');
+                const td = e.target.closest('td');
+                const cell = th || td;
+                if (!cell) return;
+                const rect = cell.getBoundingClientRect();
+                const x = e.clientX, y = e.clientY;
+                // Column resize: near right edge of th/td
+                if (x > rect.right - 8 && x < rect.right + 4) {
+                    isResizing = true; resizeMode = 'col'; startX = x;
+                    targetCol = cell;
+                    startW = cell.offsetWidth;
+                    e.preventDefault();
+                    document.body.style.userSelect = 'none';
+                    document.body.style.cursor = 'col-resize';
+                    return;
+                }
+                // Row resize: near bottom edge of td (not th for simplicity)
+                if (td && y > rect.bottom - 8 && y < rect.bottom + 4) {
+                    isResizing = true; resizeMode = 'row'; startY = y;
+                    targetRow = cell.parentNode;
+                    startH = targetRow ? targetRow.offsetHeight : cell.offsetHeight;
+                    e.preventDefault();
+                    document.body.style.userSelect = 'none';
+                    document.body.style.cursor = 'row-resize';
+                    return;
+                }
+            });
         });
         document.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
@@ -2320,6 +2328,7 @@ function wireUI() {
                 const dx = e.clientX - startX;
                 const newW = Math.max(30, startW + dx);
                 targetCol.style.width = newW + 'px';
+                // Apply same width to all cells in this column index
                 const table = targetCol.closest('table');
                 if (table) {
                     const colIndex = Array.from(targetCol.parentNode.children).indexOf(targetCol);
@@ -2337,7 +2346,8 @@ function wireUI() {
         document.addEventListener('mouseup', () => {
             if (isResizing) {
                 isResizing = false; resizeMode = null; targetCol = null; targetRow = null;
-                document.body.style.userSelect = ''; document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                document.body.style.cursor = '';
                 saveToLocalStorage();
             }
         });
