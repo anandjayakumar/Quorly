@@ -35,6 +35,8 @@ await checkDocument('/app/', {
   type: 'text/html',
   contains: ['id="focusModeBtn"', 'id="editBody"', '/styles.css', '/app.js', 'noindex',
     'id="recentsSearch"', 'data-action="export-txt"', 'data-action="copy-md"',
+    // DD-03 (IDB-0): the library's backup/restore pair, and the picker it needs.
+    'data-action="backup-all"', 'data-action="restore-backup"', 'id="backupInput"',
     // W-1 / W-2: installable, and the offline cue has somewhere to render.
     'rel="manifest"', 'id="netStatus"', 'apple-touch-icon'],
 });
@@ -112,6 +114,11 @@ try {
     'const FUNNEL_EVENTS',
     'function track',
     'navigator.sendBeacon',
+    // DD-03 (IDB-0): every document can be exported to, and restored from, one JSON bundle.
+    'function buildBackupBundle',
+    'function backupAll',
+    'function restoreBackup',
+    'quorly-backup-',
   ];
   for (const marker of markers) {
     record(`/app.js has ${marker}`, body.includes(marker), 'missing');

@@ -17,6 +17,9 @@ const FILES_INDEX_KEY = 'quorly_files_v1';
 const CURRENT_ID_KEY = 'quorly_current_id_v1';
 const FILE_KEY_PREFIX = 'quorly_file_';
 const MAX_RECENTS = 10;
+// Version history is capped per document. One name for it, because the backup/restore path has
+// to agree with saveSnapshot() about how many versions a document keeps.
+const MAX_VERSIONS = 20;
 const RESTORE_WINDOW_MS = 48 * 60 * 60 * 1000; // reopen the last document only if touched within 48 h
 let currentId = null;
 // File handles cannot be stored in localStorage, so disk links live for this session only.
@@ -643,6 +646,234 @@ function deleteRecent(id) {
     }
     renderRecents();
     toast('Deleted "' + entry.title + '"');
+}
+
+// --- BACKUP & RESTORE (DD-03 / IDB-0) ------------------------------------------------
+//
+// Everything Quorly holds lives in this browser, so a single self-contained bundle is the only
+// guarantee that survives cleared site data, a wiped profile, a different browser or a new
+// machine — and it is what makes any future eviction acceptable (DD-01 §5.4). The bundle keeps
+// every image inline as a `data:` URL and depends on nothing but this file's own format, so it
+// stays readable by a later version of Quorly and by a human.
+//
+// The frozen live keys are deliberately NOT part of the bundle. The open document is captured
+// as an ordinary document entry instead, which means a restore can never overwrite what is
+// currently open, and a hand-edited bundle can never point a restore at `doc_body_v13`.
+const BACKUP_APP = 'quorly';
+const BACKUP_FORMAT = 1;
+
+function backupFileName() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return `quorly-backup-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`;
+}
+
+// The stored snapshot / version list for one document. Async from the start so that moving the
+// library to IndexedDB (IDB-2) changes only these two bodies, not their callers.
+async function readSnapshotForBackup(id) {
+    try { return JSON.parse(localStorage.getItem(fileKey(id)) || 'null'); } catch (err) { return null; }
+}
+
+async function readVersionsForBackup(id) {
+    try {
+        const list = JSON.parse(localStorage.getItem(versionsKey(id)) || '[]');
+        return Array.isArray(list) ? list : [];
+    } catch (err) { return []; }
+}
+
+async function writeSnapshotForRestore(id, snapshot) {
+    return writeRaw(fileKey(id), JSON.stringify(snapshot));
+}
+
+async function writeVersionsForRestore(id, list) {
+    return writeRaw(versionsKey(id), JSON.stringify(list));
+}
+
+// One document's entry in the bundle. The open document has no parked snapshot to read (S-2a:
+// the live keys are its only storage), so its content is taken from the live keys — otherwise
+// the bundle would be missing the document the user is actually looking at.
+async function backupDocumentFor(id, entry) {
+    const parked = await readSnapshotForBackup(id);
+    const doc = {
+        id: id,
+        title: (parked && parked.title) || (entry && entry.title) || 'Untitled',
+        updatedAt: (parked && parked.updatedAt) || (entry && entry.updatedAt) || Date.now(),
+        wordCount: (entry && entry.wordCount) || 0,
+        snapshot: parked
+            ? { title: parked.title || 'Untitled', body: parked.body || '', titleImage: parked.titleImage || null }
+            : null,
+        versions: await readVersionsForBackup(id),
+    };
+    if (id === currentId) {
+        const live = snapshotFromLiveKeys();
+        const liveTitle = (editTitle.textContent || '').trim();
+        doc.snapshot = live;
+        doc.title = liveTitle || live.title || doc.title;
+        doc.updatedAt = Date.now();
+        doc.wordCount = countWords();
+        doc.open = true;
+    }
+    return doc;
+}
+
+async function buildBackupBundle() {
+    const documents = [];
+    const seen = new Set();
+    for (const entry of readIndex()) {
+        if (!entry || !entry.id || seen.has(entry.id)) continue;
+        seen.add(entry.id);
+        documents.push(await backupDocumentFor(entry.id, entry));
+    }
+    // The open document should always have an index entry, but the bundle must not silently
+    // lose the one document the user can see if that ever stops being true.
+    if (currentId && !seen.has(currentId)) {
+        documents.push(await backupDocumentFor(currentId, { id: currentId, title: editTitle.textContent }));
+    }
+    return {
+        app: BACKUP_APP,
+        format: BACKUP_FORMAT,
+        exportedAt: new Date().toISOString(),
+        currentId: currentId || null,
+        documents: documents,
+    };
+}
+
+function downloadJsonFile(json, name) {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Revoked late: some browsers start the download after the click handler returns.
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
+async function backupAll() {
+    try {
+        const bundle = await buildBackupBundle();
+        const json = JSON.stringify(bundle);
+        downloadJsonFile(json, backupFileName());
+        const n = bundle.documents.length;
+        toast(n
+            ? `Backup of ${n} document${n === 1 ? '' : 's'} downloaded. Keep it somewhere safe.`
+            : 'There is nothing to back up yet.');
+    } catch (err) {
+        console.error('Backup failed', err);
+        toast('Could not build the backup file. Nothing was exported.');
+    }
+}
+
+// Returns a message when the file is not a bundle this build can restore, or null when it is.
+function bundleProblem(data) {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return 'That file is not a Quorly backup.';
+    if (data.app !== BACKUP_APP) return 'That file is not a Quorly backup.';
+    if (data.format !== BACKUP_FORMAT) return `That backup was written by a different version of Quorly (format ${data.format}).`;
+    if (!Array.isArray(data.documents)) return 'That backup is damaged — it has no document list.';
+    for (const d of data.documents) {
+        if (!d || typeof d !== 'object' || typeof d.id !== 'string' || !d.id) {
+            return 'That backup is damaged — one of its documents has no id.';
+        }
+    }
+    return null;
+}
+
+// True when the copy already in this browser is exactly what the bundle holds, so restoring the
+// same file twice has nothing left to do. The open document is compared through the live keys,
+// which is where its content actually lives.
+async function localDocumentMatches(id, doc) {
+    const want = doc.snapshot || {};
+    if (id === currentId) {
+        const live = snapshotFromLiveKeys();
+        const liveTitle = (editTitle.textContent || '').trim() || live.title;
+        return liveTitle === (doc.title || '') && (live.body || '') === (want.body || '');
+    }
+    const parked = await readSnapshotForBackup(id);
+    if (!parked) return false;
+    if ((parked.title || '') !== (doc.title || '') || (parked.body || '') !== (want.body || '')) return false;
+    const have = await readVersionsForBackup(id);
+    const wanted = (Array.isArray(doc.versions) ? doc.versions : []).slice(-MAX_VERSIONS);
+    return JSON.stringify(have) === JSON.stringify(wanted);
+}
+
+// Restoring is additive and asks no questions: it never overwrites and never deletes a document
+// that is already here. Anything already present with different content comes back as a separate
+// copy under a fresh id, and the document that is open right now is only ever added as a copy
+// too. That is what makes a confirmation step unnecessary — there is nothing a restore can
+// destroy. (The one hard limit is the library size: the index keeps MAX_RECENTS entries and
+// trimIndex() deletes the content of anything past that, so restore fills the free slots
+// newest-first and says what did not fit.)
+async function restoreBackup(file) {
+    let data;
+    try {
+        data = JSON.parse(await file.text());
+    } catch (err) {
+        toast('That file could not be read as a backup (not valid JSON).');
+        return;
+    }
+    const problem = bundleProblem(data);
+    if (problem) { toast(problem); return; }
+    if (!data.documents.length) { toast('That backup has no documents in it.'); return; }
+
+    // Newest first, and a hand-edited bundle must never be able to list the same document twice.
+    const unique = [];
+    const seenIds = new Set();
+    for (const d of data.documents.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))) {
+        if (seenIds.has(d.id)) continue;
+        seenIds.add(d.id);
+        unique.push(d);
+    }
+
+    // The whole index, including the open document: `list` replaces the stored index, and
+    // dropping the open document from it would make the document the user is looking at vanish
+    // from Recents.
+    const list = readIndex().slice();
+    const slots = Math.max(0, MAX_RECENTS - list.length);
+    let restored = 0;
+    let alreadyHere = 0;
+    let failed = 0;
+    let dropped = 0;
+
+    for (const d of unique) {
+        const known = list.some((e) => e.id === d.id);
+        if (known && await localDocumentMatches(d.id, d)) { alreadyHere += 1; continue; }
+        if (restored >= slots) { dropped += 1; continue; }
+
+        // Reusing an existing id would overwrite work done since the backup was taken, so a
+        // document that is already here comes back as a copy under a fresh id — including the
+        // one that is open right now.
+        const asCopy = known || d.id === currentId;
+        const targetId = asCopy ? newDocId() : d.id;
+        const title = asCopy ? `${d.title || 'Untitled'} [Restored]` : (d.title || 'Untitled');
+        const snapshot = d.snapshot || { title: title, body: '', titleImage: null };
+
+        const okSnapshot = await writeSnapshotForRestore(targetId, {
+            title: title,
+            body: snapshot.body || '',
+            titleImage: snapshot.titleImage || null,
+            updatedAt: Date.now(),
+        });
+        const okVersions = Array.isArray(d.versions) && d.versions.length
+            ? await writeVersionsForRestore(targetId, d.versions.slice(-MAX_VERSIONS))
+            : true;
+        if (!okSnapshot || !okVersions) { failed += 1; continue; }
+
+        list.unshift({ id: targetId, title: title, updatedAt: Date.now(), wordCount: d.wordCount || 0 });
+        restored += 1;
+    }
+
+    safeSetItem(FILES_INDEX_KEY, JSON.stringify(trimIndex(list)));
+    renderRecents();
+
+    const parts = [];
+    if (restored) parts.push(`Restored ${restored} document${restored === 1 ? '' : 's'}`);
+    if (alreadyHere) parts.push(`${alreadyHere} already here`);
+    if (failed) parts.push(`${failed} could not be stored`);
+    if (dropped) parts.push(`${dropped} over the ${MAX_RECENTS}-document limit`);
+    toast(parts.length ? `${parts.join(', ')}.` : 'Nothing to restore from that file.');
 }
 
 // Put the live document (the original *_v13 keys) into the editor.
@@ -1720,8 +1951,8 @@ function saveSnapshot() {
             wordCount: words
         });
         
-        // Keep last 20 versions
-        if (versions.length > 20) versions.shift();
+        // Keep the newest MAX_VERSIONS versions.
+        if (versions.length > MAX_VERSIONS) versions.shift();
         
         // Snapshots embed images, so they can be large. Trim hard if the quota is hit.
         const key = versionsKey(currentId);
@@ -2085,6 +2316,16 @@ function wireUI() {
                 case 'export-txt': track('export', { format: 'txt' }); exportText(); break;
                 case 'copy-md': track('export', { format: 'copy' }); copyMarkdown(); break;
                 case 'history': showHistory(); break;
+                case 'backup-all': backupAll(); break;
+                // The picker is the only way to read a file the user chose; the actual restore
+                // runs from its change handler below.
+                case 'restore-backup': {
+                    const input = document.getElementById('backupInput');
+                    if (!input) { toast('Restoring a backup is unavailable in this build.'); break; }
+                    input.value = '';
+                    input.click();
+                    break;
+                }
                 case 'toggle-focus': toggleFocus(); break;
                 case 'toggle-sidebar': toggleSidebar(); break;
                 case 'toggle-mode': toggleMode(); break;
@@ -2141,6 +2382,15 @@ function wireUI() {
     if (hc) hc.addEventListener('click', closeHistory);
     const ho = document.getElementById('historyOverlay');
     if (ho) ho.addEventListener('click', closeHistory);
+
+    // DD-03 (IDB-0): restore from a chosen backup file.
+    const backupInput = document.getElementById('backupInput');
+    if (backupInput) {
+        backupInput.addEventListener('change', (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (file) restoreBackup(file);
+        });
+    }
 
     // UI-13: the Recents row-actions menu. One shared, body-level popover for every row.
     const rowMenu = document.getElementById('rowMenu');
