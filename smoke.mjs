@@ -48,6 +48,60 @@ await checkDocument('/privacy/', {
   notContains: ['mailto:', '@quorly'],
 });
 
+// --- agent discovery surface (llms.txt, skill, catalogs, robots signal) -----------
+
+await checkDocument('/llms.txt', {
+  type: 'text/plain',
+  contains: ['# Quorly', '](/agent-skill.md)', 'WebMCP'],
+});
+await checkDocument('/agent-skill.md', {
+  type: 'text/markdown',
+  contains: ['name: quorly-editor', 'get_document', 'append_content', 'consequentialHint'],
+});
+await checkDocument('/AGENTS.md', {
+  type: 'text/markdown',
+  contains: ['# AGENTS.md', 'Strict CSP', 'webmcp.js'],
+});
+
+try {
+  const { body, headers } = await get('/llms.txt');
+  record('/llms.txt starts with an H1', body.startsWith('# '), body.slice(0, 20));
+  record('/llms.txt has a markdown link', /\]\(https:\/\//.test(body), 'no link');
+  record('/llms.txt is at least 50 characters', body.length >= 50, `length=${body.length}`);
+  record('nosniff /llms.txt', headers.get('x-content-type-options') === 'nosniff', '');
+} catch (e) {
+  record('/llms.txt structure', false, String(e.message || e));
+}
+
+for (const path of ['/.well-known/ai-catalog.json', '/.well-known/ard.json']) {
+  try {
+    const { status, headers, body } = await get(path);
+    const type = headers.get('content-type') || '';
+    record(`GET ${path}`, status === 200, `status=${status}`);
+    record(`${path} is JSON`, type.startsWith('application/json'), `type=${type}`);
+    record(`nosniff ${path}`, headers.get('x-content-type-options') === 'nosniff', '');
+    const doc = JSON.parse(body);
+    const entry = Array.isArray(doc.entries) ? doc.entries[0] : null;
+    record(`${path} has an ARD entry`, !!(entry && entry.identifier && entry.displayName && entry.type && entry.url), 'missing required fields');
+    record(`${path} identifier is a domain URN`, !!entry && /^urn:air:quorly\.pages\.dev:/.test(entry.identifier || ''), entry ? entry.identifier : 'none');
+    record(`${path} entry is an agent skill`, !!entry && entry.type === 'application/agent-skills+md', entry ? entry.type : 'none');
+    const queries = entry && Array.isArray(entry.representativeQueries) ? entry.representativeQueries.length : 0;
+    record(`${path} has 2-5 representative queries`, queries >= 2 && queries <= 5, `count=${queries}`);
+  } catch (e) {
+    record(`agent catalog ${path}`, false, String(e.message || e));
+  }
+}
+
+try {
+  const { body } = await get('/robots.txt');
+  record('/robots.txt has the Content-Signal', body.includes('Content-Signal: search=yes, ai-input=yes, ai-train=no'), 'missing');
+  record('/robots.txt advertises the Agentmap', body.includes('Agentmap: https://quorly.pages.dev/.well-known/ard.json'), 'missing');
+  record('/robots.txt groups AI crawlers', body.includes('User-agent: GPTBot') && body.includes('User-agent: ClaudeBot'), 'missing');
+  record('/robots.txt still allows everything', /User-agent: \*\r?\nAllow: \//.test(body), 'base group changed');
+} catch (e) {
+  record('/robots.txt agent directives', false, String(e.message || e));
+}
+
 // --- static assets: the exact failure class we are guarding against --------------
 
 const assets = [

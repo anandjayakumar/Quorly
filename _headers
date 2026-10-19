@@ -86,6 +86,21 @@
   Content-Type: application/xml; charset=utf-8
 /robots.txt
   Content-Type: text/plain; charset=utf-8
+
+# Agent-facing discovery documents. Pinned types for the same `nosniff` reason as the
+# scripts: a markdown or JSON file served as octet-stream is unusable to every client.
+/llms.txt
+  Content-Type: text/plain; charset=utf-8
+/agent-skill.md
+  Content-Type: text/markdown; charset=utf-8
+/AGENTS.md
+  Content-Type: text/markdown; charset=utf-8
+/.well-known/ai-catalog.json
+  Content-Type: application/json; charset=utf-8
+  Cache-Control: public, max-age=3600
+/.well-known/ard.json
+  Content-Type: application/json; charset=utf-8
+  Cache-Control: public, max-age=3600
 /manifest.webmanifest
   Content-Type: application/manifest+json; charset=utf-8
 /og.png

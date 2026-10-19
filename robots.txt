@@ -1,4 +1,22 @@
 User-agent: *
 Allow: /
 
+# AI crawlers: the site may be crawled, quoted and used to answer questions, but not
+# used to train models. Content-Signal is a robots.txt extension; agents that do not
+# understand it fall back to the Allow above.
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: CCBot
+Allow: /
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+
+# Agentic Resource Discovery: the catalog of agent-facing resources (the WebMCP skill).
+Agentmap: https://quorly.pages.dev/.well-known/ard.json
+
 Sitemap: https://quorly.pages.dev/sitemap.xml

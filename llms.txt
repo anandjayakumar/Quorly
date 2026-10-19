@@ -1,0 +1,23 @@
+# Quorly
+
+> Quorly is a private, local-first writing app. Drafts are edited and stored in the browser: there is no account, no server-side document storage, and no upload.
+
+Quorly is a single-page editor written in plain HTML, CSS and JavaScript with no build step and no framework. The only outbound request the editor makes besides its own assets is a cookieless visit counter on the same origin. Nothing in a document is sent anywhere.
+
+## Pages
+
+- [Quorly home](https://quorly.pages.dev/): what the app is, why drafts never leave the browser, and a short FAQ.
+- [Editor](https://quorly.pages.dev/app/): the writing surface — headings, lists, quotes, code blocks, tables, images, Markdown/PDF/TXT export, focus mode, themes, typography and column width.
+- [Privacy](https://quorly.pages.dev/privacy/): exactly what is stored locally and what the single analytics counter records.
+
+## For agents
+
+- [Quorly editor agent skill](https://quorly.pages.dev/agent-skill.md): the WebMCP tool set the editor registers in the browser, with inputs, annotations and safety rules.
+- [Agent catalog](https://quorly.pages.dev/.well-known/ai-catalog.json): the machine-readable ARD entry for that skill.
+
+The editor's tools are registered through WebMCP (`document.modelContext`), a W3C Community Group draft. They exist only inside a browser that implements it — Chrome or Edge with the WebMCP feature enabled, or ChatGPT desktop's built-in browser. There is no server-side MCP endpoint, so an agent that cannot run the page cannot call the tools; for those agents the skill document above is the readable fallback.
+
+## Optional
+
+- [Sitemap](https://quorly.pages.dev/sitemap.xml): the four public pages.
+- [robots.txt](https://quorly.pages.dev/robots.txt): crawl rules and the AI content signal.
