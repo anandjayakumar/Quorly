@@ -97,7 +97,7 @@ body{
   background: #0e0e0e;
   color:var(--text);
   font-family:'Inter',system-ui;
-  padding:32px;
+  padding:16px;
   transition: background-color 0.3s ease;
 }
 
@@ -678,7 +678,7 @@ body.q-app .app {
   overflow: visible;
   /* Let the body scroll (browser scrollbar at viewport edge) and the reader grow with
      content. No internal scrollbar, so shadows aren't clipped horizontally. */
-  padding: 0;
+  padding: 16px;
 }
 
 /* Mobile: the offset measures from the .app scrollport, which already sits inside the body
@@ -715,7 +715,7 @@ body.q-app .sidebar {
   padding: 70px;
   min-height: 85vh;
   align-self: start;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   position: relative;
   overflow: visible;
 }
