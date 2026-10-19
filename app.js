@@ -2313,7 +2313,7 @@ function wireUI() {
         const activeRow = cell ? cell.closest('tr') : table.querySelector('tbody tr');
 
         if (action === 'insert-row-above' || action === 'insert-row-below') {
-            if (!activeRow || activeRow.parentNode.tagName === 'THEAD') return;
+            if (!activeRow) return;
             const tr = document.createElement('tr');
             for (let i = 0; i < colCount; i++) {
                 const td = document.createElement('td');
@@ -2323,8 +2323,17 @@ function wireUI() {
                 td.setAttribute('data-w', String(w));
                 tr.appendChild(td);
             }
-            if (action === 'insert-row-above') activeRow.parentNode.insertBefore(tr, activeRow);
-            else activeRow.parentNode.insertBefore(tr, activeRow.nextSibling);
+            if (activeRow.parentNode.tagName === 'THEAD') {
+                const tbody = table.querySelector('tbody');
+                if (tbody) {
+                    if (tbody.firstChild) tbody.insertBefore(tr, tbody.firstChild);
+                    else tbody.appendChild(tr);
+                }
+            } else if (action === 'insert-row-above') {
+                activeRow.parentNode.insertBefore(tr, activeRow);
+            } else {
+                activeRow.parentNode.insertBefore(tr, activeRow.nextSibling);
+            }
         } else if (action === 'insert-col-left' || action === 'insert-col-right') {
             const at = idx === null ? colCount : (action === 'insert-col-left' ? idx : idx + 1);
             const width = colWidth(table, Math.min(Math.max(at, 0), colCount - 1));
