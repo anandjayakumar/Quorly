@@ -1763,6 +1763,13 @@ body.light-mode #modeBtn .icon-sun { display: block; }
   min-width: 0;
 }
 
+.dropdown-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .dropdown-icon {
   display: block;
   width: 17px;
@@ -2025,7 +2032,9 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
    A−/A+ and ←/→ button pairs that used to sit in Document). */
 .dropdown-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* Style ("Heading 1") needs more room than the icon-only width picker, so the row keeps its
+     overall width while shifting a little from the width column to the style column. */
+  grid-template-columns: 1fr 1.3fr 0.7fr;
   gap: 8px;
   margin-bottom: 8px;
 }
