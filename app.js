@@ -377,6 +377,7 @@ function loadMarkdown(markdownText) {
     if(h1) h1.remove();
     isLoading = true;
     editBody.innerHTML = temp.innerHTML;
+    applyTableWidths();
     migrateAlignment();
     firstKeystrokeTracked = false; // an imported document starts its own count
     updateStats();
@@ -1040,6 +1041,7 @@ function loadHTML(htmlContent) {
     editTitle.textContent = title;
     isLoading = true;
     editBody.innerHTML = temp.innerHTML;
+    applyTableWidths();
     migrateAlignment();
     updateStats();
     saveToLocalStorage();
@@ -1222,8 +1224,8 @@ function insertTable() {
     const insertedTable = inserted && inserted.querySelector('table.editor-table');
     if (insertedTable) {
         insertedTable.querySelectorAll('th, td').forEach(cell => {
-            cell.setAttribute('data-w', '50');
-            cell.style.width = '50px';
+            cell.setAttribute('data-w', '150');
+            cell.style.width = '150px';
         });
     }
     saveToLocalStorage();
@@ -1280,9 +1282,54 @@ function attachBodyImageDeleteButtons() {
 
 // --- CORE SYNC & CONVERSION ---
 
+// The menu button/dropdown are stripped from saved HTML, so rebuild them (and wrap any bare
+// table) whenever a document is loaded or a table is inserted.
+const TABLE_MENU_ITEMS = [
+    ['insert-row-above', 'Insert row above'],
+    ['insert-row-below', 'Insert row below'],
+    ['insert-col-left', 'Insert column left'],
+    ['insert-col-right', 'Insert column right'],
+    ['delete-row', 'Delete row'],
+    ['delete-col', 'Delete column']
+];
+
+function ensureTableChrome(root) {
+    (root || editBody).querySelectorAll('table.editor-table').forEach(table => {
+        let wrapper = table.closest('.table-wrapper');
+        if (!wrapper) {
+            wrapper = document.createElement('div');
+            wrapper.className = 'table-wrapper';
+            table.parentNode.insertBefore(wrapper, table);
+            wrapper.appendChild(table);
+        }
+        if (!wrapper.querySelector(':scope > .table-menu-btn')) {
+            const btn = document.createElement('button');
+            btn.className = 'table-menu-btn';
+            btn.contentEditable = 'false';
+            btn.setAttribute('aria-label', 'Table options');
+            btn.title = 'Table options';
+            btn.textContent = '\u22ee';
+            wrapper.appendChild(btn);
+        }
+        if (!wrapper.querySelector(':scope > .table-menu-dropdown')) {
+            const dd = document.createElement('div');
+            dd.className = 'table-menu-dropdown';
+            dd.contentEditable = 'false';
+            TABLE_MENU_ITEMS.forEach(([action, label]) => {
+                const b = document.createElement('button');
+                b.setAttribute('data-action', action);
+                b.textContent = label;
+                dd.appendChild(b);
+            });
+            wrapper.appendChild(dd);
+        }
+    });
+}
+
 // Column widths live in data-w so they survive a save/reload: the strict CSP drops inline
 // style attributes when HTML is parsed, but property writes from JS are allowed.
 function applyTableWidths(root) {
+    ensureTableChrome(root);
     (root || editBody).querySelectorAll('.editor-table [data-w]').forEach(cell => {
         const w = parseFloat(cell.getAttribute('data-w'));
         if (!isNaN(w)) cell.style.width = w + 'px';
@@ -2231,20 +2278,31 @@ function wireUI() {
         overlay.innerHTML = '';
         const wr = wrapper.getBoundingClientRect();
         const cr = cell.getBoundingClientRect();
+        const half = 7;
         const v = document.createElement('span');
         v.className = 'resize-v';
         v.contentEditable = 'false';
-        v.style.left = (cr.right - wr.left - 4) + 'px';
-        v.style.top = (cr.top - wr.top) + 'px';
-        v.style.height = cr.height + 'px';
+        v.style.left = (cr.right - wr.left - half) + 'px';
+        v.style.top = (cr.top - wr.top + cr.height / 2 - half) + 'px';
         const h = document.createElement('span');
         h.className = 'resize-h';
         h.contentEditable = 'false';
-        h.style.left = (cr.left - wr.left) + 'px';
-        h.style.top = (cr.bottom - wr.top - 4) + 'px';
-        h.style.width = cr.width + 'px';
+        h.style.left = (cr.left - wr.left + cr.width / 2 - half) + 'px';
+        h.style.top = (cr.bottom - wr.top - half) + 'px';
         overlay.appendChild(v);
         overlay.appendChild(h);
+
+        // The menu button sits on the bottom-right corner of the selected cell.
+        const btn = wrapper.querySelector('.table-menu-btn');
+        if (btn) {
+            btn.style.left = (cr.right - wr.left - 26) + 'px';
+            btn.style.top = (cr.bottom - wr.top - 26) + 'px';
+            const dd = wrapper.querySelector('.table-menu-dropdown');
+            if (dd) {
+                dd.style.left = btn.style.left;
+                dd.style.top = btn.style.top;
+            }
+        }
     }
 
     function selectTableCell(cell) {
@@ -2302,7 +2360,7 @@ function wireUI() {
     function colWidth(table, index) {
         const th = table.querySelectorAll('thead th')[index];
         const w = th ? parseFloat(th.style.width) : NaN;
-        return isNaN(w) ? 50 : w;
+        return isNaN(w) ? 150 : w;
     }
 
     function applyTableAction(table, action) {

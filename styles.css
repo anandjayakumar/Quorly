@@ -1022,13 +1022,13 @@ body.light-mode #editBody code {
   width: auto;
   table-layout: fixed;
   border-collapse: collapse;
-  margin: 24px 0;
+  margin: 24px auto;
 }
 
 #editBody table.editor-table th,
 #editBody table.editor-table td {
-  width: 50px;
-  min-width: 50px;
+  width: 150px;
+  min-width: 150px;
   border: 1px solid rgba(255,255,255,0.15);
   padding: 8px 12px;
   text-align: left;
@@ -1053,20 +1053,20 @@ body.light-mode #editBody table.editor-table th {
 }
 
 /* Custom table wrapper + menu + resize */
-.table-wrapper { position: relative; display: inline-block; max-width: 100%; }
+.table-wrapper { position: relative; display: block; width: 100%; max-width: 100%; text-align: center; }
 .table-menu-btn {
-  position: absolute; bottom: -14px; right: -14px;
-  width: 26px; height: 26px; padding: 0;
+  position: absolute; left: 0; top: 0;
+  width: 24px; height: 24px; padding: 0;
   border-radius: 50%;
   background: rgba(30,30,35,0.92);
   border: 1px solid rgba(255,255,255,0.18);
-  color: #fff; font-size: 15px; line-height: 1;
+  color: #fff; font-size: 14px; line-height: 1;
   cursor: pointer; z-index: 210;
   display: none; align-items: center; justify-content: center;
   box-shadow: 0 2px 8px rgba(0,0,0,0.35);
 }
 .table-wrapper.table-selected .table-menu-btn { display: flex; }
-.table-menu-dropdown { position: absolute; bottom: 18px; right: -8px; background: rgba(30,30,35,0.96); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 4px; min-width: 150px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); z-index: 211; display: none; flex-direction: column; gap: 2px; }
+.table-menu-dropdown { position: absolute; left: 0; top: 0; transform: translate(-100%, calc(-100% - 8px)); background: rgba(30,30,35,0.96); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 4px; min-width: 150px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); z-index: 211; display: none; flex-direction: column; gap: 2px; }
 .table-menu-dropdown.open { display: flex; }
 .table-menu-dropdown button { background: transparent; border: none; color: rgba(255,255,255,0.85); padding: 6px 10px; border-radius: 6px; text-align: left; font-size: 12px; font-family: 'Inter', sans-serif; cursor: pointer; white-space: nowrap; }
 .table-menu-dropdown button:hover { background: rgba(255,255,255,0.08); color: #fff; }
@@ -1083,14 +1083,17 @@ body.light-mode #editBody table.editor-table th {
 .table-wrapper .resize-h {
   position: absolute;
   display: block;
+  width: 14px;
+  height: 14px;
   pointer-events: auto;
-  background: rgba(255,255,255,0.35);
-  border: 1px solid rgba(255,255,255,0.65);
-  border-radius: 3px;
+  background: rgba(255,255,255,0.55);
+  border: 1px solid rgba(255,255,255,0.85);
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
   touch-action: none;
 }
-.table-wrapper .resize-v { width: 7px; cursor: col-resize; }
-.table-wrapper .resize-h { height: 7px; cursor: row-resize; }
+.table-wrapper .resize-v { cursor: col-resize; }
+.table-wrapper .resize-h { cursor: row-resize; }
 
 body.light-mode #editBody table.editor-table th.resize-active,
 body.light-mode #editBody table.editor-table td.resize-active { outline-color: rgba(0,0,0,0.3); }
