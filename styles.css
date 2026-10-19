@@ -684,10 +684,29 @@ body.q-app .app {
   padding: 0;
 }
 
-/* Sticky panel: the offset now measures from the .app scrollport, which already sits
-   inside the body's 32px padding — 32px would double-count and drift the panel down. */
+/* Mobile: the offset measures from the .app scrollport, which already sits inside the body
+   padding — 32px would double-count and drift the panel down. Desktop re-adds the 32px
+   offset in the min-width block below, where the body has no vertical padding. */
 body.q-app .sidebar {
   top: 0;
+}
+
+/* Desktop parity with the page-scrolling layout: keep only the horizontal body padding so
+   the main column is full-bleed vertically. With the vertical body padding left on, the
+   32px frame stayed pinned above and below the text while a long document scrolled, which
+   read as extra padding compared with production. The 32px top/bottom rhythm is preserved
+   by a margin on the reader (it scrolls away with the content) and by the panel's sticky
+   offset, so first paint looks the same as before. */
+@media (min-width: 1181px) {
+  body.q-app { padding-top: 0; padding-bottom: 0; }
+  /* `align-self: start` (needed so a long document can outgrow the row) means the reader no
+     longer stretches to the scrollport. Give it the stretched height as a minimum instead, so
+     a short document still ends level with the panel and a long one grows past it. */
+  body.q-app .reader {
+    margin: 32px 0;
+    min-height: calc(100vh - 64px);
+  }
+  body.q-app .sidebar { top: 32px; }
 }
 
 /* Ensure the reader itself doesn't overflow */
