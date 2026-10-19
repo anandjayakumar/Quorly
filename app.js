@@ -2278,6 +2278,17 @@ function wireUI() {
     }
     initTableFeatures();
 
+    // Show resize sliders around the active/focused cell
+    document.querySelectorAll('.table-wrapper table.editor-table').forEach(table => {
+        table.addEventListener('click', (e) => {
+            const cell = e.target.closest('th, td');
+            const wrapper = table.closest('.table-wrapper');
+            if (!cell || !wrapper) return;
+            wrapper.querySelectorAll('th, td').forEach(c => c.classList.remove('resize-active'));
+            cell.classList.add('resize-active');
+        });
+    });
+
     // Simple resize drag for table rows/columns via mouse on borders
     (function setupTableResize() {
         let isResizing = false, resizeMode = null, startX = 0, startY = 0, startW = 0, startH = 0, targetCol = null, targetRow = null;
