@@ -662,6 +662,7 @@ async function deleteRecent(id) {
 function restoreLiveDocument() {
     editTitle.textContent = localStorage.getItem("doc_title_v13") || DEFAULT_TITLE;
     editBody.innerHTML = sanitizeHTML(localStorage.getItem("doc_body_v13") || DEFAULT_BODY);
+    applyTableWidths();
     migrateAlignment();
     loadStoredTitleImage();
     firstKeystrokeTracked = false;
@@ -699,7 +700,7 @@ function startCleanDocument(blank) {
 
     // Overwrite the live keys so a reload cannot resurrect the previous document.
     safeSetItem("doc_title_v13", editTitle.textContent);
-    safeSetItem("doc_body_v13", editBody.innerHTML);
+    safeSetItem("doc_body_v13", bodyHTML());
     localStorage.removeItem("doc_title_image_v13");
     firstKeystrokeTracked = false;
 }
@@ -733,6 +734,7 @@ async function openRecent(id) {
     isLoading = true;
     editTitle.textContent = snapshot.title || 'Untitled';
     editBody.innerHTML = sanitizeHTML(snapshot.body || '');
+    applyTableWidths();
     migrateAlignment();
     if (snapshot.titleImage) {
         // Set the width before setTitleImage so the write it triggers records the real width.
@@ -886,7 +888,7 @@ async function exportQuorly() {
         const payload = JSON.stringify({
             version: 1,
             title: editTitle.textContent,
-            body: editBody.innerHTML,
+            body: bodyHTML(),
             titleImage: titleImageData
         }, null, 2);
         await writable.write(payload);
@@ -996,6 +998,7 @@ function loadQuorly(rawContent) {
         const snapshot = JSON.parse(rawContent);
         editTitle.textContent = snapshot.title || 'Untitled';
         editBody.innerHTML = sanitizeHTML(snapshot.body || '');
+        applyTableWidths();
         migrateAlignment();
         if (snapshot.titleImage && snapshot.titleImage.src) {
             const img = document.getElementById('titleImage');
@@ -1210,8 +1213,19 @@ function insertTable() {
         tableHtml += '</tr>';
     }
     tableHtml += '</tbody></table>';
-    const html = `<div class="table-wrapper">${tableHtml}<button class="table-menu-btn" aria-label="Table options" title="Table options">⋯</button><div class="table-menu-dropdown"><button data-action="insert-row-above">Insert row above</button><button data-action="insert-row-below">Insert row below</button><button data-action="insert-col-left">Insert column left</button><button data-action="insert-col-right">Insert column right</button><button data-action="delete-row">Delete row</button><button data-action="delete-col">Delete column</button></div></div><p><br></p>`;
+    const html = `<div class="table-wrapper">${tableHtml}<button class="table-menu-btn" contenteditable="false" aria-label="Table options" title="Table options">\u22ee</button><div class="table-menu-dropdown" contenteditable="false"><button data-action="insert-row-above">Insert row above</button><button data-action="insert-row-below">Insert row below</button><button data-action="insert-col-left">Insert column left</button><button data-action="insert-col-right">Insert column right</button><button data-action="delete-row">Delete row</button><button data-action="delete-col">Delete column</button></div></div><p><br></p>`;
     document.execCommand('insertHTML', false, html);
+    // Default column width (50px) is applied through CSSOM — inline style attributes are
+    // blocked by the strict CSP, but property writes are not.
+    const wrappers = editBody.querySelectorAll('.table-wrapper');
+    const inserted = wrappers[wrappers.length - 1];
+    const insertedTable = inserted && inserted.querySelector('table.editor-table');
+    if (insertedTable) {
+        insertedTable.querySelectorAll('th, td').forEach(cell => {
+            cell.setAttribute('data-w', '50');
+            cell.style.width = '50px';
+        });
+    }
     saveToLocalStorage();
 }
 
@@ -1266,9 +1280,30 @@ function attachBodyImageDeleteButtons() {
 
 // --- CORE SYNC & CONVERSION ---
 
+// Column widths live in data-w so they survive a save/reload: the strict CSP drops inline
+// style attributes when HTML is parsed, but property writes from JS are allowed.
+function applyTableWidths(root) {
+    (root || editBody).querySelectorAll('.editor-table [data-w]').forEach(cell => {
+        const w = parseFloat(cell.getAttribute('data-w'));
+        if (!isNaN(w)) cell.style.width = w + 'px';
+    });
+    (root || editBody).querySelectorAll('.editor-table tr[data-h]').forEach(row => {
+        const h = parseFloat(row.getAttribute('data-h'));
+        if (!isNaN(h)) row.style.height = h + 'px';
+    });
+}
+
+// Serialize the editor without the table UI chrome (menu button/dropdown, resize handles).
+// The chrome lives inside #editBody so it can be positioned, but it must never be saved.
+function bodyHTML() {
+    const clone = editBody.cloneNode(true);
+    clone.querySelectorAll('.table-menu-btn, .table-menu-dropdown, .resize-overlay').forEach(el => el.remove());
+    return clone.innerHTML;
+}
+
 function saveToLocalStorage() {
     safeSetItem("doc_title_v13", editTitle.textContent);
-    safeSetItem("doc_body_v13", editBody.innerHTML);
+    safeSetItem("doc_body_v13", bodyHTML());
     
     // Save title image data
     const titleImageData = getTitleImageData();
@@ -2169,189 +2204,225 @@ function wireUI() {
     });
 
 
-    // Custom table: menu toggle, resize drag, row/col actions
-    function initTableFeatures() {
-        document.querySelectorAll('.table-wrapper').forEach(wrapper => {
-            const btn = wrapper.querySelector('.table-menu-btn');
-            const dropdown = wrapper.querySelector('.table-menu-dropdown');
-            if (btn && dropdown) {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    dropdown.classList.toggle('open');
-                });
-                dropdown.addEventListener('click', (e) => {
-                    const target = e.target.closest('button');
-                    if (!target) return;
-                    const action = target.getAttribute('data-action');
-                    const table = wrapper.querySelector('table.editor-table');
-                    const rows = table ? Array.from(table.querySelectorAll('tbody tr')) : [];
-                    const activeRow = (() => {
-                        const sel = window.getSelection();
-                        if (!sel || !sel.rangeCount) return null;
-                        let node = sel.getRangeAt(0).commonAncestorContainer;
-                        if (node.nodeType === 3) node = node.parentNode;
-                        while (node && node !== editBody) {
-                            if (node.tagName === 'TR') return node;
-                            node = node.parentNode;
-                        }
-                        return rows.length ? rows[0] : null;
-                    })();
-                    if (!table) return;
-                    if (action === 'insert-row-above') {
-                        const tr = document.createElement('tr');
-                        const cols = table.querySelectorAll('thead th').length || 3;
-                        for (let i = 0; i < cols; i++) tr.innerHTML = '<td><br></td>';
-                        if (activeRow && activeRow.parentNode) activeRow.parentNode.insertBefore(tr, activeRow);
-                        else if (table.querySelector('tbody')) table.querySelector('tbody').appendChild(tr);
-                        saveToLocalStorage();
-                    } else if (action === 'insert-row-below') {
-                        const tr = document.createElement('tr');
-                        const cols = table.querySelectorAll('thead th').length || 3;
-                        for (let i = 0; i < cols; i++) tr.innerHTML = '<td><br></td>';
-                        if (activeRow && activeRow.parentNode) {
-                            const next = activeRow.nextSibling;
-                            if (next) activeRow.parentNode.insertBefore(tr, next);
-                            else activeRow.parentNode.appendChild(tr);
-                        } else if (table.querySelector('tbody')) table.querySelector('tbody').appendChild(tr);
-                        saveToLocalStorage();
-                    } else if (action === 'insert-col-left') {
-                        const colIndex = (() => {
-                            let node = (window.getSelection() && window.getSelection().rangeCount) ? window.getSelection().getRangeAt(0).commonAncestorContainer : null;
-                            if (node && node.nodeType === 3) node = node.parentNode;
-                            while (node && node !== editBody) {
-                                if (node.tagName === 'TH' || node.tagName === 'TD') return Array.from(node.parentNode.children).indexOf(node);
-                                node = node.parentNode;
-                            }
-                            return 0;
-                        })();
-                        table.querySelectorAll('tr').forEach(tr => {
-                            const cell = document.createElement(tr.parentElement.tagName === 'THEAD' ? 'th' : 'td');
-                            cell.innerHTML = '<br>';
-                            const ref = tr.children[colIndex];
-                            if (ref) tr.insertBefore(cell, ref); else tr.appendChild(cell);
-                        });
-                        saveToLocalStorage();
-                    } else if (action === 'insert-col-right') {
-                        const colIndex = (() => {
-                            let node = (window.getSelection() && window.getSelection().rangeCount) ? window.getSelection().getRangeAt(0).commonAncestorContainer : null;
-                            if (node && node.nodeType === 3) node = node.parentNode;
-                            while (node && node !== editBody) {
-                                if (node.tagName === 'TH' || node.tagName === 'TD') return Array.from(node.parentNode.children).indexOf(node) + 1;
-                                node = node.parentNode;
-                            }
-                            return (table.querySelectorAll('thead th').length || 3) - 1;
-                        })();
-                        table.querySelectorAll('tr').forEach(tr => {
-                            const cell = document.createElement(tr.parentElement.tagName === 'THEAD' ? 'th' : 'td');
-                            cell.innerHTML = '<br>';
-                            const ref = tr.children[colIndex];
-                            if (ref) tr.insertBefore(cell, ref); else tr.appendChild(cell);
-                        });
-                        saveToLocalStorage();
-                    } else if (action === 'delete-row') {
-                        if (activeRow && activeRow.parentNode && activeRow.parentNode.children.length > 1) {
-                            activeRow.parentNode.removeChild(activeRow);
-                            saveToLocalStorage();
-                        }
-                    } else if (action === 'delete-col') {
-                        const colsCount = table.querySelectorAll('thead th').length || 3;
-                        if (colsCount <= 1) return;
-                        const colIndex = (() => {
-                            let node = (window.getSelection() && window.getSelection().rangeCount) ? window.getSelection().getRangeAt(0).commonAncestorContainer : null;
-                            if (node && node.nodeType === 3) node = node.parentNode;
-                            while (node && node !== editBody) {
-                                if (node.tagName === 'TH' || node.tagName === 'TD') return Array.from(node.parentNode.children).indexOf(node);
-                                node = node.parentNode;
-                            }
-                            return 0;
-                        })();
-                        table.querySelectorAll('tr').forEach(tr => {
-                            const cell = tr.children[colIndex];
-                            if (cell) tr.removeChild(cell);
-                        });
-                        saveToLocalStorage();
-                    }
-                    dropdown.classList.remove('open');
-                });
-            }
+    // --- Custom tables -------------------------------------------------------------
+    // Every handler is delegated from #editBody so tables inserted after load work too.
+    let activeTableCell = null;
+
+    function clearTableSelection(exceptWrapper) {
+        document.querySelectorAll('.table-wrapper.table-selected').forEach(w => {
+            if (w === exceptWrapper) return;
+            w.classList.remove('table-selected');
+            w.querySelectorAll('th, td').forEach(c => c.classList.remove('resize-active'));
+            const overlay = w.querySelector('.resize-overlay');
+            if (overlay) overlay.remove();
+            const dd = w.querySelector('.table-menu-dropdown');
+            if (dd) dd.classList.remove('open');
         });
     }
-    initTableFeatures();
 
-    // Show resize sliders around the active/focused cell
-    document.querySelectorAll('.table-wrapper table.editor-table').forEach(table => {
-        table.addEventListener('click', (e) => {
-            const cell = e.target.closest('th, td');
-            const wrapper = table.closest('.table-wrapper');
-            if (!cell || !wrapper) return;
-            wrapper.querySelectorAll('th, td').forEach(c => c.classList.remove('resize-active'));
-            cell.classList.add('resize-active');
-        });
+    function positionHandles(wrapper, cell) {
+        let overlay = wrapper.querySelector('.resize-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'resize-overlay';
+            overlay.contentEditable = 'false';
+            wrapper.appendChild(overlay);
+        }
+        overlay.innerHTML = '';
+        const wr = wrapper.getBoundingClientRect();
+        const cr = cell.getBoundingClientRect();
+        const v = document.createElement('span');
+        v.className = 'resize-v';
+        v.contentEditable = 'false';
+        v.style.left = (cr.right - wr.left - 4) + 'px';
+        v.style.top = (cr.top - wr.top) + 'px';
+        v.style.height = cr.height + 'px';
+        const h = document.createElement('span');
+        h.className = 'resize-h';
+        h.contentEditable = 'false';
+        h.style.left = (cr.left - wr.left) + 'px';
+        h.style.top = (cr.bottom - wr.top - 4) + 'px';
+        h.style.width = cr.width + 'px';
+        overlay.appendChild(v);
+        overlay.appendChild(h);
+    }
+
+    function selectTableCell(cell) {
+        const wrapper = cell.closest('.table-wrapper');
+        if (!wrapper) return;
+        clearTableSelection(wrapper);
+        wrapper.classList.add('table-selected');
+        wrapper.querySelectorAll('th, td').forEach(c => c.classList.remove('resize-active'));
+        cell.classList.add('resize-active');
+        activeTableCell = cell;
+        positionHandles(wrapper, cell);
+    }
+
+    function cellIndex(cell) {
+        return Array.from(cell.parentNode.children).indexOf(cell);
+    }
+
+    editBody.addEventListener('click', (e) => {
+        if (e.target.closest('.table-menu-btn') || e.target.closest('.table-menu-dropdown')) return;
+        const cell = e.target.closest('th, td');
+        if (cell && editBody.contains(cell)) {
+            selectTableCell(cell);
+            return;
+        }
+        if (!e.target.closest('.table-wrapper')) clearTableSelection(null);
     });
 
-    // Simple resize drag for table rows/columns via mouse on borders
-    (function setupTableResize() {
-        let isResizing = false, resizeMode = null, startX = 0, startY = 0, startW = 0, startH = 0, targetCol = null, targetRow = null;
-        document.querySelectorAll('.table-wrapper table.editor-table').forEach(table => {
-            table.addEventListener('mousedown', (e) => {
-                const th = e.target.closest('th');
-                const td = e.target.closest('td');
-                const cell = th || td;
-                if (!cell) return;
-                const rect = cell.getBoundingClientRect();
-                const x = e.clientX, y = e.clientY;
-                // Column resize: near right edge of th/td
-                if (x > rect.right - 8 && x < rect.right + 4) {
-                    isResizing = true; resizeMode = 'col'; startX = x;
-                    targetCol = cell;
-                    startW = cell.offsetWidth;
-                    e.preventDefault();
-                    document.body.style.userSelect = 'none';
-                    document.body.style.cursor = 'col-resize';
-                    return;
-                }
-                // Row resize: near bottom edge of td (not th for simplicity)
-                if (td && y > rect.bottom - 8 && y < rect.bottom + 4) {
-                    isResizing = true; resizeMode = 'row'; startY = y;
-                    targetRow = cell.parentNode;
-                    startH = targetRow ? targetRow.offsetHeight : cell.offsetHeight;
-                    e.preventDefault();
-                    document.body.style.userSelect = 'none';
-                    document.body.style.cursor = 'row-resize';
-                    return;
-                }
+    editBody.addEventListener('click', (e) => {
+        const btn = e.target.closest('.table-menu-btn');
+        if (btn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const wrapper = btn.closest('.table-wrapper');
+            const dd = wrapper && wrapper.querySelector('.table-menu-dropdown');
+            if (dd) {
+                clearTableSelection(wrapper);
+                wrapper.classList.add('table-selected');
+                dd.classList.toggle('open');
+            }
+            return;
+        }
+        const actionBtn = e.target.closest('.table-menu-dropdown button');
+        if (!actionBtn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const wrapper = actionBtn.closest('.table-wrapper');
+        const table = wrapper && wrapper.querySelector('table.editor-table');
+        if (!table) return;
+        applyTableAction(table, actionBtn.getAttribute('data-action'));
+        const dd = wrapper.querySelector('.table-menu-dropdown');
+        if (dd) dd.classList.remove('open');
+        saveToLocalStorage();
+    });
+
+    function colWidth(table, index) {
+        const th = table.querySelectorAll('thead th')[index];
+        const w = th ? parseFloat(th.style.width) : NaN;
+        return isNaN(w) ? 50 : w;
+    }
+
+    function applyTableAction(table, action) {
+        const headCells = Array.from(table.querySelectorAll('thead th'));
+        const colCount = headCells.length || 3;
+        const cell = activeTableCell && table.contains(activeTableCell) ? activeTableCell : null;
+        const idx = cell ? cellIndex(cell) : null;
+        const activeRow = cell ? cell.closest('tr') : table.querySelector('tbody tr');
+
+        if (action === 'insert-row-above' || action === 'insert-row-below') {
+            if (!activeRow || activeRow.parentNode.tagName === 'THEAD') return;
+            const tr = document.createElement('tr');
+            for (let i = 0; i < colCount; i++) {
+                const td = document.createElement('td');
+                td.innerHTML = '<br>';
+                const w = colWidth(table, i);
+                td.style.width = w + 'px';
+                td.setAttribute('data-w', String(w));
+                tr.appendChild(td);
+            }
+            if (action === 'insert-row-above') activeRow.parentNode.insertBefore(tr, activeRow);
+            else activeRow.parentNode.insertBefore(tr, activeRow.nextSibling);
+        } else if (action === 'insert-col-left' || action === 'insert-col-right') {
+            const at = idx === null ? colCount : (action === 'insert-col-left' ? idx : idx + 1);
+            const width = colWidth(table, Math.min(Math.max(at, 0), colCount - 1));
+            table.querySelectorAll('tr').forEach(tr => {
+                const isHead = tr.parentElement.tagName === 'THEAD';
+                const c = document.createElement(isHead ? 'th' : 'td');
+                c.innerHTML = '<br>';
+                c.style.width = width + 'px';
+                c.setAttribute('data-w', String(width));
+                const ref = tr.children[at];
+                if (ref) tr.insertBefore(c, ref); else tr.appendChild(c);
             });
-        });
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            if (resizeMode === 'col' && targetCol) {
-                const dx = e.clientX - startX;
-                const newW = Math.max(30, startW + dx);
-                targetCol.style.width = newW + 'px';
-                // Apply same width to all cells in this column index
-                const table = targetCol.closest('table');
-                if (table) {
-                    const colIndex = Array.from(targetCol.parentNode.children).indexOf(targetCol);
-                    table.querySelectorAll('tr').forEach(tr => {
-                        const c = tr.children[colIndex];
-                        if (c) c.style.width = newW + 'px';
-                    });
+        } else if (action === 'delete-row') {
+            const rowCount = table.querySelectorAll('tbody tr').length;
+            if (activeRow && activeRow.parentNode.tagName === 'TBODY' && rowCount > 1) activeRow.remove();
+        } else if (action === 'delete-col') {
+            if (colCount <= 1) return;
+            const at = idx === null ? colCount - 1 : idx;
+            table.querySelectorAll('tr').forEach(tr => {
+                const c = tr.children[at];
+                if (c) c.remove();
+            });
+        }
+        activeTableCell = null;
+        const wrapper = table.closest('.table-wrapper');
+        if (wrapper) {
+            const overlay = wrapper.querySelector('.resize-overlay');
+            if (overlay) overlay.remove();
+        }
+        table.querySelectorAll('th, td').forEach(c => c.classList.remove('resize-active'));
+    }
+
+    // Pointer drag on the injected resize handles.
+    (function setupTableResize() {
+        let drag = null;
+        editBody.addEventListener('pointerdown', (e) => {
+            const handle = e.target.closest('.resize-v, .resize-h');
+            if (!handle) return;
+            const cell = activeTableCell;
+            if (!cell || !cell.isConnected) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const isCol = handle.classList.contains('resize-v');
+            const row = cell.closest('tr');
+            drag = {
+                mode: isCol ? 'col' : 'row',
+                cell,
+                startX: e.clientX,
+                startY: e.clientY,
+                startSize: isCol
+                    ? (parseFloat(cell.style.width) || cell.offsetWidth)
+                    : ((row && row.offsetHeight) || cell.offsetHeight)
+            };
+            try { handle.setPointerCapture(e.pointerId); } catch (_) {}
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = isCol ? 'col-resize' : 'row-resize';
+        }, true);
+
+        document.addEventListener('pointermove', (e) => {
+            if (!drag) return;
+            if (drag.mode === 'col') {
+                const width = Math.max(50, drag.startSize + (e.clientX - drag.startX));
+                const table = drag.cell.closest('table');
+                const index = cellIndex(drag.cell);
+                table.querySelectorAll('tr').forEach(tr => {
+                    const c = tr.children[index];
+                    if (c) {
+                        c.style.width = width + 'px';
+                        c.setAttribute('data-w', String(Math.round(width)));
+                    }
+                });
+            } else {
+                const height = Math.max(24, drag.startSize + (e.clientY - drag.startY));
+                const row = drag.cell.closest('tr');
+                if (row) {
+                    row.style.height = height + 'px';
+                    row.setAttribute('data-h', String(Math.round(height)));
                 }
-            } else if (resizeMode === 'row' && targetRow) {
-                const dy = e.clientY - startY;
-                const newH = Math.max(24, startH + dy);
-                targetRow.style.height = newH + 'px';
             }
+            const wrapper = drag.cell.closest('.table-wrapper');
+            if (wrapper) positionHandles(wrapper, drag.cell);
         });
-        document.addEventListener('mouseup', () => {
-            if (isResizing) {
-                isResizing = false; resizeMode = null; targetCol = null; targetRow = null;
-                document.body.style.userSelect = '';
-                document.body.style.cursor = '';
-                saveToLocalStorage();
-            }
+
+        document.addEventListener('pointerup', () => {
+            if (!drag) return;
+            drag = null;
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+            saveToLocalStorage();
         });
     })();
+
+    window.addEventListener('resize', () => {
+        if (activeTableCell && activeTableCell.isConnected) {
+            const wrapper = activeTableCell.closest('.table-wrapper');
+            if (wrapper) positionHandles(wrapper, activeTableCell);
+        }
+    });
 
     const tid = document.getElementById('titleImageDelete');
     if (tid) tid.addEventListener('click', deleteTitleImage);
