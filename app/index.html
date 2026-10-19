@@ -127,12 +127,11 @@
             <li role="option" tabindex="-1" data-value="txt">.txt</li>
           </ul>
         </div>
+        <button class="tile-btn" type="button" id="focusModeBtn" data-action="toggle-focus" title="Toggle Focus Mode (Esc)" aria-pressed="false">
+          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 7.5v13"/><path d="M3 17.5A1.5 1.5 0 0 1 1.5 16V4.5A1.5 1.5 0 0 1 3 3h4.5A3.5 3.5 0 0 1 12 5.5 3.5 3.5 0 0 1 16.5 3H21a1.5 1.5 0 0 1 1.5 1.5V16a1.5 1.5 0 0 1-1.5 1.5h-5.5a2.5 2.5 0 0 0-3.5 2.4 2.5 2.5 0 0 0-3.5-2.4z"/></svg>
+          <span class="tile-label">Focus</span>
+        </button>
       </div>
-      <button class="row-btn" type="button" data-action="history" title="Version history">
-        <svg class="row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.05 11.5a9 9 0 1 0 2.4-6.1"/><path d="M3 3.5v5h5"/><path d="M12 8v4.2l2.6 1.6"/></svg>
-        <span class="row-label">Version History</span>
-        <svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
     </div>
 
     <!-- Formatting — at ≤1180px app.js moves this whole section into #mobileFmtBar (UI-14). -->
@@ -207,9 +206,19 @@
         <button class="fmt-btn" type="button" data-format="bold" title="Bold (Ctrl/Cmd+B)" aria-label="Bold"><b>B</b></button>
         <button class="fmt-btn" type="button" data-format="italic" title="Italic (Ctrl/Cmd+I)" aria-label="Italic"><i>I</i></button>
         <button class="fmt-btn" type="button" data-format="underline" title="Underline (Ctrl/Cmd+U)" aria-label="Underline"><u>U</u></button>
-        <button class="fmt-btn" type="button" data-format="code" title="Inline code" aria-label="Inline code">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 7l-4 5 4 5"/><path d="M16 7l4 5-4 5"/><path d="M13.5 5.5l-3 13"/></svg>
-        </button>
+        <div class="dropdown" id="fmtInsertDropdown" data-placeholder="Insert">
+          <button class="dropdown-toggle fmt-btn" type="button" aria-haspopup="listbox" aria-expanded="false" title="Insert">
+            <span class="dropdown-lead">
+              <span style="font-size:18px;line-height:1;font-weight:700;">+</span>
+            </span>
+          </button>
+          <ul class="dropdown-menu" role="listbox" hidden>
+            <li role="option" tabindex="-1" data-value="image">Image</li>
+            <li role="option" tabindex="-1" data-value="table">Table</li>
+            <li role="option" tabindex="-1" data-value="codeblock">Code Block</li>
+            <li role="option" tabindex="-1" data-value="divider">Divider</li>
+          </ul>
+        </div>
         <button class="fmt-btn" type="button" data-format="link" title="Link (Ctrl/Cmd+K)" aria-label="Link">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.5 13.5a4.5 4.5 0 0 0 6.4 0l2.6-2.6a4.5 4.5 0 0 0-6.4-6.4l-1.5 1.5"/><path d="M13.5 10.5a4.5 4.5 0 0 0-6.4 0l-2.6 2.6a4.5 4.5 0 0 0 6.4 6.4l1.5-1.5"/></svg>
         </button>
@@ -251,13 +260,7 @@
       <div class="recents-list" id="recentsList"></div>
     </div>
 
-    <!-- Focus mode — full-width, last -->
-    <div class="sidebar-section">
-      <button class="row-btn" type="button" id="focusModeBtn" data-action="toggle-focus" title="Toggle Focus Mode (Esc)" aria-pressed="false">
-        <svg class="row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 7.5v13"/><path d="M3 17.5A1.5 1.5 0 0 1 1.5 16V4.5A1.5 1.5 0 0 1 3 3h4.5A3.5 3.5 0 0 1 12 5.5 3.5 3.5 0 0 1 16.5 3H21a1.5 1.5 0 0 1 1.5 1.5V16a1.5 1.5 0 0 1-1.5 1.5h-5.5a2.5 2.5 0 0 0-3.5 2.4 2.5 2.5 0 0 0-3.5-2.4z"/></svg>
-        <span class="row-label">Focus Mode (Esc)</span>
-      </button>
-    </div>
+
   </aside>
 </div>
 
@@ -284,13 +287,7 @@
 
 <div id="appToast" role="status" aria-live="polite"></div>
 
-<!-- Version History Modal -->
-<div id="historyOverlay"></div>
-<div id="historyModal">
-  <h2>Version History</h2>
-  <div id="versionList"></div>
-  <button type="button" id="historyClose" class="modal-close">Close</button>
-</div>
+
 
 <!-- DD-03: the storage layer. It has to run before /app.js, because app.js reaches for
      window.QuorlyStore at parse time and never waits for it. Deferred scripts run in document

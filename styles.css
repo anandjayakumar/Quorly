@@ -699,6 +699,8 @@ body.q-app .app {
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 .focus-back-btn:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.25); }
+body.light-mode .focus-back-btn { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.12); color: rgba(0,0,0,0.75); }
+body.light-mode .focus-back-btn:hover { background: rgba(0,0,0,0.12); border-color: rgba(0,0,0,0.2); }
 
 @media (max-width: 1180px) {
   body.focus-mode .focus-back-btn { display: flex; }
@@ -1670,6 +1672,7 @@ body.light-mode #modeBtn .icon-sun { display: block; }
 .dropdown-tile .dropdown-toggle .tile-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dropdown-tile .tile-caret { position: absolute; bottom: 4px; right: 6px; font-size: 9px; opacity: 0.6; }
 
+.fmt-btn.dropdown-toggle { width: 38px; padding: 8px 0; min-width: 0; }
 .dropdown-toggle {
   width: 100%;
   display: flex;
@@ -1801,6 +1804,9 @@ body.light-mode .dropdown-menu li.active {
 }
 
 body.light-mode .dropdown-menu li[aria-selected="true"] {
+  color: #000000;
+}
+body.light-mode .dropdown-menu li[aria-selected="true"]::before {
   color: #000000;
 }
 
@@ -2192,6 +2198,7 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
 #fileInput { display: none; }
 #titleImage { width: 700px; }
 #historyModal h2 { margin-top: 0; }
+body.light-mode #historyModal h2 { color: #1a1a1a; }
 .modal-close {
   margin-top: 20px;
   padding: 10px 20px;

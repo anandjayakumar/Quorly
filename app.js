@@ -408,11 +408,6 @@ function readIndex() {
 // Version history is per document, so opening a different document doesn't show someone else's
 // snapshots. The storage layer owns both the key and the IndexedDB store behind it; the legacy
 // global key `doc_versions_v13` is read once, for migration.
-async function readVersions() {
-    if (!currentId) return [];
-    return QuorlyStore.listVersions(currentId);
-}
-
 // Keep only the newest MAX_RECENTS entries. The document that is currently open is never evicted.
 // Anything that falls off goes with its version history: the storage layer deletes both, and a
 // document whose snapshot is gone would be unreachable from Recents anyway.
@@ -800,7 +795,6 @@ async function syncNow() {
 
             fileDisplayEl().textContent = fileHandle.name;
             await saveToDisk();
-            await saveSnapshot(); // Save version history
             const display = fileDisplayEl();
             display.textContent = "Saved ✓";
             setTimeout(() => display.textContent = fileHandle.name, 1500);
@@ -832,7 +826,6 @@ async function syncNow() {
         }
         
         await saveToDisk();
-        await saveSnapshot(); // Save version history
 
         const display = fileDisplayEl();
         const originalName = fileHandle.name;
@@ -1799,101 +1792,6 @@ editBody.addEventListener('blur', (e) => {
     }
 }, true);
 
-// --- VERSION HISTORY ---
-
-async function saveSnapshot() {
-    if (!currentId) return;
-    try {
-        const text = editBody.innerText || "";
-        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-        const version = {
-            timestamp: Date.now(),
-            title: editTitle.textContent,
-            body: editBody.innerHTML,
-            titleImage: getTitleImageData(),
-            wordCount: words
-        };
-
-        // The storage layer keeps the newest MAX_VERSIONS. A version embeds its images, so it can
-        // be large: if the write fails, drop most of the history and try once more.
-        let stored = await QuorlyStore.appendVersion(currentId, version, MAX_VERSIONS);
-        if (!stored) {
-            await QuorlyStore.pruneVersions(currentId, 5);
-            await QuorlyStore.appendVersion(currentId, version, 5);
-        }
-    } catch (err) {
-        console.warn('Could not save version snapshot', err);
-    }
-}
-
-async function showHistory() {
-    const versions = await readVersions();
-    const versionList = document.getElementById('versionList');
-    
-    versionList.textContent = '';
-    if (versions.length === 0) {
-        const p = document.createElement('p');
-        p.className = 'version-empty';
-        p.textContent = 'No version history for this document yet. Versions are saved when you sync to disk.';
-        versionList.appendChild(p);
-    } else {
-        // Build nodes with listeners (inline onclick is blocked by the CSP)
-        versions.slice().reverse().forEach((v, i) => {
-            const item = document.createElement('div');
-            item.className = 'history-item';
-            item.addEventListener('click', () => restoreVersion(versions.length - 1 - i));
-
-            const time = document.createElement('div');
-            time.className = 'history-time';
-            time.textContent = new Date(v.timestamp).toLocaleString() + ' • ' + (v.wordCount || 0) + ' words';
-
-            const title = document.createElement('div');
-            title.className = 'history-title';
-            title.textContent = v.title;
-
-            const preview = document.createElement('div');
-            preview.className = 'history-preview';
-            preview.textContent = v.body.replace(/<[^>]*>/g, '').substring(0, 100) + '...';
-
-            item.append(time, title, preview);
-            versionList.appendChild(item);
-        });
-    }
-    
-    document.getElementById('historyOverlay').classList.add('active');
-    document.getElementById('historyModal').classList.add('active');
-}
-
-function closeHistory() {
-    document.getElementById('historyOverlay').classList.remove('active');
-    document.getElementById('historyModal').classList.remove('active');
-}
-
-async function restoreVersion(index) {
-    if (!confirm('Restore this version? Current changes will be lost.')) return;
-
-    const versions = await readVersions();
-    const version = versions[index];
-    if (!version) return;
-    
-    editTitle.textContent = version.title;
-    editBody.innerHTML = sanitizeHTML(version.body);
-    migrateAlignment();
-    
-    if (version.titleImage) {
-        setTitleImage(version.titleImage.src);
-        document.getElementById('titleImage').style.width = version.titleImage.width;
-    } else {
-        deleteTitleImage();
-    }
-    
-    saveToLocalStorage();
-    closeHistory();
-    
-    setTimeout(attachBodyImageDeleteButtons, 100);
-    setTimeout(applyCodeHighlighting, 100);
-}
-
 // --- WRITE-ASSIST removed: feature hidden. Restore from the original app if needed. ---
 
 function changeTypography(font) {
@@ -2015,11 +1913,6 @@ document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (cmdPalette && cmdPalette.style.display === 'flex') {
         cmdPalette.style.display = 'none';
-        return;
-    }
-    const historyModal = document.getElementById('historyModal');
-    if (historyModal && historyModal.classList.contains('active')) {
-        closeHistory();
         return;
     }
     // UI-14: an open panel drawer is transient UI too — close it before focus mode.
@@ -2185,7 +2078,7 @@ function wireUI() {
                 case 'export-md': track('export', { format: 'md' }); exportMarkdown(); break;
                 case 'export-pdf': track('export', { format: 'pdf' }); window.print(); break;
                 case 'export-txt': track('export', { format: 'txt' }); exportText(); break;
-                case 'history': showHistory(); break;
+
                 case 'toggle-focus': toggleFocus(); break;
                 case 'toggle-sidebar': toggleSidebar(); break;
                 case 'toggle-mode': toggleMode(); break;
@@ -2208,6 +2101,9 @@ function wireUI() {
 
     const insertDrop = document.getElementById('insertDropdown');
     if (insertDrop) initDropdown(insertDrop, (value) => handleInsert(value), true);
+
+    const fmtInsertDrop = document.getElementById('fmtInsertDropdown');
+    if (fmtInsertDrop) initDropdown(fmtInsertDrop, (value) => handleInsert(value), true);
 
     document.addEventListener('selectionchange', () => { syncHeadingDropdown(); });
 
@@ -2242,11 +2138,6 @@ function wireUI() {
     const tid = document.getElementById('titleImageDelete');
     if (tid) tid.addEventListener('click', deleteTitleImage);
 
-
-    const hc = document.getElementById('historyClose');
-    if (hc) hc.addEventListener('click', closeHistory);
-    const ho = document.getElementById('historyOverlay');
-    if (ho) ho.addEventListener('click', closeHistory);
 
     // UI-13: the Recents row-actions menu. One shared, body-level popover for every row.
     const rowMenu = document.getElementById('rowMenu');
