@@ -89,7 +89,6 @@ try {
   const { body } = await get('/app.js');
   const markers = [
     'function deleteRecent',
-    'function readVersions',
     'function exportText',
     // S-2a: the open document is stored once (live keys) and snapshotted only when parked.
     'function parkCurrentDocument',
