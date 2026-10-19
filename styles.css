@@ -699,6 +699,7 @@ body.q-app .sidebar {
   border-radius: var(--radius);
   padding: 70px;
   min-height: 85vh;
+  align-self: start;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   position: relative;
   overflow: visible;
