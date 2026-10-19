@@ -34,8 +34,7 @@ await checkDocument('/', {
 await checkDocument('/app/', {
   type: 'text/html',
   contains: ['id="focusModeBtn"', 'id="editBody"', '/styles.css', '/app.js', 'noindex',
-    'id="recentsSearch"', 'data-action="export-txt"', 'data-action="copy-md"',
-    // DD-03: the storage layer must be in the document, and before /app.js.
+    'id="recentsSearch"',    // DD-03: the storage layer must be in the document, and before /app.js.
     '/stories.js',
     // W-1 / W-2: installable, and the offline cue has somewhere to render.
     'rel="manifest"', 'id="netStatus"', 'apple-touch-icon'],
@@ -91,7 +90,6 @@ try {
   const markers = [
     'function deleteRecent',
     'function readVersions',
-    'function copyMarkdown',
     'function exportText',
     // S-2a: the open document is stored once (live keys) and snapshotted only when parked.
     'function parkCurrentDocument',

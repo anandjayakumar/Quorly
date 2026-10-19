@@ -697,7 +697,7 @@ body.q-app .sidebar {
   min-height: 85vh;
   box-shadow: 0 16px 40px rgba(0,0,0,0.5);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .doc{max-width:940px;margin:0 auto}
@@ -1077,7 +1077,7 @@ body.light-mode #editBody pre .operator { color: #d73a49; }
     opacity 0.3s ease 0.08s,
     transform var(--focus-dur) cubic-bezier(0.4, 0, 0.2, 1);
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: visible;
 }
 
 body.light-mode .sidebar {
@@ -1614,6 +1614,19 @@ body.light-mode #modeBtn .icon-sun { display: block; }
   margin-bottom: 8px;
 }
 
+/* Export dropdown rendered as a tile so it sits on the same row as New/Open/Save. */
+.dropdown-tile { margin-bottom: 0; }
+.dropdown-tile .dropdown-toggle {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 8px;
+  position: relative;
+}
+.dropdown-tile .dropdown-toggle .tile-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dropdown-tile .tile-caret { position: absolute; bottom: 4px; right: 6px; font-size: 9px; opacity: 0.6; }
+
 .dropdown-toggle {
   width: 100%;
   display: flex;
@@ -1684,6 +1697,7 @@ body.light-mode #modeBtn .icon-sun { display: block; }
 .dropdown-menu[hidden] {
   display: none;
 }
+.width-menu li { display: flex; justify-content: center; padding: 10px; }
 
 .dropdown-menu li {
   padding: 7px 9px;
@@ -1704,6 +1718,10 @@ body.light-mode #modeBtn .icon-sun { display: block; }
 .dropdown-menu li[aria-selected="true"] {
   color: #ffffff;
   font-weight: 600;
+}
+.dropdown-menu li[aria-selected="true"]::before {
+  content: '✓ ';
+  color: #ffffff;
 }
 
 body.light-mode .dropdown-toggle {
@@ -1947,6 +1965,11 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
   /* On mobile the formatting section is moved into the fixed bar; if it is still in the
      sidebar (initial paint before syncLayoutMode runs) keep it out of the drawer. */
   .sidebar #formatSection { display: none; }
+
+  /* Hide the floating selection toolbar and the page-width dropdown on mobile — the fixed
+     bar carries formatting, and width is a desktop-only concern. */
+  #toolbar { display: none !important; }
+  #docWidthDropdown { display: none; }
 
   /* Mobile: narrower dropdown triggers so four-across rows fit the drawer/bar. */
   .dropdown-toggle { min-width: 100px; }

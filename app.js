@@ -906,30 +906,6 @@ async function exportText() {
     }
 }
 
-async function copyMarkdown() {
-    const markdown = convertToMarkdown();
-    try {
-        if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('Clipboard unavailable');
-        await navigator.clipboard.writeText(markdown);
-        toast('Markdown copied to the clipboard.');
-    } catch (err) {
-        // Fallback for when the Clipboard API is blocked or unavailable.
-        try {
-            const ta = document.createElement('textarea');
-            ta.value = markdown;
-            ta.setAttribute('readonly', '');
-            ta.className = 'copy-buffer';
-            document.body.appendChild(ta);
-            ta.select();
-            const ok = document.execCommand('copy');
-            ta.remove();
-            toast(ok ? 'Markdown copied to the clipboard.' : 'Could not copy — please select and copy manually.');
-        } catch (e) {
-            toast('Could not copy Markdown.');
-        }
-    }
-}
-
 async function openFile() {
     if (!FSA_SUPPORTED) {
         toast('Opening files requires a Chromium-based browser (Chrome, Edge, Brave, Opera).');
@@ -1495,6 +1471,43 @@ function applyHeading(value) {
     saveToLocalStorage();
 }
 
+function handleExport(value) {
+    if (value === 'pdf') { track('export', { format: 'pdf' }); window.print(); }
+    else if (value === 'md') { track('export', { format: 'md' }); exportMarkdown(); }
+    else if (value === 'txt') { track('export', { format: 'txt' }); exportText(); }
+}
+
+function handleInsert(value) {
+    if (value === 'image') insertImageSlot();
+    else if (value === 'table') insertTable();
+    else if (value === 'codeblock') { document.execCommand('formatBlock', false, 'pre'); saveToLocalStorage(); }
+    else if (value === 'divider') insertDivider();
+}
+
+function syncHeadingDropdown() {
+    const root = document.getElementById('headingDropdown');
+    if (!root) return;
+    if (root.classList.contains('open')) return;
+    const valueEl = root.querySelector('.dropdown-value');
+    const menu = root.querySelector('.dropdown-menu');
+    if (!valueEl || !menu) return;
+    const sel = window.getSelection();
+    let node = (sel && sel.rangeCount) ? sel.getRangeAt(0).commonAncestorContainer : null;
+    if (node && node.nodeType === 3) node = node.parentNode;
+    let tag = 'P';
+    while (node && node !== editBody && node !== document.body) {
+        if (node.nodeName && /^H[1-6]$/.test(node.nodeName)) { tag = node.nodeName; break; }
+        if (node === editBody) break;
+        node = node.parentNode;
+    }
+    const label = ({ H1:'Heading 1', H2:'Heading 2', H3:'Heading 3', H4:'Heading 4', P:'Paragraph' })[tag] || 'Paragraph';
+    valueEl.textContent = label;
+    const targetVal = (tag === 'P') ? 'p' : tag.toLowerCase();
+    menu.querySelectorAll('[role="option"]').forEach((o) => {
+        o.setAttribute('aria-selected', String(o.getAttribute('data-value') === targetVal));
+    });
+}
+
 // Toggle the "More" panel in the Document section
 // UI-16: the bottom bar's "Local Storage" / filename chip is gone from the markup. Every write to
 // it goes through this accessor, which hands back a detached stand-in when the chip isn't in the
@@ -1997,7 +2010,8 @@ function closeOpenDropdowns() {
 
 // Custom dropdown (replaces <select> so the open list can use our palette).
 // reset=true: the control is an action menu, so the label reverts to its placeholder.
-function initDropdown(root, onSelect, reset) {
+function initDropdown(root, onSelect, reset, keepSelected) {
+    keepSelected = !!keepSelected;
     const toggle = root.querySelector('.dropdown-toggle');
     const menu = root.querySelector('.dropdown-menu');
     const valueEl = root.querySelector('.dropdown-value');
@@ -2041,10 +2055,11 @@ function initDropdown(root, onSelect, reset) {
         options().forEach((o) => o.setAttribute('aria-selected', String(o === li)));
         onSelect(li.getAttribute('data-value'), li.textContent.trim());
         if (reset) {
-            options().forEach((o) => o.setAttribute('aria-selected', 'false'));
-            valueEl.textContent = placeholder;
+            if (!keepSelected) options().forEach((o) => o.setAttribute('aria-selected', 'false'));
+            if (placeholder) valueEl.textContent = placeholder;
         } else {
-            valueEl.textContent = li.textContent.trim();
+            if (li.querySelector('svg')) valueEl.innerHTML = li.innerHTML.trim();
+            else valueEl.textContent = li.textContent.trim();
         }
         close();
         toggle.focus();
@@ -2078,6 +2093,15 @@ function initDropdown(root, onSelect, reset) {
         else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (i >= 0) choose(list[i]); }
     });
 
+    // Initialise the toggle label from the currently selected option (for tracking dropdowns).
+    if (!reset) {
+        const sel = options().find((o) => o.getAttribute('aria-selected') === 'true') || options()[0];
+        if (sel) {
+            if (sel.querySelector('svg')) valueEl.innerHTML = sel.innerHTML.trim();
+            else valueEl.textContent = sel.textContent.trim();
+        }
+    }
+
     document.addEventListener('click', (e) => {
         if (!root.contains(e.target)) close();
     });
@@ -2095,7 +2119,6 @@ function wireUI() {
                 case 'export-md': track('export', { format: 'md' }); exportMarkdown(); break;
                 case 'export-pdf': track('export', { format: 'pdf' }); window.print(); break;
                 case 'export-txt': track('export', { format: 'txt' }); exportText(); break;
-                case 'copy-md': track('export', { format: 'copy' }); copyMarkdown(); break;
                 case 'history': showHistory(); break;
                 case 'toggle-focus': toggleFocus(); break;
                 case 'toggle-sidebar': toggleSidebar(); break;
@@ -2105,14 +2128,22 @@ function wireUI() {
     });
 
     const typoDrop = document.getElementById('typographyDropdown');
-    if (typoDrop) initDropdown(typoDrop, (value) => changeTypography(value));
+    if (typoDrop) initDropdown(typoDrop, (value) => changeTypography(value), true, true);
 
     const headingDrop = document.getElementById('headingDropdown');
-    if (headingDrop) initDropdown(headingDrop, (value) => applyHeading(value), true);
+    if (headingDrop) initDropdown(headingDrop, (value) => applyHeading(value));
 
-    // UI-15: page width dropdown (text-size selection removed).
+    // UI-15: page width dropdown (icon-based selection).
     const widthDrop = document.getElementById('docWidthDropdown');
     if (widthDrop) initDropdown(widthDrop, (value) => setWidth(Number(value)));
+
+    const exportDrop = document.getElementById('exportDropdown');
+    if (exportDrop) initDropdown(exportDrop, (value) => handleExport(value), true);
+
+    const insertDrop = document.getElementById('insertDropdown');
+    if (insertDrop) initDropdown(insertDrop, (value) => handleInsert(value), true);
+
+    document.addEventListener('selectionchange', () => { syncHeadingDropdown(); });
 
     const recentsSearch = document.getElementById('recentsSearch');
     if (recentsSearch) recentsSearch.addEventListener('input', renderRecents);

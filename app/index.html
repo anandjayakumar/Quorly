@@ -104,7 +104,7 @@
     <!-- Document -->
     <div class="sidebar-section">
       <div class="section-title">Document</div>
-      <div class="tile-grid cols-3">
+      <div class="tile-grid cols-4">
         <button class="tile-btn" type="button" data-action="new-file" title="New document">
           <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
           <span class="tile-label">New</span>
@@ -117,6 +117,18 @@
           <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M8 3v5h6V3"/></svg>
           <span class="tile-label">Save</span>
         </button>
+        <div class="dropdown dropdown-tile" id="exportDropdown">
+          <button class="dropdown-toggle tile-btn" type="button" aria-haspopup="listbox" aria-expanded="false" title="Export">
+            <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span class="tile-label">Export</span>
+            <span class="dropdown-caret tile-caret" aria-hidden="true">▾</span>
+          </button>
+          <ul class="dropdown-menu" role="listbox" hidden>
+            <li role="option" tabindex="-1" data-value="pdf">Export PDF</li>
+            <li role="option" tabindex="-1" data-value="md">Export Markdown</li>
+            <li role="option" tabindex="-1" data-value="txt">Export Text</li>
+          </ul>
+        </div>
       </div>
       <button class="row-btn" type="button" data-action="history" title="Version history">
         <svg class="row-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.05 11.5a9 9 0 1 0 2.4-6.1"/><path d="M3 3.5v5h5"/><path d="M12 8v4.2l2.6 1.6"/></svg>
@@ -129,22 +141,22 @@
     <div class="sidebar-section" id="formatSection">
       <div class="section-title">Formatting</div>
       <div class="dropdown-row">
-        <div class="dropdown" id="typographyDropdown">
-          <button class="dropdown-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" title="Font">
+        <div class="dropdown" id="typographyDropdown" data-placeholder="Theme">
+          <button class="dropdown-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" title="Theme">
             <span class="dropdown-lead">
               <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7V4.5h11V7"/><path d="M8.5 4.5V20"/><path d="M14 20v-6.5a1.5 1.5 0 0 1 1.5-1.5H20"/></svg>
-              <span class="dropdown-value">Default Font</span>
+              <span class="dropdown-value">Theme</span>
             </span>
             <span class="dropdown-caret" aria-hidden="true">▾</span>
           </button>
           <ul class="dropdown-menu" role="listbox" hidden>
-            <li role="option" tabindex="-1" data-value="Default" aria-selected="true">Default Font</li>
+            <li role="option" tabindex="-1" data-value="Default" aria-selected="true">Default</li>
             <li role="option" tabindex="-1" data-value="Lora" aria-selected="false">Lora</li>
             <li role="option" tabindex="-1" data-value="Roboto" aria-selected="false">Roboto</li>
             <li role="option" tabindex="-1" data-value="Inter" aria-selected="false">Inter</li>
           </ul>
         </div>
-        <div class="dropdown" id="headingDropdown" data-placeholder="Style" data-reset="true">
+        <div class="dropdown" id="headingDropdown" data-placeholder="Style">
           <button class="dropdown-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" title="Text style">
             <span class="dropdown-lead">
               <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg>
@@ -153,31 +165,45 @@
             <span class="dropdown-caret" aria-hidden="true">▾</span>
           </button>
           <ul class="dropdown-menu" role="listbox" hidden>
-            <li role="option" tabindex="-1" data-value="p">Paragraph</li>
             <li role="option" tabindex="-1" data-value="h1">Heading 1</li>
             <li role="option" tabindex="-1" data-value="h2">Heading 2</li>
             <li role="option" tabindex="-1" data-value="h3">Heading 3</li>
             <li role="option" tabindex="-1" data-value="h4">Heading 4</li>
-            <li role="option" tabindex="-1" data-value="blockquote">Quote</li>
+            <li role="option" tabindex="-1" data-value="p" aria-selected="true">Paragraph</li>
           </ul>
         </div>
-        <div class="dropdown" id="docWidthDropdown">
+        <div class="dropdown" id="docWidthDropdown" data-placeholder="Width">
           <button class="dropdown-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" title="Page width">
             <span class="dropdown-lead">
               <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5v14"/><path d="M20 5v14"/><path d="M7.5 12h9"/><path d="M10 9.5L7.5 12l2.5 2.5"/><path d="M14 9.5L16.5 12 14 14.5"/></svg>
-              <span class="dropdown-value">1080 px</span>
+              <span class="dropdown-value"><svg viewBox="0 0 24 16" width="20" height="12" aria-hidden="true"><rect x="4" y="4" width="16" height="8" rx="1" fill="currentColor"/></svg></span>
             </span>
             <span class="dropdown-caret" aria-hidden="true">▾</span>
           </button>
-          <ul class="dropdown-menu" role="listbox" hidden>
-            <li role="option" tabindex="-1" data-value="720" aria-selected="false">720 px</li>
-            <li role="option" tabindex="-1" data-value="840" aria-selected="false">840 px</li>
-            <li role="option" tabindex="-1" data-value="960" aria-selected="false">960 px</li>
-            <li role="option" tabindex="-1" data-value="1080" aria-selected="true">1080 px</li>
-            <li role="option" tabindex="-1" data-value="1200" aria-selected="false">1200 px</li>
-            <li role="option" tabindex="-1" data-value="1320" aria-selected="false">1320 px</li>
+          <ul class="dropdown-menu width-menu" role="listbox" hidden>
+            <li role="option" tabindex="-1" data-value="720" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="10" y="4" width="4" height="8" rx="1" fill="currentColor"/></svg></li>
+            <li role="option" tabindex="-1" data-value="840" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="8" y="4" width="8" height="8" rx="1" fill="currentColor"/></svg></li>
+            <li role="option" tabindex="-1" data-value="960" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="6" y="4" width="12" height="8" rx="1" fill="currentColor"/></svg></li>
+            <li role="option" tabindex="-1" data-value="1080" aria-selected="true"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="4" y="4" width="16" height="8" rx="1" fill="currentColor"/></svg></li>
+            <li role="option" tabindex="-1" data-value="1200" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="2" y="4" width="20" height="8" rx="1" fill="currentColor"/></svg></li>
+            <li role="option" tabindex="-1" data-value="1320" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="0" y="4" width="24" height="8" rx="1" fill="currentColor"/></svg></li>
           </ul>
         </div>
+      </div>
+      <div class="dropdown" id="insertDropdown" data-placeholder="Insert">
+        <button class="dropdown-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" title="Insert">
+          <span class="dropdown-lead">
+            <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            <span class="dropdown-value">Insert</span>
+          </span>
+          <span class="dropdown-caret" aria-hidden="true">▾</span>
+        </button>
+        <ul class="dropdown-menu" role="listbox" hidden>
+          <li role="option" tabindex="-1" data-value="image">Image</li>
+          <li role="option" tabindex="-1" data-value="table">Table</li>
+          <li role="option" tabindex="-1" data-value="codeblock">Code Block</li>
+          <li role="option" tabindex="-1" data-value="divider">Divider</li>
+        </ul>
       </div>
       <div class="fmt-grid">
         <button class="fmt-btn" type="button" data-format="bold" title="Bold (Ctrl/Cmd+B)" aria-label="Bold"><b>B</b></button>
@@ -215,51 +241,7 @@
       </div>
     </div>
 
-    <!-- Insert (the anchor app.js restores the Formatting section before, UI-14) -->
-    <div class="sidebar-section" id="insertSection">
-      <div class="section-title">Insert</div>
-      <div class="tile-grid cols-4">
-        <button class="tile-btn tile-inline" type="button" data-insert="image" title="Insert an image">
-          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M20.5 16l-4.2-4.2-6 6-2.6-2.6L3.5 19.4"/></svg>
-          <span class="tile-label">Image</span>
-        </button>
-        <button class="tile-btn tile-inline" type="button" data-insert="table" title="Insert a table">
-          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9.5h18"/><path d="M3 15h18"/><path d="M9.5 4v16"/><path d="M15 4v16"/></svg>
-          <span class="tile-label">Table</span>
-        </button>
-        <button class="tile-btn tile-inline" type="button" data-insert="codeblock" title="Insert a code block">
-          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 7l-4 5 4 5"/><path d="M16 7l4 5-4 5"/><path d="M13.5 5.5l-3 13"/></svg>
-          <span class="tile-label">Code Block</span>
-        </button>
-        <button class="tile-btn tile-inline" type="button" data-insert="divider" title="Insert a divider">
-          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16"/></svg>
-          <span class="tile-label">Divider</span>
-        </button>
-      </div>
-    </div>
 
-    <!-- Export -->
-    <div class="sidebar-section">
-      <div class="section-title">Export</div>
-      <div class="tile-grid cols-4">
-        <button class="tile-btn tile-inline" type="button" data-action="export-pdf" title="Export PDF">
-          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>
-          <span class="tile-label">Export PDF</span>
-        </button>
-        <button class="tile-btn tile-inline" type="button" data-action="export-md" title="Export Markdown">
-          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M6.5 15.5v-7l2.75 3.5L12 8.5v7"/><path d="M17 9v5.5"/><path d="M15 12.5l2 2 2-2"/></svg>
-          <span class="tile-label">Export Markdown</span>
-        </button>
-        <button class="tile-btn tile-inline" type="button" data-action="export-txt" title="Export plain text">
-          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
-          <span class="tile-label">Export Text</span>
-        </button>
-        <button class="tile-btn tile-inline" type="button" data-action="copy-md" title="Copy the document as Markdown">
-          <svg class="tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>
-          <span class="tile-label">Copy as MD</span>
-        </button>
-      </div>
-    </div>
 
     <!-- Recents -->
     <div class="sidebar-section sidebar-recents">
