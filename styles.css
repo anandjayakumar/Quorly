@@ -1658,6 +1658,7 @@ body.light-mode #modeBtn .icon-sun { display: block; }
   width: 100%;
   margin-bottom: 8px;
 }
+#fmtInsertDropdown { margin-bottom: 0; }
 
 /* Export dropdown rendered as a tile so it sits on the same row as New/Open/Save. */
 .dropdown-tile { margin-bottom: 0; }
@@ -1672,7 +1673,7 @@ body.light-mode #modeBtn .icon-sun { display: block; }
 .dropdown-tile .dropdown-toggle .tile-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dropdown-tile .tile-caret { position: absolute; bottom: 4px; right: 6px; font-size: 9px; opacity: 0.6; }
 
-.fmt-btn.dropdown-toggle { padding: 8px 0; min-width: 0; }
+.fmt-btn.dropdown-toggle { padding: 8px 0; min-width: 0; text-align: center; justify-content: center; }
 .dropdown-toggle {
   width: 100%;
   display: flex;
