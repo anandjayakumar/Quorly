@@ -667,7 +667,6 @@ body.focus-mode .sidebar {
 body.focus-mode .app {
   grid-template-columns: minmax(0, var(--editor-width)) 0px;
   gap: 0;
-  max-width: var(--editor-width);
 }
 
 /* With the page itself locked (see .q-app above), the main column is the editor's scroll
