@@ -695,7 +695,7 @@ body.q-app .sidebar {
   border-radius: var(--radius);
   padding: 70px;
   min-height: 85vh;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   position: relative;
   overflow: visible;
 }
@@ -1077,7 +1077,7 @@ body.light-mode #editBody pre .operator { color: #d73a49; }
     opacity 0.3s ease 0.08s,
     transform var(--focus-dur) cubic-bezier(0.4, 0, 0.2, 1);
   overflow-y: auto;
-  overflow-x: visible;
+  overflow-x: hidden;
 }
 
 body.light-mode .sidebar {
@@ -1089,7 +1089,7 @@ body.light-mode .sidebar {
    re-flow (re-wrapping buttons mid-animation looked janky). Desktop grid only. */
 @media (min-width: 1181px) {
   .sidebar > * {
-    min-width: calc(var(--sidebar-width) - 32px);
+    min-width: calc(var(--sidebar-width) - 44px);
   }
 }
 
@@ -1821,7 +1821,7 @@ body.light-mode .section-title {
   padding: 5px;
   display: none;
   z-index: 1000;
-  box-shadow: 0 10px 28px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
   white-space: nowrap;
 }
 #toolbar button { 
