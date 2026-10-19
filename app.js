@@ -1244,7 +1244,7 @@ function insertTable() {
             tableHtml += '</tr>';
         }
         tableHtml += '</tbody></table>';
-        const html = `<div class="table-wrapper">${tableHtml}<button class="table-menu-btn" contenteditable="false" aria-label="Table options" title="Table options">\u22ee</button><div class="table-menu-dropdown" contenteditable="false"><button data-action="insert-row-above">Insert row above</button><button data-action="insert-row-below">Insert row below</button><button data-action="insert-col-left">Insert column left</button><button data-action="insert-col-right">Insert column right</button><button data-action="delete-row">Delete row</button><button data-action="delete-col">Delete column</button></div></div><p><br></p>`;
+        const html = `<div class="table-wrapper">${tableHtml}<button class="table-menu-btn" contenteditable="false" aria-label="Table options" title="Table options">\u22ee</button><div class="table-menu-dropdown" contenteditable="false"><button data-action="insert-row-above">Insert row above</button><button data-action="insert-row-below">Insert row below</button><button data-action="insert-col-left">Insert column left</button><button data-action="insert-col-right">Insert column right</button><button data-action="delete-row">Delete row</button><button data-action="delete-col">Delete column</button><button data-action="delete-table">Delete table</button></div></div><p><br></p>`;
         document.execCommand('insertHTML', false, html);
         // Column widths are applied through CSSOM — inline style attributes are blocked by the
         // strict CSP, but property writes are not.
@@ -1320,7 +1320,8 @@ const TABLE_MENU_ITEMS = [
     ['insert-col-left', 'Insert column left'],
     ['insert-col-right', 'Insert column right'],
     ['delete-row', 'Delete row'],
-    ['delete-col', 'Delete column']
+    ['delete-col', 'Delete column'],
+    ['delete-table', 'Delete table']
 ];
 
 function ensureTableChrome(root) {
@@ -2445,6 +2446,12 @@ function wireUI() {
                 const c = tr.children[at];
                 if (c) c.remove();
             });
+        } else if (action === 'delete-table') {
+            const wrapper = table.closest('.table-wrapper');
+            activeTableCell = null;
+            if (wrapper) wrapper.remove();
+            else table.remove();
+            return;
         }
         activeTableCell = null;
         const wrapper = table.closest('.table-wrapper');
