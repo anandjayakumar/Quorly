@@ -2099,9 +2099,6 @@ function wireUI() {
     const exportDrop = document.getElementById('exportDropdown');
     if (exportDrop) initDropdown(exportDrop, (value) => handleExport(value), true);
 
-    const insertDrop = document.getElementById('insertDropdown');
-    if (insertDrop) initDropdown(insertDrop, (value) => handleInsert(value), true);
-
     const fmtInsertDrop = document.getElementById('fmtInsertDropdown');
     if (fmtInsertDrop) initDropdown(fmtInsertDrop, (value) => handleInsert(value), true);
 
