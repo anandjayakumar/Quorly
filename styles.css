@@ -726,9 +726,12 @@ body.q-app .sidebar {
   /* `align-self: start` (needed so a long document can outgrow the row) means the reader no
      longer stretches to the scrollport. Give it the stretched height as a minimum instead, so
      a short document still ends level with the panel and a long one grows past it. */
+  /* The .app grid already adds 16px of padding, and the sticky panel's offset is 32px, so the
+     reader's own top margin is only the remaining 16px — otherwise the reading column sits
+     16px lower than the panel at the top of the page. */
   body.q-app .reader {
-    margin: 32px 0;
-    min-height: calc(100vh - 64px);
+    margin: 16px 0 32px;
+    min-height: calc(100vh - 48px);
   }
   body.q-app .sidebar { top: 32px; }
 }
