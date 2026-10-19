@@ -700,7 +700,7 @@ body.q-app .sidebar {
   overflow: visible;
 }
 
-.doc{max-width:940px;margin:0 auto}
+.doc{max-width:calc(var(--editor-width) - 140px);margin:0 auto}
 
 #editTitle {
   font-family: var(--title-font);

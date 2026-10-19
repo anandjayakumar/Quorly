@@ -1077,6 +1077,12 @@ function triggerCmd(type) {
 
 // Insert an inline image dropzone at the caret
 function insertImageSlot() {
+    if (lastSelectionRange) {
+        editBody.focus();
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(lastSelectionRange);
+    }
     const id = 'dz-' + Date.now();
     const dzHtml = `<div id="${id}" class="inline-dropzone" contenteditable="false">Click or Drop Image Here</div><p><br></p>`;
     document.execCommand('insertHTML', false, dzHtml);
@@ -1111,6 +1117,12 @@ function pickImageInto(target) {
 
 // Insert a horizontal divider
 function insertDivider() {
+    if (lastSelectionRange) {
+        editBody.focus();
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(lastSelectionRange);
+    }
     const ruleHtml = `<div class="content-divider" contenteditable="false"></div><p><br></p>`;
     document.execCommand('insertHTML', false, ruleHtml);
     saveToLocalStorage();
@@ -1118,8 +1130,14 @@ function insertDivider() {
 
 // Insert an editable table
 function insertTable() {
-    const rows = Math.max(1, Math.min(20, parseInt(prompt('Number of rows (including header):', '3'), 10) || 3));
-    const cols = Math.max(1, Math.min(10, parseInt(prompt('Number of columns:', '3'), 10) || 3));
+    const rows = 3;
+    const cols = 3;
+    if (lastSelectionRange) {
+        editBody.focus();
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(lastSelectionRange);
+    }
     let html = '<table class="editor-table"><thead><tr>';
     for (let c = 0; c < cols; c++) html += '<th><br></th>';
     html += '</tr></thead><tbody>';
@@ -1478,6 +1496,20 @@ function handleExport(value) {
 }
 
 function handleInsert(value) {
+    // Restore the caret/selection that lived in the editor before focus moved to the dropdown.
+    // Fall back to the end of the document when there is no remembered selection (e.g. the
+    // welcome sample is on screen and the user never clicked into the editor).
+    editBody.focus();
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    if (lastSelectionRange) {
+        sel.addRange(lastSelectionRange);
+    } else {
+        const r = document.createRange();
+        r.selectNodeContents(editBody);
+        r.collapse(false);
+        sel.addRange(r);
+    }
     if (value === 'image') insertImageSlot();
     else if (value === 'table') insertTable();
     else if (value === 'codeblock') { document.execCommand('formatBlock', false, 'pre'); saveToLocalStorage(); }
