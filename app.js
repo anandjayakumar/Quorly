@@ -942,7 +942,7 @@ async function openFile() {
     try {
         const [handle] = await window.showOpenFilePicker({
             types: [
-                { description: 'Documents', accept: {'text/html': ['.html'], 'text/markdown': ['.md']} }
+                { description: 'Documents', accept: {'text/html': ['.html'], 'text/markdown': ['.md'], 'application/json': ['.quorly']} }
             ]
         });
         
@@ -951,11 +951,17 @@ async function openFile() {
         
         // Detect file type and load accordingly
         if (handle.name.endsWith('.md')) {
-            // Load markdown but don't set fileHandle (so sync creates new .html)
             loadMarkdown(content);
             fileHandle = null;
-            filePrefix = null; // Reset prefix for new file
+            filePrefix = null;
             fileDisplayEl().textContent = 'Imported from .md';
+        } else if (handle.name.endsWith('.quorly')) {
+            loadQuorly(content);
+            fileHandle = handle;
+            const match = handle.name.match(/^(\d{6})-/);
+            if (match) filePrefix = match[1];
+            rememberHandle();
+            fileDisplayEl().textContent = fileHandle.name;
         } else {
             // Ask for write access up-front (needed later to save back to this file).
             // Must happen while we still have the user's click as activation.
@@ -981,6 +987,35 @@ async function openFile() {
         if (err && err.name !== 'AbortError') {
             toast('Could not open file: ' + (err.message || err.name));
         }
+    }
+}
+
+function loadQuorly(rawContent) {
+    try {
+        isLoading = true;
+        const snapshot = JSON.parse(rawContent);
+        editTitle.textContent = snapshot.title || 'Untitled';
+        editBody.innerHTML = sanitizeHTML(snapshot.body || '');
+        migrateAlignment();
+        if (snapshot.titleImage && snapshot.titleImage.src) {
+            const img = document.getElementById('titleImage');
+            const container = document.getElementById('titleImageContainer');
+            img.src = snapshot.titleImage.src;
+            img.style.width = snapshot.titleImage.width || '700px';
+            container.classList.add('has-image');
+        } else {
+            deleteTitleImage();
+        }
+        updateStats();
+        saveToLocalStorage();
+        isLoading = false;
+        setTimeout(attachTitleButton, 100);
+        setTimeout(attachBodyImageDeleteButtons, 100);
+        setTimeout(applyCodeHighlighting, 100);
+        toast('Imported .quorly document');
+    } catch (err) {
+        console.error('Failed to load .quorly file', err);
+        toast('Failed to import .quorly file: invalid format');
     }
 }
 
