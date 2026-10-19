@@ -1028,7 +1028,7 @@ body.light-mode #editBody code {
 #editBody table.editor-table th,
 #editBody table.editor-table td {
   width: 150px;
-  min-width: 150px;
+  min-width: 24px;
   border: 1px solid rgba(255,255,255,0.15);
   padding: 8px 12px;
   text-align: left;
@@ -1083,22 +1083,22 @@ body.light-mode #editBody table.editor-table th {
 .table-wrapper .resize-h {
   position: absolute;
   display: block;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 16px;
   pointer-events: auto;
-  background: rgba(255,255,255,0.55);
-  border: 1px solid rgba(255,255,255,0.85);
-  border-radius: 50%;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.32);
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.18);
   touch-action: none;
 }
 .table-wrapper .resize-v { cursor: col-resize; }
-.table-wrapper .resize-h { cursor: row-resize; }
+.table-wrapper .resize-h { width: 16px; height: 12px; cursor: row-resize; }
 
 body.light-mode #editBody table.editor-table th.resize-active,
 body.light-mode #editBody table.editor-table td.resize-active { outline-color: rgba(0,0,0,0.3); }
 body.light-mode .table-wrapper .resize-v,
-body.light-mode .table-wrapper .resize-h { background: rgba(0,0,0,0.3); border-color: rgba(0,0,0,0.45); }
+body.light-mode .table-wrapper .resize-h { background: rgba(0,0,0,0.12); border-color: rgba(0,0,0,0.25); }
 
 body.light-mode .table-menu-btn { background: rgba(240,240,245,0.97); border-color: rgba(0,0,0,0.15); color: #222; }
 body.light-mode .table-menu-dropdown { background: rgba(245,245,250,0.98); border-color: rgba(0,0,0,0.08); }

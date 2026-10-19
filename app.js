@@ -2278,17 +2278,16 @@ function wireUI() {
         overlay.innerHTML = '';
         const wr = wrapper.getBoundingClientRect();
         const cr = cell.getBoundingClientRect();
-        const half = 7;
         const v = document.createElement('span');
         v.className = 'resize-v';
         v.contentEditable = 'false';
-        v.style.left = (cr.right - wr.left - half) + 'px';
-        v.style.top = (cr.top - wr.top + cr.height / 2 - half) + 'px';
+        v.style.left = (cr.right - wr.left - 6) + 'px';
+        v.style.top = (cr.top - wr.top + cr.height / 2 - 8) + 'px';
         const h = document.createElement('span');
         h.className = 'resize-h';
         h.contentEditable = 'false';
-        h.style.left = (cr.left - wr.left + cr.width / 2 - half) + 'px';
-        h.style.top = (cr.bottom - wr.top - half) + 'px';
+        h.style.left = (cr.left - wr.left + cr.width / 2 - 8) + 'px';
+        h.style.top = (cr.bottom - wr.top - 6) + 'px';
         overlay.appendChild(v);
         overlay.appendChild(h);
 
@@ -2453,7 +2452,7 @@ function wireUI() {
         document.addEventListener('pointermove', (e) => {
             if (!drag) return;
             if (drag.mode === 'col') {
-                const width = Math.max(50, drag.startSize + (e.clientX - drag.startX));
+                const width = Math.max(24, drag.startSize + (e.clientX - drag.startX));
                 const table = drag.cell.closest('table');
                 const index = cellIndex(drag.cell);
                 table.querySelectorAll('tr').forEach(tr => {
