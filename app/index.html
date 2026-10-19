@@ -291,6 +291,24 @@
            browser, so "Backup all" is the one guarantee that survives cleared site data, a new
            profile or a different browser — and it is what makes eviction acceptable at all. -->
       <div class="recents-foot">
+        <!-- DD-03 (IDB-4): the two budgets side by side, because they fail differently. The
+             localStorage one is small and hard — going over it stops the open document saving —
+             while the library's is large and soft. Hidden until JS has real numbers for it:
+             an empty meter is worse than none. -->
+        <div class="storage-meter" id="storageMeter" hidden>
+          <div class="storage-line">
+            <span class="storage-name">This browser</span>
+            <span class="storage-num" id="storageLocalNum"></span>
+          </div>
+          <div class="storage-track"><i id="storageLocalBar"></i></div>
+          <div class="storage-line" id="storageDevLine">
+            <span class="storage-name" id="storageDevName">Library &amp; history</span>
+            <span class="storage-num" id="storageDevNum"></span>
+          </div>
+          <div class="storage-track" id="storageDevTrack"><i id="storageDevBar"></i></div>
+          <div class="storage-note" id="storageNote" hidden></div>
+          <button class="mini-btn" type="button" id="persistBtn" data-action="keep-data" hidden>Keep on this device</button>
+        </div>
         <div class="storage-actions">
           <button class="mini-btn" type="button" data-action="backup-all" title="Download every document and its version history as one file">Backup all</button>
           <button class="mini-btn" type="button" data-action="restore-backup" title="Restore documents from a Quorly backup file">Restore</button>

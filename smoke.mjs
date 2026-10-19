@@ -39,6 +39,8 @@ await checkDocument('/app/', {
     'data-action="backup-all"', 'data-action="restore-backup"', 'id="backupInput"',
     // DD-03: the storage layer must be in the document, and before /app.js.
     '/stories.js',
+    // DD-03 (IDB-4): the meter, and the one control it owns.
+    'id="storageMeter"', 'data-action="keep-data"',
     // W-1 / W-2: installable, and the offline cue has somewhere to render.
     'rel="manifest"', 'id="netStatus"', 'apple-touch-icon'],
 });
@@ -127,6 +129,12 @@ try {
     'QuorlyStore.getSnapshot',
     'QuorlyStore.listVersions',
     'QuorlyStore.appendVersion',
+    // DD-03 (IDB-4): two budgets and a persistence request.
+    'const LOCAL_BUDGET_BYTES',
+    'function localStorageBytes',
+    'function updateStorageMeter',
+    'QuorlyStore.persisted',
+    'function maybeRequestPersistence',
   ];
   for (const marker of markers) {
     record(`/app.js has ${marker}`, body.includes(marker), 'missing');
@@ -158,6 +166,8 @@ try {
     'function adoptSnapshot',
     'function adoptVersions',
     'function sweepBlobs',
+    // DD-03 (IDB-4): asking the browser to keep this origin's data, and reading back the answer.
+    'function persisted',
     'window.QuorlyStore',
   ];
   for (const marker of markers) {

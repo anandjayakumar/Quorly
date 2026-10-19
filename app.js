@@ -302,8 +302,14 @@ async function init() {
     announceBackend();
     const indexIds = readIndex().map((entry) => entry.id);
     QuorlyStore.migrate(indexIds).then((result) => {
-        if (result.adopted) console.info('Quorly: moved ' + result.adopted + ' localStorage records into the library.');
+        if (result.adopted) {
+            console.info('Quorly: moved ' + result.adopted + ' localStorage records into the library.');
+            // The migration is exactly what empties localStorage, so the meter is stale until it
+            // has finished.
+            scheduleStorageRefresh(300, true);
+        }
     }).catch((err) => console.warn('Quorly: could not move the library.', err));
+    scheduleStorageRefresh(0, true);
 
     // M-1: a returning writer is simply someone whose live keys already existed on load. Coarse
     // by design — there is no identifier to be more precise with, and none is wanted.
@@ -475,6 +481,7 @@ async function parkCurrentDocument() {
         return false;
     }
     touchCurrentDocument();
+    scheduleStorageRefresh(200, true);
     return true;
 }
 
@@ -651,6 +658,7 @@ async function deleteRecent(id) {
         touchCurrentDocument();
     }
     renderRecents();
+    scheduleStorageRefresh(200, true);
     toast('Deleted "' + entry.title + '"');
 }
 
@@ -876,6 +884,7 @@ async function restoreBackup(file) {
 
     safeSetItem(FILES_INDEX_KEY, JSON.stringify(trimIndex(list)));
     renderRecents();
+    scheduleStorageRefresh(200, true);
 
     const parts = [];
     if (restored) parts.push(`Restored ${restored} document${restored === 1 ? '' : 's'}`);
@@ -883,6 +892,161 @@ async function restoreBackup(file) {
     if (failed) parts.push(`${failed} could not be stored`);
     if (dropped) parts.push(`${dropped} over the ${MAX_RECENTS}-document limit`);
     toast(parts.length ? `${parts.join(', ')}.` : 'Nothing to restore from that file.');
+}
+
+// --- STORAGE METER (DD-03 / IDB-4) ----------------------------------------------------
+//
+// Two budgets, because they fail differently and only one of them is a real risk. localStorage is
+// small — 5 MB in every browser we care about — and hard: going over it means the live document,
+// which is the open document's only storage, stops saving. IndexedDB is large and soft.
+//
+// The localStorage figure is measured directly, so it is exact, and it is the budget that actually
+// runs out. The library figure comes from navigator.storage.estimate(): Chromium breaks the origin
+// down per store, so `usageDetails.indexedDB` is the library exactly, while Firefox and Safari
+// report one number covering IndexedDB, the offline shell cache and localStorage together — there,
+// what is left after subtracting localStorage is relabelled "Library & app" rather than quietly
+// presented as the library.
+//
+// The point of showing this at all is that eviction is survivable (DD-01 §5.4): the number exists
+// so the user can see the headroom, not so they can manage it byte by byte.
+const LOCAL_BUDGET_BYTES = 5 * 1024 * 1024; // the cap Chrome, Firefox and Safari all enforce
+const STORAGE_TIGHT = 0.8; // past this, say so and point at the backup button
+const META_KEY = 'quorly_meta_v1';
+
+function readMeta() {
+    try { return JSON.parse(localStorage.getItem(META_KEY) || '{}') || {}; } catch (err) { return {}; }
+}
+
+function writeMeta(patch) {
+    const meta = Object.assign(readMeta(), patch);
+    safeSetItem(META_KEY, JSON.stringify(meta));
+    return meta;
+}
+
+// UTF-16 code units, which is how browsers count localStorage, so the ratio matches the real cap.
+function localStorageBytes() {
+    let total = 0;
+    try {
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key === null) continue;
+            total += (key.length + (localStorage.getItem(key) || '').length) * 2;
+        }
+    } catch (err) { /* report nothing rather than break the panel */ }
+    return total;
+}
+
+function formatBytes(bytes) {
+    if (!bytes) return '0 KB';
+    if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + ' KB';
+    const mb = bytes / (1024 * 1024);
+    if (mb >= 1024) return (mb / 1024).toFixed(1).replace(/\.0$/, '') + ' GB';
+    return (mb >= 100 ? String(Math.round(mb)) : mb.toFixed(1).replace(/\.0$/, '')) + ' MB';
+}
+
+// The bar width is set through CSSOM on purpose: a `style` attribute would be blocked by
+// `style-src 'self'`, and the CSP is not worth weakening for a progress bar.
+function setStorageRow(prefix, used, budget) {
+    const bar = document.getElementById(prefix + 'Bar');
+    const num = document.getElementById(prefix + 'Num');
+    const ratio = budget > 0 ? Math.min(1, used / budget) : 0;
+    if (bar) bar.style.width = (ratio * 100).toFixed(1) + '%';
+    if (num) num.textContent = formatBytes(used) + ' / ' + formatBytes(budget);
+    return ratio;
+}
+
+let storageRefreshTimer = null;
+
+// The meter is informational, so it is never on the typing path: callers ask for a delay, and a
+// library change can pre-empt a queued quiet refresh.
+function scheduleStorageRefresh(delay, force) {
+    if (storageRefreshTimer !== null) {
+        if (!force) return;
+        clearTimeout(storageRefreshTimer);
+    }
+    storageRefreshTimer = setTimeout(() => {
+        storageRefreshTimer = null;
+        updateStorageMeter();
+    }, delay || 0);
+}
+
+async function updateStorageMeter() {
+    const meter = document.getElementById('storageMeter');
+    if (!meter) return;
+    meter.hidden = false;
+
+    const localBytes = localStorageBytes();
+    let pressure = setStorageRow('storageLocal', localBytes, LOCAL_BUDGET_BYTES);
+
+    const estimate = await QuorlyStore.estimate();
+    const devTrack = document.getElementById('storageDevTrack');
+    const devLine = document.getElementById('storageDevLine');
+    const devName = document.getElementById('storageDevName');
+    let libraryBytes = null;
+    if (estimate && estimate.quota) {
+        const details = estimate.usageDetails || {};
+        if (typeof details.indexedDB === 'number') {
+            // Chromium breaks the origin down per store, so this is the library exactly.
+            libraryBytes = details.indexedDB;
+            if (devName) devName.textContent = 'Library & history';
+        } else if (estimate.usage) {
+            // Firefox and Safari report one number for the whole origin, which also covers the
+            // offline shell cache. Subtracting localStorage is the closest available answer, and
+            // the label says so rather than pretending to be exact.
+            libraryBytes = Math.max(0, estimate.usage - localBytes);
+            if (devName) devName.textContent = 'Library & app';
+        }
+    }
+    if (libraryBytes !== null) {
+        pressure = Math.max(pressure, setStorageRow('storageDev', libraryBytes, estimate.quota));
+        if (devTrack) devTrack.hidden = false;
+        if (devLine) devLine.hidden = false;
+    } else {
+        // No estimate at all (an older browser). Say nothing rather than invent a denominator:
+        // the localStorage budget is still exact, and that is the one that bites.
+        if (devTrack) devTrack.hidden = true;
+        if (devLine) devLine.hidden = true;
+    }
+
+    const tight = pressure >= STORAGE_TIGHT;
+    meter.classList.toggle('is-tight', tight);
+    const note = document.getElementById('storageNote');
+    if (note) {
+        note.hidden = !tight;
+        note.textContent = tight
+            ? 'Nearly full. Back up, then delete what you no longer need.'
+            : '';
+    }
+
+    updatePersistRow();
+}
+
+// Chrome decides whether an origin is "persistent" from engagement — a bookmark, repeated visits,
+// notifications permission — rather than from the call, so a refusal is a normal outcome and never
+// a condition of the editor working.
+async function updatePersistRow(known) {
+    const button = document.getElementById('persistBtn');
+    if (!button) return false;
+    const kept = typeof known === 'boolean' ? known : await QuorlyStore.persisted();
+    button.hidden = kept;
+    return kept;
+}
+
+async function requestPersistence() {
+    writeMeta({ persistRequested: true });
+    const granted = await QuorlyStore.persist();
+    await updatePersistRow(granted);
+    toast(granted
+        ? 'This browser will keep your documents until you delete them.'
+        : 'This browser did not grant it yet. Your documents are still here — back up anything you cannot lose.');
+}
+
+// Ask once, and only after a real signal of intent: saving to disk. Asking early is the whole
+// strategy, because the answer depends on engagement the browser has not seen yet.
+async function maybeRequestPersistence() {
+    if (readMeta().persistRequested) return;
+    writeMeta({ persistRequested: true });
+    await updatePersistRow(await QuorlyStore.persist());
 }
 
 // Put the live document (the original *_v13 keys) into the editor.
@@ -1023,6 +1187,7 @@ async function syncNow() {
             fileDisplayEl().textContent = fileHandle.name;
             await saveToDisk();
             await saveSnapshot(); // Save version history
+            maybeRequestPersistence(); // a first save to disk is the signal of intent
             const display = fileDisplayEl();
             display.textContent = "Saved ✓";
             setTimeout(() => display.textContent = fileHandle.name, 1500);
@@ -1055,6 +1220,7 @@ async function syncNow() {
         
         await saveToDisk();
         await saveSnapshot(); // Save version history
+        maybeRequestPersistence(); // a save to disk is the signal of intent
         
         const display = fileDisplayEl();
         const originalName = fileHandle.name;
@@ -1448,6 +1614,9 @@ function saveToLocalStorage() {
     if (!isLoading) touchCurrentDocument();
     // Don't rewrite a file we just imported, and don't hit the disk on every keystroke.
     if (fileHandle && !isLoading) scheduleDiskSave();
+    // The live document grows as you type, so the meter follows it — but slowly, and never on the
+    // keystroke path.
+    scheduleStorageRefresh(15000);
 }
 
 const scheduleDiskSave = debounce(() => { saveToDisk(); }, 800);
@@ -1957,12 +2126,15 @@ async function saveSnapshot() {
 
         // The storage layer keeps the newest MAX_VERSIONS. A version embeds its images, so it can
         // be large: if the write fails, drop most of the history and try once more.
-        if (await QuorlyStore.appendVersion(currentId, version, MAX_VERSIONS)) return;
-        await QuorlyStore.pruneVersions(currentId, 5);
-        await QuorlyStore.appendVersion(currentId, version, 5);
+        let stored = await QuorlyStore.appendVersion(currentId, version, MAX_VERSIONS);
+        if (!stored) {
+            await QuorlyStore.pruneVersions(currentId, 5);
+            await QuorlyStore.appendVersion(currentId, version, 5);
+        }
     } catch (err) {
         console.warn('Could not save version snapshot', err);
     }
+    scheduleStorageRefresh(200, true);
 }
 
 async function showHistory() {
@@ -2318,6 +2490,7 @@ function wireUI() {
                 case 'copy-md': track('export', { format: 'copy' }); copyMarkdown(); break;
                 case 'history': showHistory(); break;
                 case 'backup-all': backupAll(); break;
+                case 'keep-data': requestPersistence(); break;
                 // The picker is the only way to read a file the user chose; the actual restore
                 // runs from its change handler below.
                 case 'restore-backup': {

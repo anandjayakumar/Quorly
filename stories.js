@@ -622,6 +622,13 @@
         try { return await navigator.storage.persist(); } catch (err) { return false; }
     }
 
+    // Whether the browser has already agreed to keep this origin's data. Chrome answers this from
+    // engagement, so it can be true without this app ever having asked.
+    async function persisted() {
+        if (!navigator.storage || !navigator.storage.persisted) return false;
+        try { return await navigator.storage.persisted(); } catch (err) { return false; }
+    }
+
     window.QuorlyStore = {
         open: open,
         isIDB: isIDB,
@@ -642,5 +649,6 @@
         sweepBlobs: sweepBlobs,
         estimate: estimate,
         persist: persist,
+        persisted: persisted,
     };
 })();

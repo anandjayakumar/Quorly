@@ -1242,6 +1242,56 @@ body.light-mode .brand-name {
   display: flex;
   gap: 6px;
 }
+
+/* DD-03 (IDB-4): the storage meter. Pressure is shown with brightness only — the palette has no
+   hue to spend on a warning, and a full bar reads as pressure on its own. */
+.storage-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+}
+.storage-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.storage-name {
+  white-space: nowrap;
+}
+.storage-num {
+  color: rgba(255,255,255,0.72);
+  font-variant-numeric: tabular-nums;
+}
+.storage-track {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.1);
+  overflow: hidden;
+}
+.storage-track > i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: rgba(255,255,255,0.5);
+  transition: width 0.3s ease;
+}
+.storage-meter.is-tight .storage-track > i {
+  background: rgba(255,255,255,0.92);
+}
+.storage-note {
+  line-height: 1.45;
+  color: rgba(255,255,255,0.5);
+}
+body.light-mode .storage-meter { color: rgba(0,0,0,0.55); }
+body.light-mode .storage-num { color: rgba(0,0,0,0.72); }
+body.light-mode .storage-track { background: rgba(0,0,0,0.1); }
+body.light-mode .storage-track > i { background: rgba(0,0,0,0.45); }
+body.light-mode .storage-meter.is-tight .storage-track > i { background: rgba(0,0,0,0.85); }
+body.light-mode .storage-note { color: rgba(0,0,0,0.5); }
 .mini-btn {
   flex: 1 1 0;
   min-width: 0;
