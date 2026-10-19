@@ -2112,8 +2112,8 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
   body { padding: calc(var(--mobile-topbar-h) + var(--mobile-fmtbar-h) + 12px) 12px 72px; }
   body.focus-mode { padding-top: calc(var(--mobile-topbar-h) + 12px); }
   .reader { padding: 22px 18px; border-radius: 14px; min-height: auto; }
-  #editTitle { font-size: 32px; margin-bottom: 14px; }
-  #editBody { font-size: 18px; }
+  #editTitle { font-size: 28px; margin-bottom: 14px; }
+  #editBody { font-size: 14px; }
   .footer-stats { gap: 12px; padding: 8px 14px; font-size: 11px; bottom: 12px; }
   .sidebar { padding: 14px; }
 }
