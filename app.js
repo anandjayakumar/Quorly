@@ -16,8 +16,7 @@ let isLoading = false; // True while importing a file (prevents auto-rewriting i
 const FILES_INDEX_KEY = 'quorly_files_v1';
 const CURRENT_ID_KEY = 'quorly_current_id_v1';
 const MAX_RECENTS = 10;
-// Version history is capped per document. One name for it, because the backup/restore path has
-// to agree with saveSnapshot() about how many versions a document keeps.
+// Version history is capped per document.
 const MAX_VERSIONS = 20;
 const RESTORE_WINDOW_MS = 48 * 60 * 60 * 1000; // reopen the last document only if touched within 48 h
 let currentId = null;
@@ -312,12 +311,8 @@ async function init() {
     QuorlyStore.migrate(indexIds).then((result) => {
         if (result.adopted) {
             console.info('Quorly: moved ' + result.adopted + ' localStorage records into the library.');
-            // The migration is exactly what empties localStorage, so the meter is stale until it
-            // has finished.
-            scheduleStorageRefresh(300, true);
         }
     }).catch((err) => console.warn('Quorly: could not move the library.', err));
-    scheduleStorageRefresh(0, true);
 
     // M-1: a returning writer is simply someone whose live keys already existed on load. Coarse
     // by design — there is no identifier to be more precise with, and none is wanted.
@@ -489,7 +484,6 @@ async function parkCurrentDocument() {
         return false;
     }
     touchCurrentDocument();
-    scheduleStorageRefresh(200, true);
     return true;
 }
 
@@ -666,410 +660,7 @@ async function deleteRecent(id) {
         touchCurrentDocument();
     }
     renderRecents();
-    scheduleStorageRefresh(200, true);
     toast('Deleted "' + entry.title + '"');
-}
-
-// --- BACKUP & RESTORE (DD-03 / IDB-0) ------------------------------------------------
-//
-// Everything Quorly holds lives in this browser, so a single self-contained bundle is the only
-// guarantee that survives cleared site data, a wiped profile, a different browser or a new
-// machine — and it is what makes any future eviction acceptable (DD-01 §5.4). The bundle keeps
-// every image inline as a `data:` URL and depends on nothing but this file's own format, so it
-// stays readable by a later version of Quorly and by a human.
-//
-// The frozen live keys are deliberately NOT part of the bundle. The open document is captured
-// as an ordinary document entry instead, which means a restore can never overwrite what is
-// currently open, and a hand-edited bundle can never point a restore at `doc_body_v13`.
-const BACKUP_APP = 'quorly';
-const BACKUP_FORMAT = 1;
-
-function backupFileName() {
-    const d = new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    return `quorly-backup-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`;
-}
-
-// The stored snapshot / version list for one document, read through the storage layer — so a
-// backup always sees exactly what the editor would, whichever backend is in use, and any image
-// that is stored as a blob reference comes back as an inline `data:` URL.
-async function readSnapshotForBackup(id) {
-    return QuorlyStore.getSnapshot(id);
-}
-
-async function readVersionsForBackup(id) {
-    return QuorlyStore.listVersions(id);
-}
-
-async function writeSnapshotForRestore(id, snapshot) {
-    return QuorlyStore.putSnapshot(id, snapshot);
-}
-
-// A restore replaces a document's history rather than appending to it, so the old list goes first.
-async function writeVersionsForRestore(id, list) {
-    await QuorlyStore.deleteVersions(id);
-    for (const version of list) {
-        if (!await QuorlyStore.appendVersion(id, version, MAX_VERSIONS)) return false;
-    }
-    return true;
-}
-
-// One document's entry in the bundle. The open document has no parked snapshot to read (S-2a:
-// the live keys are its only storage), so its content is taken from the live keys — otherwise
-// the bundle would be missing the document the user is actually looking at.
-async function backupDocumentFor(id, entry) {
-    const parked = await readSnapshotForBackup(id);
-    const doc = {
-        id: id,
-        title: (parked && parked.title) || (entry && entry.title) || 'Untitled',
-        updatedAt: (parked && parked.updatedAt) || (entry && entry.updatedAt) || Date.now(),
-        wordCount: (entry && entry.wordCount) || 0,
-        snapshot: parked
-            ? { title: parked.title || 'Untitled', body: parked.body || '', titleImage: parked.titleImage || null }
-            : null,
-        versions: await readVersionsForBackup(id),
-    };
-    if (id === currentId) {
-        const live = snapshotFromLiveKeys();
-        const liveTitle = (editTitle.textContent || '').trim();
-        doc.snapshot = live;
-        doc.title = liveTitle || live.title || doc.title;
-        doc.updatedAt = Date.now();
-        doc.wordCount = countWords();
-        doc.open = true;
-    }
-    return doc;
-}
-
-async function buildBackupBundle() {
-    const documents = [];
-    const seen = new Set();
-    for (const entry of readIndex()) {
-        if (!entry || !entry.id || seen.has(entry.id)) continue;
-        seen.add(entry.id);
-        documents.push(await backupDocumentFor(entry.id, entry));
-    }
-    // The open document should always have an index entry, but the bundle must not silently
-    // lose the one document the user can see if that ever stops being true.
-    if (currentId && !seen.has(currentId)) {
-        documents.push(await backupDocumentFor(currentId, { id: currentId, title: editTitle.textContent }));
-    }
-    return {
-        app: BACKUP_APP,
-        format: BACKUP_FORMAT,
-        exportedAt: new Date().toISOString(),
-        currentId: currentId || null,
-        documents: documents,
-    };
-}
-
-function downloadJsonFile(json, name) {
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    // Revoked late: some browsers start the download after the click handler returns.
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
-}
-
-async function backupAll() {
-    try {
-        const bundle = await buildBackupBundle();
-        const json = JSON.stringify(bundle);
-        downloadJsonFile(json, backupFileName());
-        const n = bundle.documents.length;
-        toast(n
-            ? `Backup of ${n} document${n === 1 ? '' : 's'} downloaded. Keep it somewhere safe.`
-            : 'There is nothing to back up yet.');
-    } catch (err) {
-        console.error('Backup failed', err);
-        toast('Could not build the backup file. Nothing was exported.');
-    }
-}
-
-// Returns a message when the file is not a bundle this build can restore, or null when it is.
-function bundleProblem(data) {
-    if (!data || typeof data !== 'object' || Array.isArray(data)) return 'That file is not a Quorly backup.';
-    if (data.app !== BACKUP_APP) return 'That file is not a Quorly backup.';
-    if (data.format !== BACKUP_FORMAT) return `That backup was written by a different version of Quorly (format ${data.format}).`;
-    if (!Array.isArray(data.documents)) return 'That backup is damaged — it has no document list.';
-    for (const d of data.documents) {
-        if (!d || typeof d !== 'object' || typeof d.id !== 'string' || !d.id) {
-            return 'That backup is damaged — one of its documents has no id.';
-        }
-    }
-    return null;
-}
-
-// True when the copy already in this browser is exactly what the bundle holds, so restoring the
-// same file twice has nothing left to do. The open document is compared through the live keys,
-// which is where its content actually lives.
-async function localDocumentMatches(id, doc) {
-    const want = doc.snapshot || {};
-    if (id === currentId) {
-        const live = snapshotFromLiveKeys();
-        const liveTitle = (editTitle.textContent || '').trim() || live.title;
-        return liveTitle === (doc.title || '') && (live.body || '') === (want.body || '');
-    }
-    const parked = await readSnapshotForBackup(id);
-    if (!parked) return false;
-    if ((parked.title || '') !== (doc.title || '') || (parked.body || '') !== (want.body || '')) return false;
-    const have = await readVersionsForBackup(id);
-    const wanted = (Array.isArray(doc.versions) ? doc.versions : []).slice(-MAX_VERSIONS);
-    return JSON.stringify(have) === JSON.stringify(wanted);
-}
-
-// Restoring is additive and asks no questions: it never overwrites and never deletes a document
-// that is already here. Anything already present with different content comes back as a separate
-// copy under a fresh id, and the document that is open right now is only ever added as a copy
-// too. That is what makes a confirmation step unnecessary — there is nothing a restore can
-// destroy. (The one hard limit is the library size: the index keeps MAX_RECENTS entries and
-// trimIndex() deletes the content of anything past that, so restore fills the free slots
-// newest-first and says what did not fit.)
-async function restoreBackup(file) {
-    let data;
-    try {
-        data = JSON.parse(await file.text());
-    } catch (err) {
-        toast('That file could not be read as a backup (not valid JSON).');
-        return;
-    }
-    const problem = bundleProblem(data);
-    if (problem) { toast(problem); return; }
-    if (!data.documents.length) { toast('That backup has no documents in it.'); return; }
-
-    // Newest first, and a hand-edited bundle must never be able to list the same document twice.
-    const unique = [];
-    const seenIds = new Set();
-    for (const d of data.documents.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))) {
-        if (seenIds.has(d.id)) continue;
-        seenIds.add(d.id);
-        unique.push(d);
-    }
-
-    // The whole index, including the open document: `list` replaces the stored index, and
-    // dropping the open document from it would make the document the user is looking at vanish
-    // from Recents.
-    const list = readIndex().slice();
-    const slots = Math.max(0, MAX_RECENTS - list.length);
-    let restored = 0;
-    let alreadyHere = 0;
-    let failed = 0;
-    let dropped = 0;
-
-    for (const d of unique) {
-        const known = list.some((e) => e.id === d.id);
-        if (known && await localDocumentMatches(d.id, d)) { alreadyHere += 1; continue; }
-        if (restored >= slots) { dropped += 1; continue; }
-
-        // Reusing an existing id would overwrite work done since the backup was taken, so a
-        // document that is already here comes back as a copy under a fresh id — including the
-        // one that is open right now.
-        const asCopy = known || d.id === currentId;
-        const targetId = asCopy ? newDocId() : d.id;
-        const title = asCopy ? `${d.title || 'Untitled'} [Restored]` : (d.title || 'Untitled');
-        const snapshot = d.snapshot || { title: title, body: '', titleImage: null };
-
-        const okSnapshot = await writeSnapshotForRestore(targetId, {
-            title: title,
-            body: snapshot.body || '',
-            titleImage: snapshot.titleImage || null,
-            updatedAt: Date.now(),
-        });
-        const okVersions = Array.isArray(d.versions) && d.versions.length
-            ? await writeVersionsForRestore(targetId, d.versions.slice(-MAX_VERSIONS))
-            : true;
-        if (!okSnapshot || !okVersions) { failed += 1; continue; }
-
-        list.unshift({ id: targetId, title: title, updatedAt: Date.now(), wordCount: d.wordCount || 0 });
-        restored += 1;
-    }
-
-    safeSetItem(FILES_INDEX_KEY, JSON.stringify(trimIndex(list)));
-    renderRecents();
-    scheduleStorageRefresh(200, true);
-
-    const parts = [];
-    if (restored) parts.push(`Restored ${restored} document${restored === 1 ? '' : 's'}`);
-    if (alreadyHere) parts.push(`${alreadyHere} already here`);
-    if (failed) parts.push(`${failed} could not be stored`);
-    if (dropped) parts.push(`${dropped} over the ${MAX_RECENTS}-document limit`);
-    toast(parts.length ? `${parts.join(', ')}.` : 'Nothing to restore from that file.');
-}
-
-// --- STORAGE METER (DD-03 / IDB-4) ----------------------------------------------------
-//
-// Two budgets, because they fail differently and only one of them is a real risk. localStorage is
-// small — 5 MB in every browser we care about — and hard: going over it means the live document,
-// which is the open document's only storage, stops saving. IndexedDB is large and soft.
-//
-// The localStorage figure is measured directly, so it is exact, and it is the budget that actually
-// runs out. The library figure comes from navigator.storage.estimate(): Chromium breaks the origin
-// down per store, so `usageDetails.indexedDB` is the library exactly, while Firefox and Safari
-// report one number covering IndexedDB, the offline shell cache and localStorage together — there,
-// what is left after subtracting localStorage is relabelled "Library & app" rather than quietly
-// presented as the library.
-//
-// The two rows are measured in different units, and each is compared against a budget in its own
-// unit, which is all the ratios need:
-//   - localStorage in UTF-16 code units, against the quota browsers really enforce — see below.
-//   - the library in bytes, against the byte quota `estimate()` reports.
-//
-// The point of showing this at all is that eviction is survivable (DD-01 §5.4): the number exists
-// so the user can see the headroom, not so they can manage it byte by byte.
-//
-// The quota is 5 x 1024 x 1024 UTF-16 code units, not bytes. Measured directly against Chromium by
-// filling localStorage until it threw: the exact refusal point is 5,242,880 code units summed over
-// every key and value, which is where the "5 MB" every browser documents comes from. Counting bytes
-// (doubling) instead would put the warning at 80% of *half* the real budget and tell a user with
-// room to spare that they were nearly full.
-const LOCAL_BUDGET_UNITS = 5 * 1024 * 1024;
-const STORAGE_TIGHT = 0.8; // past this, say so and point at the backup button
-const META_KEY = 'quorly_meta_v1';
-
-function readMeta() {
-    try { return JSON.parse(localStorage.getItem(META_KEY) || '{}') || {}; } catch (err) { return {}; }
-}
-
-function writeMeta(patch) {
-    const meta = Object.assign(readMeta(), patch);
-    safeSetItem(META_KEY, JSON.stringify(meta));
-    return meta;
-}
-
-// UTF-16 code units, keys included, which is exactly what the browser counts against the quota.
-function localStorageUsed() {
-    let total = 0;
-    try {
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key === null) continue;
-            total += key.length + (localStorage.getItem(key) || '').length;
-        }
-    } catch (err) { /* report nothing rather than break the panel */ }
-    return total;
-}
-
-// One display formatter for both rows. The unit it is handed is code units for localStorage and
-// bytes for the library; to a reader both are "MB", and each row is only ever compared against a
-// budget in its own unit.
-function formatSize(units) {
-    if (!units) return '0 KB';
-    if (units < 1024 * 1024) return Math.max(1, Math.round(units / 1024)) + ' KB';
-    const mb = units / (1024 * 1024);
-    if (mb >= 1024) return (mb / 1024).toFixed(1).replace(/\.0$/, '') + ' GB';
-    return (mb >= 100 ? String(Math.round(mb)) : mb.toFixed(1).replace(/\.0$/, '')) + ' MB';
-}
-
-// The bar width is set through CSSOM on purpose: a `style` attribute would be blocked by
-// `style-src 'self'`, and the CSP is not worth weakening for a progress bar.
-function setStorageRow(prefix, used, budget) {
-    const bar = document.getElementById(prefix + 'Bar');
-    const num = document.getElementById(prefix + 'Num');
-    const ratio = budget > 0 ? Math.min(1, used / budget) : 0;
-    if (bar) bar.style.width = (ratio * 100).toFixed(1) + '%';
-    if (num) num.textContent = formatSize(used) + ' / ' + formatSize(budget);
-    return ratio;
-}
-
-let storageRefreshTimer = null;
-
-// The meter is informational, so it is never on the typing path: callers ask for a delay, and a
-// library change can pre-empt a queued quiet refresh.
-function scheduleStorageRefresh(delay, force) {
-    if (storageRefreshTimer !== null) {
-        if (!force) return;
-        clearTimeout(storageRefreshTimer);
-    }
-    storageRefreshTimer = setTimeout(() => {
-        storageRefreshTimer = null;
-        updateStorageMeter();
-    }, delay || 0);
-}
-
-async function updateStorageMeter() {
-    const meter = document.getElementById('storageMeter');
-    if (!meter) return;
-    meter.hidden = false;
-
-    const localUnits = localStorageUsed();
-    let pressure = setStorageRow('storageLocal', localUnits, LOCAL_BUDGET_UNITS);
-
-    const estimate = await QuorlyStore.estimate();
-    const devTrack = document.getElementById('storageDevTrack');
-    const devLine = document.getElementById('storageDevLine');
-    const devName = document.getElementById('storageDevName');
-    let libraryBytes = null;
-    if (estimate && estimate.quota) {
-        const details = estimate.usageDetails || {};
-        if (typeof details.indexedDB === 'number') {
-            // Chromium breaks the origin down per store, so this is the library exactly.
-            libraryBytes = details.indexedDB;
-            if (devName) devName.textContent = 'Library & history';
-        } else if (estimate.usage) {
-            // Firefox and Safari report one number for the whole origin, which also covers the
-            // offline shell cache. Subtracting localStorage is the closest available answer, and
-            // the label says so rather than pretending to be exact. `estimate()` counts bytes, so
-            // the code units have to be doubled to be subtracted from the same thing.
-            libraryBytes = Math.max(0, estimate.usage - localUnits * 2);
-            if (devName) devName.textContent = 'Library & app';
-        }
-    }
-    if (libraryBytes !== null) {
-        pressure = Math.max(pressure, setStorageRow('storageDev', libraryBytes, estimate.quota));
-        if (devTrack) devTrack.hidden = false;
-        if (devLine) devLine.hidden = false;
-    } else {
-        // No estimate at all (an older browser). Say nothing rather than invent a denominator:
-        // the localStorage budget is still exact, and that is the one that bites.
-        if (devTrack) devTrack.hidden = true;
-        if (devLine) devLine.hidden = true;
-    }
-
-    const tight = pressure >= STORAGE_TIGHT;
-    meter.classList.toggle('is-tight', tight);
-    const note = document.getElementById('storageNote');
-    if (note) {
-        note.hidden = !tight;
-        note.textContent = tight
-            ? 'Nearly full. Back up, then delete what you no longer need.'
-            : '';
-    }
-
-    updatePersistRow();
-}
-
-// Chrome decides whether an origin is "persistent" from engagement — a bookmark, repeated visits,
-// notifications permission — rather than from the call, so a refusal is a normal outcome and never
-// a condition of the editor working.
-async function updatePersistRow(known) {
-    const button = document.getElementById('persistBtn');
-    if (!button) return false;
-    const kept = typeof known === 'boolean' ? known : await QuorlyStore.persisted();
-    button.hidden = kept;
-    return kept;
-}
-
-async function requestPersistence() {
-    writeMeta({ persistRequested: true });
-    const granted = await QuorlyStore.persist();
-    await updatePersistRow(granted);
-    toast(granted
-        ? 'This browser will keep your documents until you delete them.'
-        : 'This browser did not grant it yet. Your documents are still here — back up anything you cannot lose.');
-}
-
-// Ask once, and only after a real signal of intent: saving to disk. Asking early is the whole
-// strategy, because the answer depends on engagement the browser has not seen yet.
-async function maybeRequestPersistence() {
-    if (readMeta().persistRequested) return;
-    writeMeta({ persistRequested: true });
-    await updatePersistRow(await QuorlyStore.persist());
 }
 
 // Put the live document (the original *_v13 keys) into the editor.
@@ -1210,7 +801,6 @@ async function syncNow() {
             fileDisplayEl().textContent = fileHandle.name;
             await saveToDisk();
             await saveSnapshot(); // Save version history
-            maybeRequestPersistence(); // a first save to disk is the signal of intent
             const display = fileDisplayEl();
             display.textContent = "Saved ✓";
             setTimeout(() => display.textContent = fileHandle.name, 1500);
@@ -1243,8 +833,7 @@ async function syncNow() {
         
         await saveToDisk();
         await saveSnapshot(); // Save version history
-        maybeRequestPersistence(); // a save to disk is the signal of intent
-        
+
         const display = fileDisplayEl();
         const originalName = fileHandle.name;
         display.textContent = "Saved ✓";
@@ -1637,9 +1226,6 @@ function saveToLocalStorage() {
     if (!isLoading) touchCurrentDocument();
     // Don't rewrite a file we just imported, and don't hit the disk on every keystroke.
     if (fileHandle && !isLoading) scheduleDiskSave();
-    // The live document grows as you type, so the meter follows it — but slowly, and never on the
-    // keystroke path.
-    scheduleStorageRefresh(15000);
 }
 
 const scheduleDiskSave = debounce(() => { saveToDisk(); }, 800);
@@ -2157,7 +1743,6 @@ async function saveSnapshot() {
     } catch (err) {
         console.warn('Could not save version snapshot', err);
     }
-    scheduleStorageRefresh(200, true);
 }
 
 async function showHistory() {
@@ -2512,17 +2097,6 @@ function wireUI() {
                 case 'export-txt': track('export', { format: 'txt' }); exportText(); break;
                 case 'copy-md': track('export', { format: 'copy' }); copyMarkdown(); break;
                 case 'history': showHistory(); break;
-                case 'backup-all': backupAll(); break;
-                case 'keep-data': requestPersistence(); break;
-                // The picker is the only way to read a file the user chose; the actual restore
-                // runs from its change handler below.
-                case 'restore-backup': {
-                    const input = document.getElementById('backupInput');
-                    if (!input) { toast('Restoring a backup is unavailable in this build.'); break; }
-                    input.value = '';
-                    input.click();
-                    break;
-                }
                 case 'toggle-focus': toggleFocus(); break;
                 case 'toggle-sidebar': toggleSidebar(); break;
                 case 'toggle-mode': toggleMode(); break;
@@ -2579,15 +2153,6 @@ function wireUI() {
     if (hc) hc.addEventListener('click', closeHistory);
     const ho = document.getElementById('historyOverlay');
     if (ho) ho.addEventListener('click', closeHistory);
-
-    // DD-03 (IDB-0): restore from a chosen backup file.
-    const backupInput = document.getElementById('backupInput');
-    if (backupInput) {
-        backupInput.addEventListener('change', (e) => {
-            const file = e.target.files && e.target.files[0];
-            if (file) restoreBackup(file);
-        });
-    }
 
     // UI-13: the Recents row-actions menu. One shared, body-level popover for every row.
     const rowMenu = document.getElementById('rowMenu');

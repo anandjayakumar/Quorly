@@ -1235,108 +1235,6 @@ body.light-mode .brand-name {
   color: rgba(255,255,255,0.5);
 }
 
-/* DD-03 (IDB-0): the library footer. It sits below the scrolling list and never shrinks, so
-   Recents stays the only part of the panel that gives way on a short window. */
-.recents-foot {
-  flex: 0 0 auto;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255,255,255,0.08);
-}
-.storage-actions {
-  display: flex;
-  gap: 6px;
-}
-
-/* DD-03 (IDB-4): the storage meter. Pressure is shown with brightness only — the palette has no
-   hue to spend on a warning, and a full bar reads as pressure on its own. */
-.storage-meter {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 10px;
-  font-size: 11px;
-  color: rgba(255,255,255,0.55);
-}
-.storage-line {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-.storage-name {
-  white-space: nowrap;
-}
-.storage-num {
-  color: rgba(255,255,255,0.72);
-  font-variant-numeric: tabular-nums;
-}
-.storage-track {
-  height: 3px;
-  border-radius: 2px;
-  background: rgba(255,255,255,0.1);
-  overflow: hidden;
-}
-.storage-track > i {
-  display: block;
-  width: 0;
-  height: 100%;
-  background: rgba(255,255,255,0.5);
-  transition: width 0.3s ease;
-}
-.storage-meter.is-tight .storage-track > i {
-  background: rgba(255,255,255,0.92);
-}
-.storage-note {
-  line-height: 1.45;
-  color: rgba(255,255,255,0.5);
-}
-body.light-mode .storage-meter { color: rgba(0,0,0,0.55); }
-body.light-mode .storage-num { color: rgba(0,0,0,0.72); }
-body.light-mode .storage-track { background: rgba(0,0,0,0.1); }
-body.light-mode .storage-track > i { background: rgba(0,0,0,0.45); }
-body.light-mode .storage-meter.is-tight .storage-track > i { background: rgba(0,0,0,0.85); }
-body.light-mode .storage-note { color: rgba(0,0,0,0.5); }
-
-/* Short windows. The storage meter adds ~77 px of non-shrinking footer, which is the difference
-   between fitting and not fitting on a phone. The meter keeps its numbers — they are the whole
-   information — and gives up its bars, which are decoration next to them. */
-@media (max-height: 700px) {
-  .storage-track { display: none; }
-  .storage-meter { gap: 2px; margin-bottom: 8px; }
-}
-.mini-btn {
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 6px 8px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 9px;
-  color: rgba(255,255,255,0.72);
-  font-family: 'Inter', sans-serif;
-  font-size: 11px;
-  line-height: 1.2;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-}
-.mini-btn:hover {
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.2);
-  color: #ffffff;
-}
-body.light-mode .recents-foot { border-top-color: rgba(0,0,0,0.1); }
-body.light-mode .mini-btn {
-  background: rgba(0,0,0,0.03);
-  border-color: rgba(0,0,0,0.1);
-  color: rgba(0,0,0,0.7);
-}
-body.light-mode .mini-btn:hover {
-  background: rgba(0,0,0,0.07);
-  border-color: rgba(0,0,0,0.2);
-  color: #111111;
-}
-
 .recent-item {
   position: relative;
   display: flex;
@@ -2137,9 +2035,6 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
 
 /* --- Added for strict CSP: replaces former inline style attributes --- */
 #fileInput { display: none; }
-/* DD-03: the same treatment for the backup file picker. `hidden` is not enough on its own —
-   a global `display:` rule on inputs would win over the attribute. */
-#backupInput { display: none; }
 #titleImage { width: 700px; }
 #historyModal h2 { margin-top: 0; }
 .modal-close {

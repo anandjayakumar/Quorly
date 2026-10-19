@@ -50,7 +50,7 @@ const NODE = `"${process.execPath}"`;
 const NPX_BIN = path.join(path.dirname(process.execPath), process.platform === 'win32' ? 'npx.cmd' : 'npx');
 const WRANGLER = fs.existsSync(NPX_BIN) ? `"${NPX_BIN}" --yes wrangler@3` : 'npx --yes wrangler@3';
 const KEEP_PREVIEWS = 3;
-const SMOKE_MIN_TOTAL = 149; // the suite may grow; this floor is what must never be dropped
+const SMOKE_MIN_TOTAL = 143; // the suite may grow; this floor is what must never be dropped
 const DEV_READY_MS = 150_000;
 
 // ---------------------------------------------------------------------------------

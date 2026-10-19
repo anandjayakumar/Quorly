@@ -35,12 +35,8 @@ await checkDocument('/app/', {
   type: 'text/html',
   contains: ['id="focusModeBtn"', 'id="editBody"', '/styles.css', '/app.js', 'noindex',
     'id="recentsSearch"', 'data-action="export-txt"', 'data-action="copy-md"',
-    // DD-03 (IDB-0): the library's backup/restore pair, and the picker it needs.
-    'data-action="backup-all"', 'data-action="restore-backup"', 'id="backupInput"',
     // DD-03: the storage layer must be in the document, and before /app.js.
     '/stories.js',
-    // DD-03 (IDB-4): the meter, and the one control it owns.
-    'id="storageMeter"', 'data-action="keep-data"',
     // W-1 / W-2: installable, and the offline cue has somewhere to render.
     'rel="manifest"', 'id="netStatus"', 'apple-touch-icon'],
 });
@@ -118,26 +114,12 @@ try {
     'const FUNNEL_EVENTS',
     'function track',
     'navigator.sendBeacon',
-    // DD-03 (IDB-0): every document can be exported to, and restored from, one JSON bundle.
-    'function buildBackupBundle',
-    'function backupAll',
-    'function restoreBackup',
-    'quorly-backup-',
     // DD-03 (IDB-1/2/3): storage goes through the adapter, so a backend swap changes no caller.
     // These four are the read paths the library actually depends on.
     'QuorlyStore.putSnapshot',
     'QuorlyStore.getSnapshot',
     'QuorlyStore.listVersions',
     'QuorlyStore.appendVersion',
-    // DD-03 (IDB-4): two budgets and a persistence request.
-    'const LOCAL_BUDGET_UNITS',
-    'function localStorageUsed',
-    // The quota is in UTF-16 code units, so the sum must not be doubled: counting bytes would put
-    // the warning at 80% of half the real budget. This marker is the expression itself.
-    "key.length + (localStorage.getItem(key) || '').length",
-    'function updateStorageMeter',
-    'QuorlyStore.persisted',
-    'function maybeRequestPersistence',
   ];
   for (const marker of markers) {
     record(`/app.js has ${marker}`, body.includes(marker), 'missing');
