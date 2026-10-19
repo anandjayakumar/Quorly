@@ -1201,15 +1201,16 @@ function insertTable() {
         sel.removeAllRanges();
         sel.addRange(lastSelectionRange);
     }
-    let html = '<table class="editor-table"><thead><tr>';
-    for (let c = 0; c < cols; c++) html += '<th><br></th>';
-    html += '</tr></thead><tbody>';
+    let tableHtml = '<table class="editor-table"><thead><tr>';
+    for (let c = 0; c < cols; c++) tableHtml += '<th><br></th>';
+    tableHtml += '</tr></thead><tbody>';
     for (let r = 1; r < rows; r++) {
-        html += '<tr>';
-        for (let c = 0; c < cols; c++) html += '<td><br></td>';
-        html += '</tr>';
+        tableHtml += '<tr>';
+        for (let c = 0; c < cols; c++) tableHtml += '<td><br></td>';
+        tableHtml += '</tr>';
     }
-    html += '</tbody></table><p><br></p>';
+    tableHtml += '</tbody></table>';
+    const html = `<div class="table-wrapper">${tableHtml}<button class="table-menu-btn" aria-label="Table options" title="Table options">⋯</button><div class="table-menu-dropdown"><button data-action="insert-row-above">Insert row above</button><button data-action="insert-row-below">Insert row below</button><button data-action="insert-col-left">Insert column left</button><button data-action="insert-col-right">Insert column right</button><button data-action="delete-row">Delete row</button><button data-action="delete-col">Delete column</button></div></div><p><br></p>`;
     document.execCommand('insertHTML', false, html);
     saveToLocalStorage();
 }
@@ -2166,6 +2167,180 @@ function wireUI() {
             else if (kind === 'divider') insertDivider();
         });
     });
+
+
+    // Custom table: menu toggle, resize drag, row/col actions
+    function initTableFeatures() {
+        document.querySelectorAll('.table-wrapper').forEach(wrapper => {
+            const btn = wrapper.querySelector('.table-menu-btn');
+            const dropdown = wrapper.querySelector('.table-menu-dropdown');
+            if (btn && dropdown) {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    dropdown.classList.toggle('open');
+                });
+                dropdown.addEventListener('click', (e) => {
+                    const target = e.target.closest('button');
+                    if (!target) return;
+                    const action = target.getAttribute('data-action');
+                    const table = wrapper.querySelector('table.editor-table');
+                    const rows = table ? Array.from(table.querySelectorAll('tbody tr')) : [];
+                    const activeRow = (() => {
+                        const sel = window.getSelection();
+                        if (!sel || !sel.rangeCount) return null;
+                        let node = sel.getRangeAt(0).commonAncestorContainer;
+                        if (node.nodeType === 3) node = node.parentNode;
+                        while (node && node !== editBody) {
+                            if (node.tagName === 'TR') return node;
+                            node = node.parentNode;
+                        }
+                        return rows.length ? rows[0] : null;
+                    })();
+                    if (!table) return;
+                    if (action === 'insert-row-above') {
+                        const tr = document.createElement('tr');
+                        const cols = table.querySelectorAll('thead th').length || 3;
+                        for (let i = 0; i < cols; i++) tr.innerHTML = '<td><br></td>';
+                        if (activeRow && activeRow.parentNode) activeRow.parentNode.insertBefore(tr, activeRow);
+                        else if (table.querySelector('tbody')) table.querySelector('tbody').appendChild(tr);
+                        saveToLocalStorage();
+                    } else if (action === 'insert-row-below') {
+                        const tr = document.createElement('tr');
+                        const cols = table.querySelectorAll('thead th').length || 3;
+                        for (let i = 0; i < cols; i++) tr.innerHTML = '<td><br></td>';
+                        if (activeRow && activeRow.parentNode) {
+                            const next = activeRow.nextSibling;
+                            if (next) activeRow.parentNode.insertBefore(tr, next);
+                            else activeRow.parentNode.appendChild(tr);
+                        } else if (table.querySelector('tbody')) table.querySelector('tbody').appendChild(tr);
+                        saveToLocalStorage();
+                    } else if (action === 'insert-col-left') {
+                        const colIndex = (() => {
+                            let node = (window.getSelection() && window.getSelection().rangeCount) ? window.getSelection().getRangeAt(0).commonAncestorContainer : null;
+                            if (node && node.nodeType === 3) node = node.parentNode;
+                            while (node && node !== editBody) {
+                                if (node.tagName === 'TH' || node.tagName === 'TD') return Array.from(node.parentNode.children).indexOf(node);
+                                node = node.parentNode;
+                            }
+                            return 0;
+                        })();
+                        table.querySelectorAll('tr').forEach(tr => {
+                            const cell = document.createElement(tr.parentElement.tagName === 'THEAD' ? 'th' : 'td');
+                            cell.innerHTML = '<br>';
+                            const ref = tr.children[colIndex];
+                            if (ref) tr.insertBefore(cell, ref); else tr.appendChild(cell);
+                        });
+                        saveToLocalStorage();
+                    } else if (action === 'insert-col-right') {
+                        const colIndex = (() => {
+                            let node = (window.getSelection() && window.getSelection().rangeCount) ? window.getSelection().getRangeAt(0).commonAncestorContainer : null;
+                            if (node && node.nodeType === 3) node = node.parentNode;
+                            while (node && node !== editBody) {
+                                if (node.tagName === 'TH' || node.tagName === 'TD') return Array.from(node.parentNode.children).indexOf(node) + 1;
+                                node = node.parentNode;
+                            }
+                            return (table.querySelectorAll('thead th').length || 3) - 1;
+                        })();
+                        table.querySelectorAll('tr').forEach(tr => {
+                            const cell = document.createElement(tr.parentElement.tagName === 'THEAD' ? 'th' : 'td');
+                            cell.innerHTML = '<br>';
+                            const ref = tr.children[colIndex];
+                            if (ref) tr.insertBefore(cell, ref); else tr.appendChild(cell);
+                        });
+                        saveToLocalStorage();
+                    } else if (action === 'delete-row') {
+                        if (activeRow && activeRow.parentNode && activeRow.parentNode.children.length > 1) {
+                            activeRow.parentNode.removeChild(activeRow);
+                            saveToLocalStorage();
+                        }
+                    } else if (action === 'delete-col') {
+                        const colsCount = table.querySelectorAll('thead th').length || 3;
+                        if (colsCount <= 1) return;
+                        const colIndex = (() => {
+                            let node = (window.getSelection() && window.getSelection().rangeCount) ? window.getSelection().getRangeAt(0).commonAncestorContainer : null;
+                            if (node && node.nodeType === 3) node = node.parentNode;
+                            while (node && node !== editBody) {
+                                if (node.tagName === 'TH' || node.tagName === 'TD') return Array.from(node.parentNode.children).indexOf(node);
+                                node = node.parentNode;
+                            }
+                            return 0;
+                        })();
+                        table.querySelectorAll('tr').forEach(tr => {
+                            const cell = tr.children[colIndex];
+                            if (cell) tr.removeChild(cell);
+                        });
+                        saveToLocalStorage();
+                    }
+                    dropdown.classList.remove('open');
+                });
+            }
+        });
+    }
+    initTableFeatures();
+
+    // Simple resize drag for table rows/columns via mouse on borders
+    (function setupTableResize() {
+        let isResizing = false, resizeMode = null, startX = 0, startY = 0, startW = 0, startH = 0, targetCol = null, targetRow = null;
+        document.querySelectorAll('.table-wrapper table.editor-table').forEach(table => {
+            table.addEventListener('mousedown', (e) => {
+                const th = e.target.closest('th');
+                const td = e.target.closest('td');
+                const cell = th || td;
+                if (!cell) return;
+                const rect = cell.getBoundingClientRect();
+                const x = e.clientX, y = e.clientY;
+                // Column resize: near right edge of th/td
+                if (x > rect.right - 8 && x < rect.right + 4) {
+                    isResizing = true; resizeMode = 'col'; startX = x;
+                    targetCol = cell;
+                    startW = cell.offsetWidth;
+                    e.preventDefault();
+                    document.body.style.userSelect = 'none';
+                    document.body.style.cursor = 'col-resize';
+                    return;
+                }
+                // Row resize: near bottom edge of td (not th for simplicity)
+                if (td && y > rect.bottom - 8 && y < rect.bottom + 4) {
+                    isResizing = true; resizeMode = 'row'; startY = y;
+                    targetRow = cell.parentNode;
+                    startH = targetRow ? targetRow.offsetHeight : cell.offsetHeight;
+                    e.preventDefault();
+                    document.body.style.userSelect = 'none';
+                    document.body.style.cursor = 'row-resize';
+                    return;
+                }
+            });
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            if (resizeMode === 'col' && targetCol) {
+                const dx = e.clientX - startX;
+                const newW = Math.max(30, startW + dx);
+                targetCol.style.width = newW + 'px';
+                // Apply same width to all cells in this column index
+                const table = targetCol.closest('table');
+                if (table) {
+                    const colIndex = Array.from(targetCol.parentNode.children).indexOf(targetCol);
+                    table.querySelectorAll('tr').forEach(tr => {
+                        const c = tr.children[colIndex];
+                        if (c) c.style.width = newW + 'px';
+                    });
+                }
+            } else if (resizeMode === 'row' && targetRow) {
+                const dy = e.clientY - startY;
+                const newH = Math.max(24, startH + dy);
+                targetRow.style.height = newH + 'px';
+            }
+        });
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false; resizeMode = null; targetCol = null; targetRow = null;
+                document.body.style.userSelect = '';
+                document.body.style.cursor = '';
+                saveToLocalStorage();
+            }
+        });
+    })();
 
     const tid = document.getElementById('titleImageDelete');
     if (tid) tid.addEventListener('click', deleteTitleImage);

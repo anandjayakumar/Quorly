@@ -1047,6 +1047,26 @@ body.light-mode #editBody table.editor-table th {
   background: rgba(0,0,0,0.04);
 }
 
+/* Custom table wrapper + menu + resize */
+.table-wrapper { position: relative; display: inline-block; max-width: 100%; }
+.table-menu-btn { position: absolute; top: -12px; right: -12px; width: 28px; height: 28px; border-radius: 50%; background: rgba(30,30,35,0.9); border: 1px solid rgba(255,255,255,0.12); color: #fff; font-size: 16px; line-height: 1; cursor: pointer; z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.15s ease, transform 0.15s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; }
+.table-wrapper:hover .table-menu-btn { opacity: 1; pointer-events: auto; transform: scale(1); }
+.table-menu-dropdown { position: absolute; top: 10px; right: -6px; background: rgba(30,30,35,0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 4px; min-width: 150px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); z-index: 201; display: none; flex-direction: column; gap: 2px; }
+.table-menu-dropdown.open { display: flex; }
+.table-menu-dropdown button { background: transparent; border: none; color: rgba(255,255,255,0.85); padding: 6px 10px; border-radius: 6px; text-align: left; font-size: 12px; font-family: 'Inter', sans-serif; cursor: pointer; white-space: nowrap; }
+.table-menu-dropdown button:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+/* Resize cursors on table borders */
+#editBody table.editor-table th { position: relative; cursor: default; }
+#editBody table.editor-table th::after { content: ''; position: absolute; right: -3px; top: 0; width: 6px; height: 100%; cursor: col-resize; z-index: 10; }
+#editBody table.editor-table td { position: relative; cursor: default; }
+#editBody table.editor-table td::after { content: ''; position: absolute; bottom: -3px; left: 0; width: 100%; height: 6px; cursor: row-resize; z-index: 10; }
+
+body.light-mode .table-menu-btn { background: rgba(240,240,245,0.95); border-color: rgba(0,0,0,0.1); color: #222; }
+body.light-mode .table-menu-dropdown { background: rgba(245,245,250,0.97); border-color: rgba(0,0,0,0.08); }
+body.light-mode .table-menu-dropdown button { color: rgba(0,0,0,0.8); }
+body.light-mode .table-menu-dropdown button:hover { background: rgba(0,0,0,0.05); color: #000; }
+
 /* Syntax highlighting classes */
 #editBody pre .keyword { color: #ff79c6; font-weight: 500; }
 #editBody pre .string { color: #50fa7b; }
