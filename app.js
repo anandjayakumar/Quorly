@@ -1,6 +1,6 @@
 
 let fileHandle = null;
-let bodyFontSize = 18;
+let bodyFontSize = 16;
 let editorWidth = 1080;
 // UI-14: at ≤1180px the panel is a drawer and the Formatting section moves under the top bar.
 const MOBILE_LAYOUT = window.matchMedia('(max-width: 1180px)');
@@ -1593,7 +1593,7 @@ function setFontSize(px) {
     document.documentElement.style.setProperty('--body-font-size', `${bodyFontSize}px`);
 }
 function resetFontSize() {
-    setFontSize(18);
+    setFontSize(16);
 }
 function setWidth(px) {
     editorWidth = Math.max(600, Math.min(1400, px));
@@ -2110,10 +2110,7 @@ function wireUI() {
     const headingDrop = document.getElementById('headingDropdown');
     if (headingDrop) initDropdown(headingDrop, (value) => applyHeading(value), true);
 
-    // UI-15: absolute text size and page width, replacing the ±/←→ button pairs.
-    const sizeDrop = document.getElementById('fontSizeDropdown');
-    if (sizeDrop) initDropdown(sizeDrop, (value) => setFontSize(Number(value)));
-
+    // UI-15: page width dropdown (text-size selection removed).
     const widthDrop = document.getElementById('docWidthDropdown');
     if (widthDrop) initDropdown(widthDrop, (value) => setWidth(Number(value)));
 

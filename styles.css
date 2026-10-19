@@ -71,7 +71,7 @@
   --muted:#9aa0a6;
   --accent:#3b82f6;
   --radius:20px;
-  --body-font-size: 18px;
+  --body-font-size: 16px;
   --editor-width: 1080px;
   --sidebar-width: 400px;
   --app-gap: 28px;
@@ -82,6 +82,18 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
+
+/* --- App shell, /app/ only (the q-app class is set on the app page's html and body) ---
+   The editor is not a document: the page itself must never scroll (that is what produced
+   the double-scrollbar class of bugs). The scroll owners are the panel (.sidebar), the
+   recents list (.recents-list) and the main column (.app).
+   `overflow: clip` rather than `hidden` so the page cannot scroll even programmatically;
+   do not "fix" this back to visible/hidden without reading that comment. */
+html.q-app,
+body.q-app{
+  height: 100%;
+  overflow: clip;
+}
 
 body{
   margin:0;
@@ -660,6 +672,21 @@ body.focus-mode .app {
   gap: 0;
 }
 
+/* With the page itself locked (see .q-app above), the main column is the editor's scroll
+   owner. Its height comes from the body's content box, so at ≤1180px the fixed top and
+   formatting bars still bound it via the body padding; the grid tracks grow into it and
+   everything below just works from the layout. */
+body.q-app .app {
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Sticky panel: the offset now measures from the .app scrollport, which already sits
+   inside the body's 32px padding — 32px would double-count and drift the panel down. */
+body.q-app .sidebar {
+  top: 0;
+}
+
 /* Ensure the reader itself doesn't overflow */
 .reader {
   width: 100%;
@@ -668,7 +695,7 @@ body.focus-mode .app {
   border-radius: var(--radius);
   padding: 70px;
   min-height: 85vh;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
   position: relative;
   overflow: hidden;
 }
@@ -833,7 +860,7 @@ body.focus-mode .app {
   color: rgba(255,255,255,0.8);
   cursor: pointer;
   z-index: 100;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
   transition: all 0.2s ease;
   user-select: none;
 }
@@ -998,7 +1025,7 @@ body.light-mode #editBody pre .operator { color: #d73a49; }
     display: none; 
     flex-direction: column;
     min-width: 200px; 
-    box-shadow: 0 12px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05); 
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05); 
     z-index: 3000;
 }
 .cmd-item { 
@@ -1043,7 +1070,7 @@ body.light-mode #editBody pre .operator { color: #d73a49; }
   height: calc(100vh - 64px);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
   /* Collapse/expand: fade + slide. The fade-in on expand is slightly delayed so the
      panel doesn't appear while it is still squeezed. */
   transition:
@@ -1228,6 +1255,27 @@ body.light-mode .brand-name {
   padding-right: 2px;
 }
 
+/* --- Scroll affordance for the app's real scrollers (UI-OVF).
+   The page can no longer scroll, so a visible, palette-matched thumb on these two keeps
+   the affordance; greys only, plus a thin Firefox equivalent. */
+.sidebar,
+.recents-list {
+  scrollbar-width: thin;
+  scrollbar-color: #444444 transparent;
+  scrollbar-gutter: stable;
+}
+.sidebar::-webkit-scrollbar,
+.recents-list::-webkit-scrollbar { width: 8px; }
+.sidebar::-webkit-scrollbar-thumb,
+.recents-list::-webkit-scrollbar-thumb {
+  background: #444444;
+  border-radius: 4px;
+}
+body.light-mode .sidebar::-webkit-scrollbar-thumb,
+body.light-mode .recents-list::-webkit-scrollbar-thumb {
+  background: #999999;
+}
+
 .recents-empty {
   margin: 0;
   font-size: 11px;
@@ -1344,7 +1392,7 @@ body.light-mode .brand-name {
   background: #141414;
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 10px;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
 }
 
 #rowMenu[hidden] { display: none; }
@@ -1628,7 +1676,7 @@ body.light-mode #modeBtn .icon-sun { display: block; }
   background: #141414;
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 8px;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
   max-height: 240px;
   overflow-y: auto;
 }
@@ -1751,7 +1799,7 @@ body.light-mode .section-title {
   padding: 5px;
   display: none;
   z-index: 1000;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
   white-space: nowrap;
 }
 #toolbar button { 
@@ -1780,7 +1828,7 @@ body.light-mode .section-title {
     display: flex; gap: 24px; font-size: 12px; 
     color: rgba(255,255,255,0.5); 
     z-index: 2000;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 /* W-2: offline status chip. Hidden unless the browser is offline, and it inherits the
@@ -1831,7 +1879,7 @@ body.light-mode blockquote { border-left-color: #c4c4c4; color: #333333; }
   opacity: 0;
   transition: opacity 0.25s ease, transform 0.25s ease;
   pointer-events: none;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
 }
 #appToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rgba(0,0,0,0.15); color: #1a1a1a; }
@@ -1840,7 +1888,7 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
    A−/A+ and ←/→ button pairs that used to sit in Document). */
 .dropdown-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -1880,7 +1928,7 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
 }
 .mobile-fmtbar .section-title { display: none; }
 .mobile-fmtbar .dropdown { width: auto; flex: 0 0 auto; margin-bottom: 0; }
-.mobile-fmtbar .dropdown-toggle { width: auto; min-width: 132px; padding: 8px 10px; }
+.mobile-fmtbar .dropdown-toggle { width: auto; min-width: 100px; padding: 8px 10px; }
 .mobile-fmtbar .dropdown-row { display: flex; gap: 8px; margin-bottom: 0; flex: 0 0 auto; }
 .mobile-fmtbar .dropdown-row .dropdown { width: auto; }
 .mobile-fmtbar .fmt-grid { display: flex; gap: 8px; margin-top: 0; flex: 0 0 auto; }
@@ -1895,6 +1943,13 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
 
   /* Content starts below the two fixed bars. */
   body { padding: calc(var(--mobile-topbar-h) + var(--mobile-fmtbar-h) + 16px) 16px 80px; }
+
+  /* On mobile the formatting section is moved into the fixed bar; if it is still in the
+     sidebar (initial paint before syncLayoutMode runs) keep it out of the drawer. */
+  .sidebar #formatSection { display: none; }
+
+  /* Mobile: narrower dropdown triggers so four-across rows fit the drawer/bar. */
+  .dropdown-toggle { min-width: 100px; }
 
   .app {
     grid-template-columns: minmax(0, 1fr);
@@ -2012,6 +2067,9 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
 }
 
 @media print{
+  /* UI-OVF: unlock the app shell so printing flows across pages again. */
+  html.q-app, body.q-app { height: auto; overflow: visible; }
+  body.q-app .app { height: auto; overflow: visible; }
   .sidebar, #toolbar, .footer-stats, .meta, .inline-dropzone, .title-add-btn, .title-image-delete, .img-delete,
   .mobile-topbar, .mobile-fmtbar, .panel-scrim {display:none !important}
   body{padding:0 !important; margin:0;}
