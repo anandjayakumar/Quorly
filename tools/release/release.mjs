@@ -2,15 +2,19 @@
 /**
  * Quorly release runner — see docs/QUORLY_RELEASE_PIPELINE.md
  *
- *   node tools/release/release.mjs run [--commit <sha>] [--dry-run]
+ *   node tools/release/release.mjs run [--commit <commit>] [--dry-run]
  *   node tools/release/release.mjs launch
- *   node tools/release/release.mjs promote --commit <sha> [--force]
+ *   node tools/release/release.mjs promote --commit <commit> [--force]
  *   node tools/release/release.mjs prune [--keep N]
  *   node tools/release/release.mjs status
  *
  * `run`      snapshot a commit -> local gate -> deploy preview -> verify the alias -> prune.
  * `launch`   what the post-commit hook calls: spawns `run` detached and returns immediately.
  * `promote`  deploy a commit that already passed the gate to production. Manual only.
+ *
+ * Both `--commit` forms take any commit-ish — a full SHA, an abbreviation, a branch or HEAD — and
+ * resolve it to the full SHA first, so what is gated, deployed, recorded and moved onto `main` is
+ * always the same object.
  *
  * The gate is the same suite in both places: smoke.mjs must report every check (the floor is
  * SMOKE_MIN_TOTAL). A failure before the deploy stage deploys nothing. Everything is recorded
@@ -68,15 +72,15 @@ const nowIso = () => new Date().toISOString();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Run a shell command, tee its output into the log, and never throw unless asked to. */
-function sh(cmd, { cwd = REPO, allowFail = false, env = process.env } = {}) {
-  log(`$ ${cmd}`);
+function sh(cmd, { cwd = REPO, allowFail = false, env = process.env, quiet = false } = {}) {
+  if (!quiet) log(`$ ${cmd}`);
   try {
     const out = execSync(cmd, { cwd, env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 });
-    if (out.trim()) log(out.trim().replace(/^/gm, '    '));
+    if (!quiet && out.trim()) log(out.trim().replace(/^/gm, '    '));
     return { code: 0, out: out.trim() };
   } catch (e) {
     const out = [e.stdout, e.stderr].filter(Boolean).join('\n').toString().trim();
-    if (out) log(out.replace(/^/gm, '    '));
+    if (out && !quiet) log(out.replace(/^/gm, '    '));
     if (allowFail) return { code: e.status ?? 1, out };
     throw new Error(`command failed: ${cmd}\n${out.slice(-800)}`);
   }
@@ -89,6 +93,29 @@ function sh(cmd, { cwd = REPO, allowFail = false, env = process.env } = {}) {
 function gitHead() { return sh('git rev-parse HEAD', { allowFail: false }).out; }
 function gitBranch() { return sh('git rev-parse --abbrev-ref HEAD', { allowFail: true }).out || '(detached)'; }
 function isDirty() { return sh('git status --porcelain', { allowFail: true }).out.length > 0; }
+
+/**
+ * The full 40-character SHA for a commit-ish argument. Resolving once, here, is what stops the
+ * history lookup, `git archive`, the branch move and the production record from disagreeing about
+ * the same commit — and it means `--commit 3a1a201` or `--commit dev` is accepted and recorded
+ * canonically. Returns null for anything git cannot resolve, so the caller can say so.
+ */
+function resolveCommit(ref) {
+  if (!ref) return null;
+  const r = sh(`git rev-parse --verify --quiet "${ref}^{commit}"`, { allowFail: true, quiet: true });
+  return r.code === 0 && r.out ? r.out.split('\n')[0].trim() : null;
+}
+
+/**
+ * Whether two commit strings name the same commit. Exact equality is the normal path; the prefix
+ * fallback exists because a history line written by an older build may hold an abbreviation. The
+ * seven-character floor is git's own convention for an unambiguous abbreviation.
+ */
+function sameCommit(a, b) {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  return a.length >= 7 && b.length >= 7 && (a.startsWith(b) || b.startsWith(a));
+}
 
 function countFiles(dir) {
   let n = 0;
@@ -174,7 +201,7 @@ function lastPassedRun(sha) {
     const lines = fs.readFileSync(HISTORY, 'utf8').trim().split('\n').reverse();
     for (const l of lines) {
       const r = JSON.parse(l);
-      if (r.commit === sha && r.state === 'passed' && !r.dryRun) return r;
+      if (sameCommit(r.commit, sha) && r.state === 'passed' && !r.dryRun) return r;
     }
   } catch { /* no history */ }
   return null;
@@ -269,7 +296,16 @@ async function cmdRun(argv) {
   const shaArg = argv.indexOf('--commit');
   const runIdArg = argv.indexOf('--run-id');
 
-  const sha = shaArg >= 0 ? argv[shaArg + 1] : gitHead();
+  const commitArg = shaArg >= 0 ? argv[shaArg + 1] : null;
+  if (shaArg >= 0 && (!commitArg || commitArg.startsWith('-'))) {
+    console.error('run --commit needs a commit: a full or abbreviated SHA, a branch, or HEAD.');
+    return 1;
+  }
+  const sha = resolveCommit(commitArg || 'HEAD');
+  if (!sha) {
+    console.error(`No such commit: ${commitArg}`);
+    return 1;
+  }
   const short = sha.slice(0, 8);
   const runId = runIdArg >= 0 ? argv[runIdArg + 1] : nowIso().replace(/[:.]/g, '-');
 
@@ -416,7 +452,19 @@ async function cmdRun(argv) {
 async function cmdPromote(argv) {
   const shaArg = argv.indexOf('--commit');
   const force = argv.includes('--force');
-  const sha = shaArg >= 0 ? argv[shaArg + 1] : gitHead();
+  const commitArg = shaArg >= 0 ? argv[shaArg + 1] : null;
+
+  // A usage error must not leave a release record behind, so the commit is checked before the run
+  // directory, the log and the lock exist.
+  if (shaArg >= 0 && (!commitArg || commitArg.startsWith('-'))) {
+    console.error('promote --commit needs a commit: a full or abbreviated SHA, a branch, or HEAD.');
+    return 1;
+  }
+  const sha = resolveCommit(commitArg || 'HEAD');
+  if (!sha) {
+    console.error(`No such commit: ${commitArg}`);
+    return 1;
+  }
   const short = sha.slice(0, 8);
 
   fs.mkdirSync(RUNS, { recursive: true });

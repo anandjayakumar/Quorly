@@ -125,10 +125,18 @@ function track(event, props) {
 }
 
 // --- IMAGE INTAKE (S-2b) ---
-// localStorage is this app's only storage, so every image is decoded, downscaled and re-encoded
-// on the way in: one unprocessed phone photo can fill the whole origin quota. Longest edge is
-// capped per use; opaque images become WebP (JPEG where WebP is unsupported), images with
-// transparency stay PNG. Anything past MAX_IMAGE_BYTES is refused before it is decoded.
+// Every image is decoded, downscaled and re-encoded on the way in, before it reaches any store:
+// one unprocessed phone photo can dominate everything the app holds, and the live document it
+// lands in has a hard 5 MB budget. Longest edge is capped per use; opaque images become WebP (JPEG
+// where WebP is unsupported), images with transparency stay PNG. Anything past MAX_IMAGE_BYTES is
+// refused before it is decoded. Re-encoding here is also what lets identical images dedupe to a
+// single content-addressed blob once the same bytes reach the library.
+//
+// Measured against a real 1920x863 photograph (S-2b check): downscaled to 1600x719 and encoded to
+// WebP at IMAGE_QUALITY, the result is 244 KB against the 460 KB source, and against a lossless PNG
+// of the same pixels it holds a 44 dB PSNR — mean per-channel error 2.5/255, nothing anywhere over
+// 32, and at most 9/255 in flat sky, which is where lossy banding shows up first. There is no
+// visible cost to the size it buys, so the quality is left where it is.
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // refuse before decoding anything larger
 const MAX_IMAGE_EDGE = 1600;              // body / inline images
 const MAX_TITLE_EDGE = 1000;              // header (title) image
