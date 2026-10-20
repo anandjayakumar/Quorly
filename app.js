@@ -1179,6 +1179,287 @@ function preserveScroll(fn) {
     }
 }
 
+// --- PASTE CLEAN (N-7) ---
+// Nothing pasted into the editor is inserted the way it came off the clipboard. The browser's own
+// paste drops the source app's markup straight into the document, which is why Google Docs arrives as
+// <b id="docs-internal-guid-…"> + <span style> + a <style> block (and renders bold end to end), and
+// why an X/Twitter thread — one <div> per line — collapses into a single run once those divs are
+// folded away. normalizePastedHTML() rebuilds the payload from a small block/inline allow-list and
+// returns semantic HTML. It has no side effects beyond a detached element, so the .docx/.md importers
+// (N-5, N-6) can call the same function instead of growing a second converter.
+//
+// Every route a paste can take — Ctrl+V, Ctrl+Shift+V, the context menu, long-press → Paste —
+// dispatches the one cancelable `paste` event, so this is the only hook the editor needs.
+
+// Inline tags kept as themselves. Anything else inline (span, font, u, label…) is unwrapped: its text
+// survives, its formatting does not.
+const PASTE_INLINE = {
+    B: 'strong', STRONG: 'strong',
+    I: 'em', EM: 'em',
+    A: 'a',
+    CODE: 'code',
+    S: 's', DEL: 's', STRIKE: 's',
+    SUB: 'sub', SUP: 'sup'
+};
+const PASTE_HEADINGS = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
+// Elements that start their own block. Anything holding one of these is a container, not a paragraph:
+// X wraps its run of line-divs in an outer <div>, and Google Docs wraps whole paragraphs in one <b>.
+// Folding either into a single <p> is exactly the collapse this handler exists to prevent.
+const PASTE_BLOCKS = new Set([
+    ...PASTE_HEADINGS,
+    'P', 'DIV', 'SECTION', 'ARTICLE', 'HEADER', 'FOOTER', 'MAIN', 'ASIDE', 'NAV', 'FIGURE',
+    'FIGCAPTION', 'ADDRESS', 'DL', 'DT', 'DD', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TD', 'TH',
+    'BLOCKQUOTE', 'PRE', 'UL', 'OL', 'LI', 'HR'
+]);
+
+// Collapse runs of HTML whitespace (and NBSPs) the way the browser would on render, so a source's
+// indentation never reaches the document as visible space.
+function pasteText(value) {
+    return String(value).replace(/\s+/g, ' ');
+}
+
+// A serialized run is blank when it carries no text and no image: <br> and empty tags alone don't
+// count. Empty paragraphs and headings are dropped rather than left behind as gaps.
+function isPasteBlank(html) {
+    return !/[^\s]/.test(html.replace(/<[^>]*>/g, '')) && !/<img\b/i.test(html);
+}
+
+function pasteHasBlockChild(el) {
+    return Array.from(el.children || []).some(child => PASTE_BLOCKS.has(child.tagName));
+}
+
+// href allow-list: http(s), mailto and relative. The probe drops control characters and spaces first,
+// because "java\tscript:" is a scheme the browser still honours.
+function pasteHref(value) {
+    const href = String(value == null ? '' : value).trim();
+    if (!href) return '';
+    const probe = href.replace(/[\u0000-\u0020\u007f]/g, '').toLowerCase();
+    const scheme = probe.match(/^([a-z][a-z0-9+.-]*):/);
+    if (!scheme) return href; // relative path or #anchor
+    return (scheme[1] === 'http' || scheme[1] === 'https' || scheme[1] === 'mailto') ? href : '';
+}
+
+// Images: data: URIs are self-contained (the app's own intake produces them) and https: renders,
+// because img-src in _headers allows it and imported files already show remote images. A relative src
+// would point at this origin, and http: is blocked by that same CSP, so neither is kept.
+function pasteImage(node) {
+    const src = String(node.getAttribute('src') || '').trim();
+    const probe = src.replace(/[\u0000-\u0020\u007f]/g, '').toLowerCase();
+    if (!/^(data:image\/|https:)/.test(probe)) return '';
+    const alt = String(node.getAttribute('alt') || '').replace(/\s+/g, ' ').trim();
+    return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}">`;
+}
+
+// <b style="font-weight:normal"> is a wrapper, not emphasis — that is Google Docs' outer <b>, and
+// keeping it would make every pasted line bold.
+function isPasteNeutralBold(el) {
+    const style = (el.getAttribute('style') || '').replace(/\s+/g, '').toLowerCase();
+    return style.includes('font-weight:normal') || style.includes('font-weight:400');
+}
+
+// <pre> keeps its text verbatim: syntax-highlight spans go, their text and the newlines stay.
+function pastePreText(node) {
+    let text = '';
+    Array.from(node.childNodes).forEach(n => {
+        if (n.nodeType === 3) text += n.nodeValue;
+        else if (n.nodeType === 1) text += n.tagName === 'BR' ? '\n' : pastePreText(n);
+    });
+    // The HTML parser drops one newline right after <pre>; authored content does not include it.
+    return text.replace(/^\n/, '');
+}
+
+// Serialize inline content. `open` holds the inline tags already being emitted, so <b><b>x</b></b>
+// produces one <strong> instead of two.
+function pasteInline(parent, open) {
+    return Array.from(parent.childNodes).map(node => pasteInlineNode(node, open)).join('');
+}
+
+function pasteInlineNode(node, open) {
+    if (node.nodeType === 3) return escapeHtml(pasteText(node.nodeValue));
+    if (node.nodeType !== 1) return ''; // comments and the like never survive a sanitize
+    const tag = node.tagName;
+    if (tag === 'BR') return '<br>';
+    if (tag === 'IMG') return pasteImage(node);
+
+    const name = PASTE_INLINE[tag];
+    if (!name) return pasteInline(node, open); // span, font, …: keep the text, drop the wrapper
+    if (name === 'strong' && isPasteNeutralBold(node)) return pasteInline(node, open);
+
+    if (name === 'a') {
+        const href = pasteHref(node.getAttribute('href'));
+        const inner = pasteInline(node, open);
+        return href ? `<a href="${escapeHtml(href)}" rel="noopener">${inner}</a>` : inner;
+    }
+    if (open.has(name)) return pasteInline(node, open);
+
+    const next = new Set(open);
+    next.add(name);
+    return `<${name}>${pasteInline(node, next)}</${name}>`;
+}
+
+// <ul>/<ol> survive with their items, nested lists stay inside their parent item, and neither a stray
+// node nor an empty <li> becomes an empty bullet.
+function pasteList(list) {
+    const items = [];
+    Array.from(list.childNodes).forEach(node => {
+        if (node.nodeType !== 1) return; // bare text directly inside a list has no item to live in
+        if (node.tagName === 'LI') {
+            const item = pasteListItem(node);
+            if (item) items.push(item);
+        } else if (node.tagName === 'UL' || node.tagName === 'OL') {
+            if (items.length) items[items.length - 1] += pasteList(node);
+        }
+    });
+    return items.length ? `<${list.tagName.toLowerCase()}>${items.join('')}</${list.tagName.toLowerCase()}>` : '';
+}
+
+function pasteListItem(li) {
+    const parts = [];
+    let nested = '';
+    Array.from(li.childNodes).forEach(node => {
+        if (node.nodeType === 1 && (node.tagName === 'UL' || node.tagName === 'OL')) {
+            nested += pasteList(node);
+            return;
+        }
+        // A <li> wrapping <p>s or <div>s (Google Docs, Word) keeps their text in the single item.
+        parts.push(pasteInlineNode(node, new Set()));
+    });
+    const text = parts.join(' ').replace(/\s+/g, ' ').trim();
+    if (!text && !nested) return '';
+    return `<li>${text}${nested}</li>`;
+}
+
+// Rebuild one block element into `out` (a list of HTML strings, in document order).
+function pasteBlock(node, out) {
+    const tag = node.tagName;
+
+    if (tag === 'HR') { out.push('<hr>'); return; }
+
+    if (tag === 'PRE') {
+        const text = pastePreText(node);
+        if (text.trim()) out.push('<pre>' + escapeHtml(text) + '</pre>');
+        return;
+    }
+
+    if (tag === 'BLOCKQUOTE') {
+        const inner = [];
+        pasteBlocks(node, inner);
+        if (inner.length) out.push('<blockquote>' + inner.join('') + '</blockquote>');
+        return;
+    }
+
+    if (tag === 'UL' || tag === 'OL') {
+        const list = pasteList(node);
+        if (list) out.push(list);
+        return;
+    }
+
+    // Whatever else holds blocks is only a wrapper (X's outer div, Docs' outer b) — recurse.
+    if (pasteHasBlockChild(node)) { pasteBlocks(node, out); return; }
+
+    const html = pasteInline(node, new Set()).trim();
+    if (isPasteBlank(html)) return; // an empty <p> run is a gap, not content
+
+    // A heading stays a heading, but never empty and never inside a paragraph — the parser would
+    // otherwise split the paragraph around it.
+    if (PASTE_HEADINGS.has(tag)) out.push(`<${tag.toLowerCase()}>${html}</${tag.toLowerCase()}>`);
+    else out.push('<p>' + html + '</p>');
+}
+
+// Walk a container: an inline run becomes one paragraph, blocks are rebuilt in place.
+function pasteBlocks(container, out) {
+    let run = '';
+    const flush = () => {
+        const html = run.trim();
+        run = '';
+        if (html && !isPasteBlank(html)) out.push('<p>' + html + '</p>');
+    };
+    Array.from(container.childNodes).forEach(node => {
+        if (node.nodeType === 3) { run += escapeHtml(pasteText(node.nodeValue)); return; }
+        if (node.nodeType !== 1) return;
+        if (PASTE_BLOCKS.has(node.tagName)) {
+            flush();
+            pasteBlock(node, out);
+            return;
+        }
+        if (pasteHasBlockChild(node)) { // e.g. <b> wrapped around whole paragraphs
+            flush();
+            pasteBlocks(node, out);
+            return;
+        }
+        run += pasteInlineNode(node, new Set());
+    });
+    flush();
+}
+
+// Foreign HTML in, clean semantic HTML out. Pure: it parses into an inert document and returns a
+// string, so nothing is fetched and nothing touches the editor until the caller inserts the result.
+// (A detached element would not do — Chrome starts loading images set inside one, which would let a
+// pasted tracking pixel phone home while we are still deciding what to keep.)
+function normalizePastedHTML(html) {
+    // sanitizeHTML first: the walk below must never see scripts, on* handlers, <style> or <meta>.
+    const doc = new DOMParser().parseFromString(sanitizeHTML(String(html == null ? '' : html)), 'text/html');
+    const out = [];
+    pasteBlocks(doc.body || doc.documentElement, out);
+    return out.join('');
+}
+
+// text/plain (or the Shift+paste escape hatch): a blank line is a paragraph break, a single newline a
+// line break inside the paragraph. Escaped throughout, and NBSPs become ordinary spaces.
+function plainTextToHTML(text) {
+    const lines = String(text == null ? '' : text).replace(/\r\n?/g, '\n').split('\n');
+    const out = [];
+    let para = [];
+    const flush = () => {
+        const html = para.join('<br>');
+        para = [];
+        if (!isPasteBlank(html)) out.push('<p>' + html + '</p>');
+    };
+    lines.forEach(line => {
+        const clean = escapeHtml(line.replace(/\s+/g, ' ').trim());
+        if (clean) para.push(clean);
+        else flush();
+    });
+    flush();
+    return out.join('');
+}
+
+// The editor's only paste hook. It is bound to #editBody alone, so the title field, the rename and
+// search boxes and dialogs keep the browser's own paste.
+// Escape hatch: Shift+paste inserts the clipboard text as plain text, bypassing normalisation, for
+// anyone who wants the source's own words (or is filling a code block) without the rebuild.
+editBody.addEventListener('paste', (e) => {
+    const data = e.clipboardData;
+    if (!data) return;
+    const html = data.getData('text/html') || '';
+    const text = data.getData('text/plain') || '';
+    // Nothing we can rebuild (an image file on the clipboard, say): leave it to the browser.
+    if (!html.trim() && !text) return;
+    e.preventDefault();
+
+    // Inside a code block the text is the content: a <p> built for the page body would look wrong in
+    // <pre> and break the block. Escaped text is inserted as-is — its newlines stay literal characters
+    // in one text node, so they render as lines here and survive into the Markdown export, whereas
+    // <br> would render but leave textContent empty.
+    const anchor = window.getSelection().anchorNode;
+    const caretEl = anchor && (anchor.nodeType === 1 ? anchor : anchor.parentElement);
+    const inPre = caretEl && caretEl.closest && caretEl.closest('pre');
+    if (text && inPre && editBody.contains(inPre)) {
+        document.execCommand('insertHTML', false, escapeHtml(text));
+        return;
+    }
+
+    const insert = e.shiftKey ? plainTextToHTML(text)
+        : html.trim() ? normalizePastedHTML(html)
+        : plainTextToHTML(text);
+    if (!insert) return;
+
+    // One execCommand keeps the whole paste a single undo step and leaves the caret after it. The
+    // existing `input` listener on #editBody already runs the debounced save and the first_keystroke
+    // counter, so nothing extra is saved here.
+    document.execCommand('insertHTML', false, sanitizeHTML(insert));
+});
+
 function insertImageSlot() {
     preserveScroll(() => {
         if (lastSelectionRange) {
