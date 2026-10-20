@@ -3,10 +3,10 @@
   "entries": [
     {
       "@context": "https://agenticresourcediscovery.org/context/v1",
-      "identifier": "urn:air:quorly.pages.dev:skill:webmcp-editor-tools",
+      "identifier": "urn:air:quorly.us.ci:skill:webmcp-editor-tools",
       "displayName": "Quorly editor WebMCP tools",
       "type": "application/agent-skills+md",
-      "url": "https://quorly.pages.dev/agent-skill.md",
+      "url": "https://quorly.us.ci/agent-skill.md",
       "description": "Agent-readable description of the WebMCP tools the Quorly editor registers in the browser: read, list, open, create and edit documents, insert tables, and set reading preferences. Destructive actions keep an in-page confirmation step.",
       "capabilities": [
         "get_document",
