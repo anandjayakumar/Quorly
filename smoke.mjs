@@ -194,6 +194,12 @@ try {
     'QuorlyStore.appendVersion',
     // WebMCP shares the import pipeline; agent text is sanitized the same way.
     'function markdownToClean',
+    // N-7: paste is rebuilt block by block before it reaches the document (tables included), and the
+    // same normaliser is what the importers call. A stale or partial /app.js must fail here.
+    'function normalizePastedHTML',
+    'function plainTextToHTML',
+    'function pasteTable',
+    "addEventListener('paste'",
   ];
   for (const marker of markers) {
     record(`/app.js has ${marker}`, body.includes(marker), 'missing');

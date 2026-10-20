@@ -1313,20 +1313,89 @@ function pasteList(list) {
     return items.length ? `<${list.tagName.toLowerCase()}>${items.join('')}</${list.tagName.toLowerCase()}>` : '';
 }
 
-function pasteListItem(li) {
-    const parts = [];
-    let nested = '';
-    Array.from(li.childNodes).forEach(node => {
-        if (node.nodeType === 1 && (node.tagName === 'UL' || node.tagName === 'OL')) {
-            nested += pasteList(node);
+// Serialize a container that has to come out as one run of inline HTML (a list item, a table cell).
+// Inline nodes are emitted next to each other with nothing inserted between them: pasteText() has
+// already normalised each text node's whitespace, so `<li>Hello <a>world</a>!</li>` keeps its space
+// before "world" and gains none before the "!", and Word's `<span>Wor</span><span>d</span>` is "Word".
+// A block child is a line of its own — Word and Docs wrap every list item in <p> or <div> — so lines
+// are joined by the caller, never nodes.
+function pasteInlineLines(container, skip) {
+    const lines = [];
+    let run = '';
+    const flush = () => {
+        const html = run.trim();
+        run = '';
+        if (html && !isPasteBlank(html)) lines.push(html);
+    };
+    Array.from(container.childNodes).forEach(node => {
+        if (node.nodeType === 3) { run += escapeHtml(pasteText(node.nodeValue)); return; }
+        if (node.nodeType !== 1) return; // comments and the like never survive a sanitize
+        if (skip && skip(node)) return;
+        if (PASTE_BLOCKS.has(node.tagName)) {
+            flush();
+            run = pasteInline(node, new Set());
+            flush();
             return;
         }
-        // A <li> wrapping <p>s or <div>s (Google Docs, Word) keeps their text in the single item.
-        parts.push(pasteInlineNode(node, new Set()));
+        run += pasteInlineNode(node, new Set());
     });
-    const text = parts.join(' ').replace(/\s+/g, ' ').trim();
+    flush();
+    return lines;
+}
+
+function pasteListItem(li) {
+    // A nested list belongs to its item, not to its text.
+    let nested = '';
+    const lines = pasteInlineLines(li, node => {
+        if (node.tagName !== 'UL' && node.tagName !== 'OL') return false;
+        nested += pasteList(node);
+        return true;
+    });
+    const text = lines.join(' ');
     if (!text && !nested) return '';
     return `<li>${text}${nested}</li>`;
+}
+
+// A pasted table becomes the table insertTable() builds — `<table class="editor-table">` with a real
+// <thead>/<tbody> and no inline styles — so the table menu, the column widths and the Markdown export
+// all work on it. The wrapper and the menu buttons are added after insertion by applyTableWidths(),
+// which is how every other table in the editor gets them.
+// The editor's table model has no merged cells: a colspan is expanded into its columns (so the grid
+// still lines up with the rows below it, the text in the first one) and a rowspan is dropped. Short
+// rows are padded, which keeps the table rectangular for the column operations.
+function pasteTable(table) {
+    const rows = [];
+    // The table's own rows and cells (not querySelectorAll): a nested table stays inside its cell.
+    Array.from(table.rows || []).forEach(row => {
+        const cells = [];
+        Array.from(row.cells || []).forEach(cell => {
+            if (cell.tagName !== 'TD' && cell.tagName !== 'TH') return;
+            const th = cell.tagName === 'TH';
+            const span = Math.max(1, Math.min(20, Math.trunc(Number(cell.getAttribute('colspan'))) || 1));
+            cells.push({ th, html: pasteInlineLines(cell).join('<br>') });
+            for (let extra = 1; extra < span; extra++) cells.push({ th, html: '' });
+        });
+        if (!cells.length) return;
+        rows.push(cells);
+    });
+    if (!rows.length) return '';
+
+    // A first row made only of <th> is the source's header row; anything else stays in the body,
+    // because a header the source did not have should not be invented. Header cells stay <th>.
+    const headed = rows[0].every(cell => cell.th);
+    const width = Math.max(...rows.map(row => row.length));
+    const pad = (count, tag) => Array.from({ length: count }, () => `<${tag}><br></${tag}>`).join('');
+    const rowHtml = (row, forceTag) => {
+        const cells = row.map(cell => {
+            const tag = forceTag || (cell.th ? 'th' : 'td');
+            return `<${tag}>${cell.html || '<br>'}</${tag}>`;
+        }).join('');
+        return `<tr>${cells}${pad(width - row.length, forceTag || 'td')}</tr>`;
+    };
+
+    const head = headed ? `<thead>${rowHtml(rows[0], 'th')}</thead>` : '';
+    const body = rows.slice(headed ? 1 : 0).map(row => rowHtml(row)).join('');
+    return `<table class="editor-table">${head}${body ? `<tbody>${body}</tbody>` : ''}</table>`;
 }
 
 // Rebuild one block element into `out` (a list of HTML strings, in document order).
@@ -1351,6 +1420,14 @@ function pasteBlock(node, out) {
     if (tag === 'UL' || tag === 'OL') {
         const list = pasteList(node);
         if (list) out.push(list);
+        return;
+    }
+
+    // A table is rebuilt as a table (never as a run of paragraphs) and pushed as a block of its own,
+    // so a table pasted mid-paragraph is split out of the paragraph like any other block here.
+    if (tag === 'TABLE') {
+        const table = pasteTable(node);
+        if (table) out.push(table);
         return;
     }
 
@@ -1424,6 +1501,31 @@ function plainTextToHTML(text) {
     return out.join('');
 }
 
+// The text a pasted fragment carries, read back out of the same rebuild: one line per block and a line
+// break inside a block. textContent alone would run X's one-<div>-per-line payload together, so it is
+// only used as the shape the rebuild already gives it. Needed when a source offers no text/plain.
+function htmlToPlainText(html) {
+    const normalized = normalizePastedHTML(html);
+    if (!normalized) return '';
+    const doc = new DOMParser().parseFromString(normalized, 'text/html');
+    const textOf = node => Array.from(node.childNodes).map(child => {
+        if (child.nodeType === 3) return child.nodeValue;
+        if (child.nodeType !== 1) return '';
+        return child.tagName === 'BR' ? '\n' : textOf(child);
+    }).join('');
+    const lines = [];
+    Array.from(doc.body ? doc.body.children : []).forEach(el => {
+        if (el.tagName === 'TABLE') {
+            Array.from(el.rows || []).forEach(row => {
+                lines.push(Array.from(row.cells || []).map(cell => textOf(cell)).join('\t'));
+            });
+            return;
+        }
+        lines.push(textOf(el));
+    });
+    return lines.join('\n');
+}
+
 // The editor's only paste hook. It is bound to #editBody alone, so the title field, the rename and
 // search boxes and dialogs keep the browser's own paste.
 // Escape hatch: Shift+paste inserts the clipboard text as plain text, bypassing normalisation, for
@@ -1441,23 +1543,41 @@ editBody.addEventListener('paste', (e) => {
     // <pre> and break the block. Escaped text is inserted as-is — its newlines stay literal characters
     // in one text node, so they render as lines here and survive into the Markdown export, whereas
     // <br> would render but leave textContent empty.
-    const anchor = window.getSelection().anchorNode;
+    // The caret is not always in the selection — a context-menu paste can arrive after focus moved —
+    // so the event target is the fallback for "where is this going" before we give up on <pre>.
+    const selection = window.getSelection();
+    const anchor = selection ? selection.anchorNode : null;
     const caretEl = anchor && (anchor.nodeType === 1 ? anchor : anchor.parentElement);
-    const inPre = caretEl && caretEl.closest && caretEl.closest('pre');
-    if (text && inPre && editBody.contains(inPre)) {
-        document.execCommand('insertHTML', false, escapeHtml(text));
+    const inPre = (caretEl && caretEl.closest && caretEl.closest('pre'))
+        || (e.target && e.target.closest ? e.target.closest('pre') : null);
+    // A source that supplies only text/html (some do) still has to arrive as text inside a code block,
+    // or its block markup would be inserted into the <pre>.
+    const codeText = inPre && editBody.contains(inPre) ? (text || htmlToPlainText(html)) : '';
+    if (codeText) {
+        // insertHTML is not guaranteed to be honoured; the text itself is the last resort.
+        if (!document.execCommand('insertHTML', false, escapeHtml(codeText))) {
+            document.execCommand('insertText', false, codeText);
+        }
         return;
     }
 
     const insert = e.shiftKey ? plainTextToHTML(text)
         : html.trim() ? normalizePastedHTML(html)
         : plainTextToHTML(text);
-    if (!insert) return;
 
     // One execCommand keeps the whole paste a single undo step and leaves the caret after it. The
     // existing `input` listener on #editBody already runs the debounced save and the first_keystroke
     // counter, so nothing extra is saved here.
-    document.execCommand('insertHTML', false, sanitizeHTML(insert));
+    // preventDefault() has already taken the clipboard away from the browser, so a paste that rebuilds
+    // to nothing (whitespace only, an image whose src we keep none of) or that the browser refuses to
+    // insert must still land as plain text rather than disappear.
+    if (insert && document.execCommand('insertHTML', false, sanitizeHTML(insert))) {
+        // A pasted table gets the same wrapper and menu button as one made from the toolbar.
+        if (insert.includes('<table')) applyTableWidths();
+        return;
+    }
+    const fallback = text || htmlToPlainText(html);
+    if (fallback) document.execCommand('insertText', false, fallback);
 });
 
 function insertImageSlot() {
