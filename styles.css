@@ -62,6 +62,24 @@
   src: url('fonts/fira-code.woff2') format('woff2');
 }
 
+/* Archivo - American-gothic grotesque, added as a trial option so Default (Inter + Montserrat)
+   can be compared against a Chirp-like face in the same menu. Latin subset, variable weight. */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('fonts/archivo.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Archivo';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('fonts/archivo-italic.woff2') format('woff2');
+}
+
 :root{
   --bg:#0e0e0e;
   --viewer:#000000;

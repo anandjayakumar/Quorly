@@ -115,6 +115,8 @@ const assets = [
   ['/vendor/marked.min.js', 'text/javascript'],
   ['/vendor/dompurify.min.js', 'text/javascript'],
   ['/fonts/inter.woff2', 'font/woff2'],
+  ['/fonts/archivo.woff2', 'font/woff2'],
+  ['/fonts/archivo-italic.woff2', 'font/woff2'],
   ['/fonts/lora.woff2', 'font/woff2'],
   ['/fonts/fira-code.woff2', 'font/woff2'],
   ['/og.png', 'image/png'],

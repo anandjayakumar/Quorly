@@ -1968,6 +1968,10 @@ function changeTypography(font) {
             title: "'Roboto', sans-serif",
             body: "'Roboto', sans-serif"
         },
+        'Archivo': {
+            title: "'Archivo', system-ui, sans-serif",
+            body: "'Archivo', system-ui, sans-serif"
+        },
         'Inter': {
             title: "'Inter', system-ui, sans-serif",
             body: "'Inter', system-ui, sans-serif"
