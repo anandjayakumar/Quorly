@@ -1228,6 +1228,39 @@ function pasteHasBlockChild(el) {
     return Array.from(el.children || []).some(child => PASTE_BLOCKS.has(child.tagName));
 }
 
+// Excluded contexts where anchor-only behaviour must not apply: anchors inside table cells,
+// list items, headings, pre, blockquote, hr, or nested inside any of those.
+function isExcludedPasteContext(node) {
+    const excludedTags = new Set(['BLOCKQUOTE', 'PRE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HR', 'LI', 'TD', 'TH', 'TABLE']);
+    let parent = node.parentElement;
+    while (parent && parent.tagName !== 'BODY' && parent.tagName !== 'HTML') {
+        if (excludedTags.has(parent.tagName)) return true;
+        parent = parent.parentElement;
+    }
+    return false;
+}
+
+// A block is anchor-only when, after removing every <a>, nothing remains but whitespace,
+// and the node contains at least one <a>, no <br>, no images, and no nested block elements.
+function isAnchorOnlyBlock(node) {
+    if (!node || node.nodeType !== 1) return false;
+    if (isExcludedPasteContext(node)) return false;
+    const anchors = node.getElementsByTagName ? Array.from(node.getElementsByTagName('A')) : [];
+    if (!anchors.length) return false;
+    // No nested block elements (excluding the node itself)
+    for (const el of Array.from(node.getElementsByTagName ? node.getElementsByTagName('*') : [])) {
+        if (el !== node && PASTE_BLOCKS.has(el.tagName)) return false;
+    }
+    // No <br> or images anywhere inside
+    if (node.getElementsByTagName('BR').length > 0) return false;
+    if (node.getElementsByTagName('IMG').length > 0) return false;
+    // After stripping all <a> tags, only whitespace should remain
+    const clone = node.cloneNode(true);
+    for (const a of Array.from(clone.getElementsByTagName ? clone.getElementsByTagName('A') : [])) a.remove();
+    const stripped = clone.innerHTML.replace(/<[^>]*>/g, '').replace(/\s+/g, '').trim();
+    return stripped.length === 0;
+}
+
 // href allow-list: http(s), mailto and relative. The probe drops control characters and spaces first,
 // because "java\tscript:" is a scheme the browser still honours.
 function pasteHref(value) {
@@ -1433,6 +1466,26 @@ function pasteBlock(node, out) {
 
     // Whatever else holds blocks is only a wrapper (X's outer div, Docs' outer b) — recurse.
     if (pasteHasBlockChild(node)) { pasteBlocks(node, out); return; }
+
+    // Anchor-only block: flows into the open paragraph (or opens one if none is open).
+    // Exclusions (table cells, list items, headings, pre, blockquote, hr) are handled above
+    // by isExcludedPasteContext, so this only affects standard block containers.
+    if (isAnchorOnlyBlock(node)) {
+        const html = pasteInline(node, new Set()).trim();
+        if (!isPasteBlank(html)) {
+            if (out.length > 0) {
+                const last = out[out.length - 1];
+                if (last && last.startsWith('<p>') && last.endsWith('</p>')) {
+                    const inner = last.slice(3, -4);
+                    const sep = inner.length > 0 && !/\s$/.test(inner) ? ' ' : '';
+                    out[out.length - 1] = '<p>' + inner + sep + html + '</p>';
+                    return;
+                }
+            }
+            out.push('<p>' + html + '</p>');
+        }
+        return;
+    }
 
     const html = pasteInline(node, new Set()).trim();
     if (isPasteBlank(html)) return; // an empty <p> run is a gap, not content
