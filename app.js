@@ -1955,11 +1955,48 @@ editBody.addEventListener('blur', (e) => {
 // --- WRITE-ASSIST removed: feature hidden. Restore from the original app if needed. ---
 
 function changeTypography(font) {
+    // Trial set (2026-10-20). Default / Archivo / Archivo + MS / Modern are the four
+    // heading-vs-body combinations under comparison; the rest are the candidate typefaces.
+    // 'Lora', 'Roboto' and 'Inter' stay as legacy keys because webmcp.js still advertises
+    // them; they are not in the menu any more and will go when the list is finalised.
     const fontMap = {
         'Default': {
             title: "'Montserrat', sans-serif",
             body: "'Inter', system-ui, sans-serif"
         },
+        'Archivo': {
+            title: "'Archivo', system-ui, sans-serif",
+            body: "'Archivo', system-ui, sans-serif"
+        },
+        'Archivo + MS': {
+            title: "'Montserrat', sans-serif",
+            body: "'Archivo', system-ui, sans-serif"
+        },
+        'Modern': {
+            title: "'Inter', system-ui, sans-serif",
+            body: "'Inter', system-ui, sans-serif"
+        },
+        'Literature': {
+            title: "'Literata', serif",
+            body: "'Literata', serif"
+        },
+        'Paperback': {
+            title: "'Crimson Pro', serif",
+            body: "'Crimson Pro', serif"
+        },
+        'Mono': {
+            title: "'IBM Plex Mono', monospace",
+            body: "'IBM Plex Mono', monospace"
+        },
+        'Screenwriter': {
+            title: "'Courier Prime', monospace",
+            body: "'Courier Prime', monospace"
+        },
+        'OpenDyslexic': {
+            title: "'OpenDyslexic', system-ui, sans-serif",
+            body: "'OpenDyslexic', system-ui, sans-serif"
+        },
+        // legacy, unreachable from the menu
         'Lora': {
             title: "'Lora', serif",
             body: "'Lora', serif"
@@ -1967,10 +2004,6 @@ function changeTypography(font) {
         'Roboto': {
             title: "'Roboto', sans-serif",
             body: "'Roboto', sans-serif"
-        },
-        'Archivo': {
-            title: "'Archivo', system-ui, sans-serif",
-            body: "'Archivo', system-ui, sans-serif"
         },
         'Inter': {
             title: "'Inter', system-ui, sans-serif",
