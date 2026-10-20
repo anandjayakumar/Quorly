@@ -298,7 +298,7 @@
         type: 'object',
         properties: {
           theme: { type: 'string', enum: ['dark', 'light'], description: 'Colour theme.' },
-          font: { type: 'string', enum: ['Default', 'Archivo', 'Lora', 'Roboto', 'Inter'], description: 'Reading font.' },
+          font: { type: 'string', enum: ['Default', 'Lora', 'Roboto', 'Inter'], description: 'Reading font.' },
           fontSize: { type: 'integer', minimum: 12, maximum: 28, description: 'Body text size in pixels.' },
           width: { type: 'integer', minimum: 720, maximum: 1320, description: 'Reading column width in pixels.' }
         },
@@ -316,7 +316,7 @@
         }
 
         if (typeof input.font === 'string') {
-          const fonts = ['Default', 'Archivo', 'Lora', 'Roboto', 'Inter'];
+          const fonts = ['Default', 'Lora', 'Roboto', 'Inter'];
           if (fonts.indexOf(input.font) === -1) return err('Unknown font.');
           changeTypography(input.font);
           const dropdown = document.getElementById('typographyDropdown');

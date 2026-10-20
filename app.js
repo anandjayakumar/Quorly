@@ -1955,25 +1955,13 @@ editBody.addEventListener('blur', (e) => {
 // --- WRITE-ASSIST removed: feature hidden. Restore from the original app if needed. ---
 
 function changeTypography(font) {
-    // Trial set (2026-10-20). Default / Archivo / Archivo + MS / Modern are the four
-    // heading-vs-body combinations under comparison; the rest are the candidate typefaces.
-    // 'Lora', 'Roboto' and 'Inter' stay as legacy keys because webmcp.js still advertises
-    // them; they are not in the menu any more and will go when the list is finalised.
+    // Final set (2026-10-20): Default won the heading/body comparison, and Screenwriter
+    // replaced Mono (the two mono faces read too alike to sit side by side).
+    // 'Lora', 'Roboto' and 'Inter' stay as legacy keys only because webmcp.js still
+    // advertises them; they are unreachable from the menu.
     const fontMap = {
         'Default': {
             title: "'Montserrat', sans-serif",
-            body: "'Inter', system-ui, sans-serif"
-        },
-        'Archivo': {
-            title: "'Archivo', system-ui, sans-serif",
-            body: "'Archivo', system-ui, sans-serif"
-        },
-        'Archivo + MS': {
-            title: "'Montserrat', sans-serif",
-            body: "'Archivo', system-ui, sans-serif"
-        },
-        'Modern': {
-            title: "'Inter', system-ui, sans-serif",
             body: "'Inter', system-ui, sans-serif"
         },
         'Literature': {
@@ -1983,10 +1971,6 @@ function changeTypography(font) {
         'Paperback': {
             title: "'Crimson Pro', serif",
             body: "'Crimson Pro', serif"
-        },
-        'Mono': {
-            title: "'IBM Plex Mono', monospace",
-            body: "'IBM Plex Mono', monospace"
         },
         'Screenwriter': {
             title: "'Courier Prime', monospace",
