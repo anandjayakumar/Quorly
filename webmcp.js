@@ -320,11 +320,15 @@
           if (fonts.indexOf(input.font) === -1) return err('Unknown font.');
           changeTypography(input.font);
           const dropdown = document.getElementById('typographyDropdown');
-          // Mark the matching option rather than relabelling the toggle: the toggle always
-          // reads "Theme", exactly as it does when a person picks a face from the menu.
+          // Mirror what a click does: mark the option and label the toggle with its name.
           if (dropdown) {
             dropdown.querySelectorAll('[role="option"]').forEach(function (option) {
-              option.setAttribute('aria-selected', String(option.getAttribute('data-value') === input.font));
+              const match = option.getAttribute('data-value') === input.font;
+              option.setAttribute('aria-selected', String(match));
+              if (match) {
+                const value = dropdown.querySelector('.dropdown-value');
+                if (value) value.textContent = option.textContent.trim();
+              }
             });
           }
           applied.font = input.font;

@@ -2001,8 +2001,9 @@ function restoreReadingFont() {
     if (!chosen) return;
     changeTypography(saved);
     options.forEach((o) => o.setAttribute('aria-selected', String(o === chosen)));
-    // The toggle keeps showing the "Theme" label (reset + placeholder), so only the
-    // checkmark inside the menu changes.
+    // The toggle is labelled with the current face, the same way a click labels it.
+    const valueEl = root.querySelector('.dropdown-value');
+    if (valueEl) valueEl.textContent = chosen.textContent.trim();
 }
 
 // Title image management
@@ -2276,7 +2277,9 @@ function wireUI() {
 
     const typoDrop = document.getElementById('typographyDropdown');
     if (typoDrop) {
-        initDropdown(typoDrop, (value) => changeTypography(value), true, true);
+        // No reset/placeholder: the toggle shows the chosen face (Default, Paperback, ...)
+        // rather than a fixed label, so the current typeface is visible without opening the menu.
+        initDropdown(typoDrop, (value) => changeTypography(value));
         restoreReadingFont();
     }
 
