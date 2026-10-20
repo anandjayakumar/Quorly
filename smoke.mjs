@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 // Post-deploy smoke test for Quorly.
 //
-//   node smoke.mjs https://quorly.pages.dev
+//   node smoke.mjs https://quorly.us.ci
 //
 // Exits non-zero if anything regresses. It exists because a direct upload once stored
 // assets with `Content-Type: application/octet-stream`; combined with `nosniff` the
 // browser downloaded index.html instead of rendering it. Nothing in the deploy pipeline
 // noticed. This does. Run it after every deploy.
 
-const BASE = (process.argv[2] || 'https://quorly.pages.dev').replace(/\/+$/, '');
+const BASE = (process.argv[2] || 'https://quorly.us.ci').replace(/\/+$/, '');
 
 const results = [];
 let failed = 0;
@@ -40,7 +40,7 @@ await checkDocument('/', {
 
 await checkDocument('/index.md', {
   type: 'text/markdown',
-  contains: ['# Quorly', '](https://quorly.pages.dev/app/)', 'Focus Mode', 'Is Quorly really free?'],
+  contains: ['# Quorly', '](https://quorly.us.ci/app/)', 'Focus Mode', 'Is Quorly really free?'],
   notContains: ['Version history'],
 });
 
@@ -65,7 +65,7 @@ await checkDocument('/privacy/', {
 
 await checkDocument('/llms.txt', {
   type: 'text/plain',
-  contains: ['# Quorly', '](https://quorly.pages.dev/agent-skill.md)', 'WebMCP'],
+  contains: ['# Quorly', '](https://quorly.us.ci/agent-skill.md)', 'WebMCP'],
 });
 await checkDocument('/agent-skill.md', {
   type: 'text/markdown',
@@ -96,7 +96,7 @@ for (const path of ['/.well-known/ai-catalog.json', '/.well-known/ard.json']) {
     const doc = JSON.parse(body);
     const entry = Array.isArray(doc.entries) ? doc.entries[0] : null;
     record(`${path} has an ARD entry`, !!(entry && entry.identifier && entry.displayName && entry.type && entry.url), 'missing required fields');
-    record(`${path} identifier is a domain URN`, !!entry && /^urn:air:quorly\.pages\.dev:/.test(entry.identifier || ''), entry ? entry.identifier : 'none');
+    record(`${path} identifier is a domain URN`, !!entry && /^urn:air:quorly\.us\.ci:/.test(entry.identifier || ''), entry ? entry.identifier : 'none');
     record(`${path} entry is an agent skill`, !!entry && entry.type === 'application/agent-skills+md', entry ? entry.type : 'none');
     const queries = entry && Array.isArray(entry.representativeQueries) ? entry.representativeQueries.length : 0;
     record(`${path} has 2-5 representative queries`, queries >= 2 && queries <= 5, `count=${queries}`);
@@ -108,7 +108,7 @@ for (const path of ['/.well-known/ai-catalog.json', '/.well-known/ard.json']) {
 try {
   const { body } = await get('/robots.txt');
   record('/robots.txt has the Content-Signal', body.includes('Content-Signal: search=yes, ai-input=yes, ai-train=no'), 'missing');
-  record('/robots.txt advertises the Agentmap', body.includes('Agentmap: https://quorly.pages.dev/.well-known/ard.json'), 'missing');
+  record('/robots.txt advertises the Agentmap', body.includes('Agentmap: https://quorly.us.ci/.well-known/ard.json'), 'missing');
   record('/robots.txt groups AI crawlers', body.includes('User-agent: GPTBot') && body.includes('User-agent: ClaudeBot'), 'missing');
   record('/robots.txt still allows everything', /User-agent: \*\r?\nAllow: \//.test(body), 'base group changed');
 } catch (e) {

@@ -5,7 +5,7 @@ description: Read and edit documents in the Quorly browser editor through its We
 
 # Quorly editor skill
 
-Quorly is a private, local-first writing app at <https://quorly.pages.dev/app/>. Documents live
+Quorly is a private, local-first writing app at <https://quorly.us.ci/app/>. Documents live
 in the browser: there is no account, no upload, and no server-side document storage. This
 document describes the in-page tools the editor registers, for agents that can run the page.
 

@@ -1,4 +1,4 @@
-# AGENTS.md — working on quorly.pages.dev
+# AGENTS.md — working on quorly.us.ci
 
 Conventions for coding agents that read this repository's published output. This file describes
 the project; it is not an instruction channel for the running app, and the app never reads it.

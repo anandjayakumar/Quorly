@@ -40,7 +40,7 @@ const PRODUCTION = path.join(REL, 'production.json');
 
 const PROJECT = 'quorly';
 const PREVIEW_ALIAS = 'https://preview.quorly.pages.dev';
-const PROD_ALIAS = 'https://quorly.pages.dev';
+const PROD_ALIAS = 'https://quorly.us.ci';
 const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID || '07e6e9a6b18b4cae4d21fccba4dae17a';
 const API = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/pages/projects/${PROJECT}/deployments`;
 
@@ -540,7 +540,17 @@ async function cmdPromote(argv) {
       return d.id;
     });
 
-    await step('smoke-production', () => runSmoke(PROD_ALIAS, { label: 'production gate' }));
+    await step('smoke-production', async () => {
+      try {
+        return runSmoke(PROD_ALIAS, { label: 'production gate' });
+      } catch (e) {
+        // PROD_ALIAS is a custom domain, so it can still be serving the previous
+        // deployment for a beat after the new one lands. Retry once.
+        log('production gate failed once - retrying in 6s');
+        await sleep(6000);
+        return runSmoke(PROD_ALIAS, { label: 'production gate (retry)' });
+      }
+    });
 
     await step('mark-main', () => {
       sh(`git branch -f main ${sha}`);
