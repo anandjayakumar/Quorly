@@ -298,7 +298,7 @@
         type: 'object',
         properties: {
           theme: { type: 'string', enum: ['dark', 'light'], description: 'Colour theme.' },
-          font: { type: 'string', enum: ['Default', 'Lora', 'Roboto', 'Inter'], description: 'Reading font.' },
+          font: { type: 'string', enum: ['Default', 'Literature', 'Paperback', 'Screenwriter', 'OpenDyslexic'], description: 'Reading font.' },
           fontSize: { type: 'integer', minimum: 12, maximum: 28, description: 'Body text size in pixels.' },
           width: { type: 'integer', minimum: 720, maximum: 1320, description: 'Reading column width in pixels.' }
         },
@@ -316,12 +316,12 @@
         }
 
         if (typeof input.font === 'string') {
-          const fonts = ['Default', 'Lora', 'Roboto', 'Inter'];
+          const fonts = ['Default', 'Literature', 'Paperback', 'Screenwriter', 'OpenDyslexic'];
           if (fonts.indexOf(input.font) === -1) return err('Unknown font.');
           changeTypography(input.font);
           const dropdown = document.getElementById('typographyDropdown');
-          const value = dropdown && dropdown.querySelector('.dropdown-value');
-          if (value) value.textContent = input.font;
+          // Mark the matching option rather than relabelling the toggle: the toggle always
+          // reads "Theme", exactly as it does when a person picks a face from the menu.
           if (dropdown) {
             dropdown.querySelectorAll('[role="option"]').forEach(function (option) {
               option.setAttribute('aria-selected', String(option.getAttribute('data-value') === input.font));

@@ -28,12 +28,12 @@ const SW_PATH = '/sw.js';
 // to be satisfied from the HTTP cache; everything else is fetched with `cache: 'reload'` so
 // a fresh deploy always lands in the cache rather than being read back from the browser.
 const PRECACHE_STABLE = [
+  // Only the default reading pair is precached: offline first paint must not fetch a font
+  // before it can draw. The optional faces (Literature, Paperback, Screenwriter,
+  // OpenDyslexic) are cached on first use by the cache-first branch below instead, so a
+  // writer who never opens the menu never downloads them.
   '/fonts/inter.woff2',
   '/fonts/inter-italic.woff2',
-  '/fonts/lora.woff2',
-  '/fonts/lora-italic.woff2',
-  '/fonts/roboto.woff2',
-  '/fonts/roboto-italic.woff2',
   '/fonts/montserrat.woff2',
   '/fonts/fira-code.woff2',
   '/favicon.png',

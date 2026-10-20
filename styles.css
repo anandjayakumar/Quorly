@@ -15,38 +15,6 @@
 }
 
 @font-face {
-  font-family: 'Lora';
-  font-style: normal;
-  font-weight: 400 700;
-  font-display: swap;
-  src: url('fonts/lora.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Lora';
-  font-style: italic;
-  font-weight: 400 700;
-  font-display: swap;
-  src: url('fonts/lora-italic.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Roboto';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('fonts/roboto.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Roboto';
-  font-style: italic;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('fonts/roboto-italic.woff2') format('woff2');
-}
-
-@font-face {
   font-family: 'Montserrat';
   font-style: normal;
   font-weight: 100 900;
@@ -62,26 +30,9 @@
   src: url('fonts/fira-code.woff2') format('woff2');
 }
 
-/* Archivo - American-gothic grotesque, added as a trial option so Default (Inter + Montserrat)
-   can be compared against a Chirp-like face in the same menu. Latin subset, variable weight. */
-@font-face {
-  font-family: 'Archivo';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('fonts/archivo.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Archivo';
-  font-style: italic;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('fonts/archivo-italic.woff2') format('woff2');
-}
-
-/* Trial typeface set. All self-hosted, Latin-subset, SIL OFL. Only the families actually
-   selected are downloaded, so these declarations cost nothing on a normal page load. */
+/* The reading typefaces behind the Theme menu. All self-hosted, Latin-subset, SIL OFL
+   (see fonts/LICENSE.md). A face is only fetched once it is actually selected, so the menu
+   costs nothing on a normal page load - the default is Inter + Montserrat above. */
 @font-face {
   font-family: 'Literata';
   font-style: normal;
@@ -112,30 +63,6 @@
   font-weight: 400 700;
   font-display: swap;
   src: url('fonts/crimson-pro-italic.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'IBM Plex Mono';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('fonts/plex-mono.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'IBM Plex Mono';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('fonts/plex-mono-bold.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'IBM Plex Mono';
-  font-style: italic;
-  font-weight: 400;
-  font-display: swap;
-  src: url('fonts/plex-mono-italic.woff2') format('woff2');
 }
 
 @font-face {

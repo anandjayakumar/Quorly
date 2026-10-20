@@ -15,6 +15,8 @@ let isLoading = false; // True while importing a file (prevents auto-rewriting i
 // document gets its own snapshot so it can be reopened from the Recents list later.
 const FILES_INDEX_KEY = 'quorly_files_v1';
 const CURRENT_ID_KEY = 'quorly_current_id_v1';
+// Reading typeface, same value set as the Theme menu (see changeTypography).
+const READING_FONT_KEY = 'quorly_typeface_v1';
 const MAX_RECENTS = 10;
 // Version history is capped per document.
 const MAX_VERSIONS = 20;
@@ -1955,10 +1957,9 @@ editBody.addEventListener('blur', (e) => {
 // --- WRITE-ASSIST removed: feature hidden. Restore from the original app if needed. ---
 
 function changeTypography(font) {
-    // Final set (2026-10-20): Default won the heading/body comparison, and Screenwriter
-    // replaced Mono (the two mono faces read too alike to sit side by side).
-    // 'Lora', 'Roboto' and 'Inter' stay as legacy keys only because webmcp.js still
-    // advertises them; they are unreachable from the menu.
+    // Final set (2026-10-20). Default won the heading/body comparison; the serif and mono
+    // candidates sit alongside it. Every key here must also exist as an option in the
+    // Theme menu (app/index.html) and in the set_reading_preferences enum (webmcp.js).
     const fontMap = {
         'Default': {
             title: "'Montserrat', sans-serif",
@@ -1979,23 +1980,29 @@ function changeTypography(font) {
         'OpenDyslexic': {
             title: "'OpenDyslexic', system-ui, sans-serif",
             body: "'OpenDyslexic', system-ui, sans-serif"
-        },
-        // legacy, unreachable from the menu
-        'Lora': {
-            title: "'Lora', serif",
-            body: "'Lora', serif"
-        },
-        'Roboto': {
-            title: "'Roboto', sans-serif",
-            body: "'Roboto', sans-serif"
-        },
-        'Inter': {
-            title: "'Inter', system-ui, sans-serif",
-            body: "'Inter', system-ui, sans-serif"
         }
     };
-    document.documentElement.style.setProperty('--title-font', fontMap[font].title);
-    document.documentElement.style.setProperty('--body-font', fontMap[font].body);
+    const entry = fontMap[font];
+    if (!entry) return; // unknown value (stale WebMCP client, old storage): leave the page as-is
+    document.documentElement.style.setProperty('--title-font', entry.title);
+    document.documentElement.style.setProperty('--body-font', entry.body);
+    safeSetItem(READING_FONT_KEY, font);
+}
+
+// A typeface is a reading preference, not a per-session action: without this a writer who
+// picks Paperback comes back to Default on reload and has no idea why.
+function restoreReadingFont() {
+    const saved = localStorage.getItem(READING_FONT_KEY);
+    const root = document.getElementById('typographyDropdown');
+    if (!saved || !root) return;
+    const options = Array.from(root.querySelectorAll('.dropdown-menu [role="option"]'));
+    const chosen = options.find((o) => o.getAttribute('data-value') === saved);
+    // A value from an older build (or a font we dropped) is ignored rather than half-applied.
+    if (!chosen) return;
+    changeTypography(saved);
+    options.forEach((o) => o.setAttribute('aria-selected', String(o === chosen)));
+    // The toggle keeps showing the "Theme" label (reset + placeholder), so only the
+    // checkmark inside the menu changes.
 }
 
 // Title image management
@@ -2268,7 +2275,10 @@ function wireUI() {
     });
 
     const typoDrop = document.getElementById('typographyDropdown');
-    if (typoDrop) initDropdown(typoDrop, (value) => changeTypography(value), true, true);
+    if (typoDrop) {
+        initDropdown(typoDrop, (value) => changeTypography(value), true, true);
+        restoreReadingFont();
+    }
 
     const headingDrop = document.getElementById('headingDropdown');
     if (headingDrop) initDropdown(headingDrop, (value) => applyHeading(value));

@@ -138,10 +138,12 @@ policy cannot express `frame-ancestors`.
 
 ## Fonts
 
-Self-hosted, open-source (OFL / Apache-2.0) only: Inter, Lora, Roboto, Montserrat and
-Fira Code. Google serves these as variable fonts, so each family is one file covering its
-full weight range. Twitter's proprietary **Chirp** was removed because it cannot be
-redistributed.
+Self-hosted, open-source (OFL) only. The editor offers five reading faces: **Default**
+(Inter body + Montserrat titles), **Literature** (Literata), **Paperback** (Crimson Pro),
+**Screenwriter** (Courier Prime) and **OpenDyslexic**. Fira Code sets code blocks, and the
+landing page keeps Lora as its serif. Google serves the variable families as one file per
+style covering the full weight range; the OFL notices live in `fonts/LICENSE.md`. Twitter's
+proprietary **Chirp** was removed because it cannot be redistributed.
 
 ## Offline + installable (service worker)
 
