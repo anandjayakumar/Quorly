@@ -155,8 +155,18 @@ async function waitForHttp(url, timeoutMs) {
 
 function killTree(pid) {
   if (!pid) return;
-  try { execSync(`taskkill /PID ${pid} /T /F`, { stdio: 'ignore' }); }
-  catch { /* already gone */ }
+  if (process.platform === 'win32') {
+    try { execSync(`taskkill /PID ${pid} /T /F`, { stdio: 'ignore' }); }
+    catch { /* already gone */ }
+    return;
+  }
+  // POSIX (CI): the dev server is spawned through a shell, so the recorded pid is the shell's
+  // and wrangler/workerd hang off it. Signal the pid and its direct children; SIGKILL is a
+  // no-op if SIGTERM already did the job.
+  for (const sig of ['SIGTERM', 'SIGKILL']) {
+    try { process.kill(pid, sig); } catch { /* already gone */ }
+    try { execSync(`pkill -${sig} -P ${pid}`, { stdio: 'ignore' }); } catch { /* no children */ }
+  }
 }
 
 function oauthToken() {
@@ -368,15 +378,22 @@ async function cmdRun(argv) {
   }
 
   try {
-    await step('auth', () => {
-      const auth = cfAuth();
-      if (!auth) throw new Error('no credentials: set CLOUDFLARE_API_TOKEN, or run `npx wrangler login`');
-      if (auth.mode === 'oauth') {
-        status.authWarning = 'using the cached wrangler OAuth token; it can expire. Set CLOUDFLARE_API_TOKEN for unattended runs.';
-        return 'cached OAuth token (see authWarning)';
-      }
-      return 'CLOUDFLARE_API_TOKEN';
-    });
+    if (dryRun) {
+      // --dry-run never talks to Cloudflare, so it must not demand credentials either: CI runs
+      // the full local gate (snapshot + dev server + smoke) without a deploy token.
+      status.steps.push({ name: 'auth', ok: true, summary: 'skipped (--dry-run)', ms: 0 });
+      log('--- auth: skipped (--dry-run)');
+    } else {
+      await step('auth', () => {
+        const auth = cfAuth();
+        if (!auth) throw new Error('no credentials: set CLOUDFLARE_API_TOKEN, or run `npx wrangler login`');
+        if (auth.mode === 'oauth') {
+          status.authWarning = 'using the cached wrangler OAuth token; it can expire. Set CLOUDFLARE_API_TOKEN for unattended runs.';
+          return 'cached OAuth token (see authWarning)';
+        }
+        return 'CLOUDFLARE_API_TOKEN';
+      });
+    }
 
     await step('snapshot', () => `${snapshot(sha, runDir, stage)} files from ${short}`);
 

@@ -1,0 +1,55 @@
+name: CI
+
+# O-1: the release gate, run again on a clean machine.
+#
+# It runs the exact same command the local pipeline uses, with --dry-run so no Cloudflare
+# credentials are needed and nothing is deployed:
+#
+#   git archive <sha> -> wrangler pages dev -> smoke.mjs
+#
+# That combination is what caught the `octet-stream` regression locally; running it here means
+# a broken commit fails loudly even when nobody's machine is awake.
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Gate — snapshot, local Pages server, smoke suite
+        run: node tools/release/release.mjs run --dry-run
+
+      - name: Upload gate log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-log
+          path: .release/runs/*.log
+          if-no-files-found: ignore
+          retention-days: 14
