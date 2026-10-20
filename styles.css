@@ -2302,28 +2302,52 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
 }
 
 @media print{
-  /* UI-OVF: unlock the app shell so printing flows across pages again. */
   html.q-app, body.q-app { height: auto; overflow: visible; }
   body.q-app .app { height: auto; overflow: visible; padding: 0; }
-  .sidebar, #toolbar, .footer-stats, .meta, .inline-dropzone, .title-add-btn, .title-image-delete, .img-delete,
-  .mobile-topbar, .mobile-fmtbar, .panel-scrim {display:none !important}
+  .sidebar, #toolbar, .footer-stats, .inline-dropzone, .title-add-btn, .title-image-delete, .img-delete,
+  .mobile-topbar, .mobile-fmtbar, .panel-scrim, .print-footer {display:none !important}
   body{padding:0 !important; margin:0;}
-  
-  /* Dark mode print */
-  body:not(.light-mode) {background:white !important;}
-  body:not(.light-mode) .reader{background: white !important; color: #000 !important; box-shadow: none;}
-  body:not(.light-mode) #editTitle,
-  body:not(.light-mode) #editBody {color: #000 !important;}
-  body:not(.light-mode) .content-divider {background: rgba(0,0,0,0.12);}
-  body:not(.light-mode) #editBody pre {background: #f5f5f5 !important; border-color: #e0e0e0 !important; color: #2d2d2d !important;}
-  body:not(.light-mode) #editBody a {color: #2563eb !important;}
-  
-  /* Light mode print - preserve existing styles */
-  body.light-mode .reader {box-shadow: none;}
-  
   .reader{box-shadow: none; padding: 20px; border-radius: 0; min-height: auto; margin: 0; max-width: 100%;}
   .app{display: block; max-width: 100%; grid-template-columns: none;}
   .doc{max-width: 100%;}
+
+  /* Print theme: independently of on-screen theme (default = light) */
+  body.print-theme-light {background: #fff !important;}
+  body.print-theme-light .reader{background: #fff !important; color: #1a1a1a !important;}
+  body.print-theme-light #editTitle,
+  body.print-theme-light #editBody {color: #1a1a1a !important;}
+  body.print-theme-light .content-divider {background: rgba(0,0,0,0.12) !important;}
+  body.print-theme-light #editBody pre {background: #f5f5f5 !important; border-color: #e0e0e0 !important; color: #2d2d2d !important; white-space: pre-wrap !important; word-break: break-word !important; overflow: visible !important;}
+  body.print-theme-light #editBody a {color: #2563eb !important;}
+  body.print-theme-light #editBody pre .keyword { color: #d73a49; }
+  body.print-theme-light #editBody pre .string { color: #22863a; }
+  body.print-theme-light #editBody pre .number { color: #005cc5; }
+  body.print-theme-light #editBody pre .comment { color: #6a737d; }
+  body.print-theme-light #editBody pre .function { color: #6f42c1; }
+  body.print-theme-light #editBody pre .operator { color: #d73a49; }
+
+  body.print-theme-dark {background: #0e0e0e !important;}
+  body.print-theme-dark .reader{background: #0e0e0e !important; color: #f5f6f7 !important;}
+  body.print-theme-dark #editTitle,
+  body.print-theme-dark #editBody {color: #f5f6f7 !important;}
+  body.print-theme-dark .content-divider {background: rgba(255,255,255,0.12) !important;}
+  body.print-theme-dark #editBody pre {background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.1) !important; color: #e8e8e8 !important; white-space: pre-wrap !important; word-break: break-word !important; overflow: visible !important;}
+  body.print-theme-dark #editBody a {color: #3b82f6 !important;}
+  body.print-theme-dark #editBody pre .keyword { color: #ff79c6; }
+  body.print-theme-dark #editBody pre .string { color: #50fa7b; }
+  body.print-theme-dark #editBody pre .number { color: #bd93f9; }
+  body.print-theme-dark #editBody pre .comment { color: #6272a4; }
+  body.print-theme-dark #editBody pre .function { color: #8be9fd; }
+  body.print-theme-dark #editBody pre .operator { color: #ff79c6; }
+
+  /* Title page: visible only when content exists */
+  .meta { display: none !important; }
+  body.print-has-content .meta { display: block !important; page-break-after: always; margin-bottom: 32px; }
+  body.print-has-content .meta-divider { display: block !important; }
+
+  /* Page numbers via fixed footer (works in Chrome; best available approximation) */
+  .print-footer { display: block !important; position: fixed; bottom: 12px; left: 0; width: 100%; text-align: center; font-size: 9px; color: #888; font-family: 'Inter', sans-serif; z-index: 9999; }
+  .print-page-num::after { content: counter(page); }
 }
 
 /* --- Added for strict CSP: replaces former inline style attributes --- */

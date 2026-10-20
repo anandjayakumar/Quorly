@@ -17,6 +17,7 @@ const FILES_INDEX_KEY = 'quorly_files_v1';
 const CURRENT_ID_KEY = 'quorly_current_id_v1';
 // Reading typeface, same value set as the Theme menu (see changeTypography).
 const READING_FONT_KEY = 'quorly_typeface_v1';
+const PRINT_THEME_KEY = 'print_theme'; // N-4 print theme (light/dark), independent of editor mode
 const MAX_RECENTS = 10;
 // Version history is capped per document.
 const MAX_VERSIONS = 20;
@@ -120,6 +121,7 @@ function track(event, props) {
         const payload = { e: event };
         if (props && typeof props.format === 'string') payload.format = props.format.slice(0, 32);
         if (props && typeof props.tool === 'string') payload.tool = props.tool.slice(0, 32);
+        if (props && typeof props.theme === 'string') payload.theme = props.theme.slice(0, 32);
         navigator.sendBeacon('/e', JSON.stringify(payload));
     } catch (err) {
         // Analytics must never be able to break the editor or delay a navigation.
@@ -233,6 +235,7 @@ async function init() {
         document.body.classList.add('light-mode');
     }
     syncModeButton();
+    applyPrintTheme();
 
     // UI-09: reopen the last-worked document, but only if it was touched within 48 h.
     const savedId = localStorage.getItem(CURRENT_ID_KEY);
@@ -2133,7 +2136,19 @@ function applyHeading(value) {
 
 function handleExport(value) {
     if (value === 'quorly') { track('export', { format: 'quorly' }); exportQuorly(); }
-    else if (value === 'pdf') { track('export', { format: 'pdf' }); window.print(); }
+    else if (value === 'pdf') {
+        const theme = getPrintTheme();
+        track('export', { format: 'pdf', theme: theme });
+        const hasContent = !!((editTitle.textContent || '').trim() || (editBody.innerText || '').trim());
+        if (hasContent) document.body.classList.add('print-has-content');
+        else document.body.classList.remove('print-has-content');
+        window.print();
+        // Clean up temporary print-has-content after the print dialog closes
+        window.addEventListener('afterprint', function cleanup() {
+            document.body.classList.remove('print-has-content');
+            window.removeEventListener('afterprint', cleanup);
+        });
+    }
     else if (value === 'md') { track('export', { format: 'md' }); exportMarkdown(); }
     else if (value === 'txt') { track('export', { format: 'txt' }); exportText(); }
 }
@@ -2270,11 +2285,25 @@ function syncModeButton() {
     btn.setAttribute('aria-label', label);
     btn.title = label;
 }
-function toggleMode() { 
-    document.body.classList.toggle('light-mode'); 
+function toggleMode() {
+    document.body.classList.toggle('light-mode');
     const light = document.body.classList.contains('light-mode');
     localStorage.setItem('mode', light ? 'light' : 'dark');
     syncModeButton();
+}
+
+function getPrintTheme() {
+    const saved = localStorage.getItem(PRINT_THEME_KEY);
+    return (saved === 'dark') ? 'dark' : 'light';
+}
+function applyPrintTheme() {
+    const theme = getPrintTheme();
+    document.body.classList.remove('print-theme-light', 'print-theme-dark');
+    document.body.classList.add('print-theme-' + theme);
+}
+function setPrintTheme(value) {
+    localStorage.setItem(PRINT_THEME_KEY, value);
+    applyPrintTheme();
 }
 // UI-15: the A−/A+ and ←/→ button pairs became numeric dropdowns, so these take an absolute
 // value. `resetFontSize` stays because Ctrl/Cmd+0 still uses it.
@@ -2719,7 +2748,7 @@ function wireUI() {
                 case 'new-file': newFile(); break;
                 case 'open-file': openFile(); break;
                 case 'export-md': track('export', { format: 'md' }); exportMarkdown(); break;
-                case 'export-pdf': track('export', { format: 'pdf' }); window.print(); break;
+                case 'export-pdf': handleExport('pdf'); break;
                 case 'export-txt': track('export', { format: 'txt' }); exportText(); break;
 
                 case 'toggle-focus': toggleFocus(); break;
@@ -2749,6 +2778,20 @@ function wireUI() {
 
     const fmtInsertDrop = document.getElementById('fmtInsertDropdown');
     if (fmtInsertDrop) initDropdown(fmtInsertDrop, (value) => handleInsert(value), true);
+
+    const printThemeDrop = document.getElementById('printThemeDropdown');
+    if (printThemeDrop) {
+        initDropdown(printThemeDrop, (value) => setPrintTheme(value), false);
+        // Initialize label from saved theme
+        const savedTheme = getPrintTheme();
+        const themeOptions = Array.from(printThemeDrop.querySelectorAll('[role="option"]'));
+        const selected = themeOptions.find(o => o.getAttribute('data-value') === savedTheme);
+        if (selected) selected.setAttribute('aria-selected', 'true');
+        else if (themeOptions[0]) themeOptions[0].setAttribute('aria-selected', 'true');
+        themeOptions.forEach(o => { if (o !== selected && o !== themeOptions[0] && o.getAttribute('data-value') !== savedTheme) o.setAttribute('aria-selected', 'false'); });
+        const valueEl = printThemeDrop.querySelector('.dropdown-value');
+        if (valueEl) valueEl.textContent = selected ? selected.textContent.trim() : 'Light PDF';
+    }
 
     document.addEventListener('selectionchange', () => { syncHeadingDropdown(); });
 
