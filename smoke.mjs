@@ -57,8 +57,8 @@ await checkDocument('/app/', {
 
 await checkDocument('/privacy/', {
   type: 'text/html',
-  contains: ['Privacy', 'No accounts, no email'],
-  notContains: ['mailto:', '@quorly', 'Version History', 'doc_versions_v13'],
+  contains: ['Privacy', 'No accounts', 'hello@quorly.us.ci', 'mailto:hello@quorly.us.ci'],
+  notContains: ['legal@', 'support@', 'Version History', 'doc_versions_v13'],
 });
 
 // --- agent discovery surface (llms.txt, skill, catalogs, robots signal) -----------
