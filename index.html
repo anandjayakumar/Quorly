@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Quorly — a private writing app that never uploads your draft</title>
-<meta name="description" content="Quorly is a fast, distraction-free writing app that runs entirely in your browser. No account, no upload, no tracking. Write, format and export — your words stay on your device." />
+<title>Quorly — Private Browser Writing App &amp; Markdown Editor</title>
+<meta name="description" content="Quorly is a private, distraction-free browser writing app and Markdown editor that works offline. No account, no sign-up, no upload, no ads, no cookies — your words stay on your device." />
 <link rel="canonical" href="https://quorly.pages.dev/" />
+<link rel="alternate" type="text/markdown" href="https://quorly.pages.dev/index.md" />
 <meta name="theme-color" content="#0e0e0e" />
 <link rel="icon" href="/favicon.png" type="image/png" />
 <link rel="apple-touch-icon" href="/favicon.png" />
@@ -13,16 +14,16 @@
 
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Quorly" />
-<meta property="og:title" content="Quorly — a private writing app that never uploads your draft" />
-<meta property="og:description" content="Distraction-free writing that runs entirely in your browser. No account, no upload, no tracking." />
+<meta property="og:title" content="Quorly — Private Browser Writing App &amp; Markdown Editor" />
+<meta property="og:description" content="A private, distraction-free browser writing app and Markdown editor that works offline. No account, no upload, no ads, no cookies." />
 <meta property="og:url" content="https://quorly.pages.dev/" />
 <meta property="og:image" content="https://quorly.pages.dev/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="Quorly — private, local-first writing in your browser." />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Quorly — a private writing app that never uploads your draft" />
-<meta name="twitter:description" content="Distraction-free writing that runs entirely in your browser. No account, no upload, no tracking." />
+<meta name="twitter:title" content="Quorly — Private Browser Writing App &amp; Markdown Editor" />
+<meta name="twitter:description" content="A private, distraction-free browser writing app and Markdown editor that works offline. No account, no upload, no ads, no cookies." />
 <meta name="twitter:image" content="https://quorly.pages.dev/og.png" />
 
 <link rel="stylesheet" href="/landing.css" />
@@ -30,19 +31,79 @@
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "Quorly",
-  "applicationCategory": "WritingApplication",
-  "operatingSystem": "Any (web browser)",
-  "url": "https://quorly.pages.dev/",
-  "description": "A private, local-first writing app that runs entirely in your browser. No account, no upload, no tracking.",
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-  "featureList": [
-    "Rich-text editing with headings, lists, quotes and tables",
-    "Markdown and PDF export",
-    "Focus Mode and light/dark themes",
-    "Version history stored locally",
-    "No account and no upload"
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "Quorly",
+      "url": "https://quorly.pages.dev/",
+      "applicationCategory": "WritingApplication",
+      "applicationSubCategory": "Markdown editor",
+      "operatingSystem": "Any (web browser)",
+      "description": "A private, distraction-free browser writing app and Markdown editor that runs entirely in your browser and works offline. No account, no sign-up, no upload, no ads, no cookies.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "featureList": [
+        "Rich-text editing with headings, lists, quotes and tables",
+        "Markdown, PDF, plain text and .quorly export",
+        "Focus Mode, light and dark themes, adjustable typography",
+        "A local document library (Recents) kept in your browser",
+        "Works offline and installs as an app",
+        "No account, no upload, no cookies",
+        "WebMCP tools so AI agents can read and edit the open document"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is Quorly really free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. The editor runs entirely in your browser, so it costs almost nothing to serve. There is no account, no trial and no paywall on the writing features."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Where are my documents stored?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "In this browser, on this device. The open document lives in local storage and the documents you have parked live in the browser's own database. Use Export to keep a permanent copy: .quorly keeps the document with its images, and Markdown, PDF or plain text are one click away."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need to sign up or log in?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. There is no account system at all. Open the editor and start writing."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I export my writing?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes — export to Markdown, PDF, plain text or a .quorly package (the document plus its images), or write the file straight to disk with your operating system's file picker."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it work offline?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Once the page has loaded, yes. Everything after that — editing, formatting, exporting — happens locally."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What about images and tables?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "You can paste or drop images, and insert tables, dividers and code blocks. Images are embedded directly in the document."
+          }
+        }
+      ]
+    }
   ]
 }
 </script>
@@ -67,8 +128,9 @@
     <p class="eyebrow">Private by architecture</p>
     <h1>A writing app that<br><em>never sees</em> your words.</h1>
     <p class="lede">
-      Quorly is a fast, distraction-free editor that runs entirely in your browser.
-      There is no account and no upload — your draft never leaves your device.
+      Quorly is a private, distraction-free browser writing app and Markdown editor that runs
+      entirely in your browser — and keeps working offline. No account, no sign-up, no upload,
+      no ads, no cookies. Your draft never leaves your device.
     </p>
     <p class="cta-row">
       <a class="btn-primary" href="/app/">Start writing</a>
@@ -78,7 +140,8 @@
   </section>
 
   <section id="features" class="section">
-    <h2>Everything you need to finish a draft. Nothing you don't.</h2>
+    <h2>A minimalist browser writing app built for focus and privacy.</h2>
+    <p class="micro">Everything you need to finish a draft. Nothing you don't.</p>
     <div class="grid">
       <article class="card">
         <h3>Write without friction</h3>
@@ -94,11 +157,11 @@
       </article>
       <article class="card">
         <h3>Markdown and PDF export</h3>
-        <p>One click to Markdown for your notes app or static-site generator, one click to PDF, or save straight to disk with the File System Access API.</p>
+        <p>One click to Markdown for your notes app or static-site generator, one click to PDF, one click to plain text or a <code>.quorly</code> package that keeps your images, or save straight to disk with the File System Access API.</p>
       </article>
       <article class="card">
-        <h3>Version history</h3>
-        <p>Quorly snapshots your work locally as you go, so an accidental deletion is an undo away — not a support ticket.</p>
+        <h3>Your documents, kept local</h3>
+        <p>Every document you write is saved in this browser and listed in Recents — search them, reopen them, delete them. Nothing is uploaded, and nothing needs an account.</p>
       </article>
       <article class="card">
         <h3>Yours to keep</h3>
@@ -115,7 +178,7 @@
     </details>
     <details>
       <summary>Where are my documents stored?</summary>
-      <p>In your browser's local storage, on your device. That means clearing your browser data clears your documents, so use <strong>Save</strong> or export to keep a copy somewhere permanent.</p>
+      <p>In this browser, on this device. The open document lives in local storage and the documents you have parked live in the browser's own database. Use Export to keep a permanent copy: .quorly keeps the document with its images, and Markdown, PDF or plain text are one click away.</p>
     </details>
     <details>
       <summary>Do I need to sign up or log in?</summary>
@@ -123,7 +186,7 @@
     </details>
     <details>
       <summary>Can I export my writing?</summary>
-      <p>Yes — export to Markdown, export to PDF, or save the file to disk with your operating system's file picker.</p>
+      <p>Yes — export to Markdown, PDF, plain text or a .quorly package (the document plus its images), or write the file straight to disk with your operating system's file picker.</p>
     </details>
     <details>
       <summary>Does it work offline?</summary>

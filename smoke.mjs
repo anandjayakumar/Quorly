@@ -28,7 +28,20 @@ async function get(path) {
 
 await checkDocument('/', {
   type: 'text/html',
-  contains: ['never sees', 'og:image', 'rel="canonical"', 'application/ld+json', '/app/', 'rel="manifest"'],
+  contains: ['never sees', 'og:image', 'rel="canonical"', 'application/ld+json', '/app/', 'rel="manifest"',
+    // SEO hygiene pass (2026-10-20): keyword-bearing title/description, a WebApplication +
+    // FAQPage graph, and the Markdown alternate.
+    'Private Browser Writing App', '"@type": "WebApplication"', '"@type": "FAQPage"',
+    'rel="alternate" type="text/markdown"',
+    // Accuracy: the copy must not advertise features that no longer exist.
+    'A minimalist browser writing app built for focus and privacy'],
+  notContains: ['Version history', 'no tracking'],
+});
+
+await checkDocument('/index.md', {
+  type: 'text/markdown',
+  contains: ['# Quorly', '](https://quorly.pages.dev/app/)', 'Focus Mode', 'Is Quorly really free?'],
+  notContains: ['Version history'],
 });
 
 await checkDocument('/app/', {
@@ -45,7 +58,7 @@ await checkDocument('/app/', {
 await checkDocument('/privacy/', {
   type: 'text/html',
   contains: ['Privacy', 'No accounts, no email'],
-  notContains: ['mailto:', '@quorly'],
+  notContains: ['mailto:', '@quorly', 'Version History', 'doc_versions_v13'],
 });
 
 // --- agent discovery surface (llms.txt, skill, catalogs, robots signal) -----------

@@ -137,7 +137,7 @@ kbd {
 }
 
 .lede {
-  max-width: 46ch;
+  max-width: 58ch;
   font-size: clamp(1rem, 2vw, 1.18rem);
   color: var(--muted);
 }

@@ -91,6 +91,8 @@
 # scripts: a markdown or JSON file served as octet-stream is unusable to every client.
 /llms.txt
   Content-Type: text/plain; charset=utf-8
+/index.md
+  Content-Type: text/markdown; charset=utf-8
 /agent-skill.md
   Content-Type: text/markdown; charset=utf-8
 /AGENTS.md
