@@ -1814,6 +1814,12 @@ body.light-mode #modeBtn .icon-sun { display: block; }
   min-width: 0;
 }
 
+.insert-plus {
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 700;
+}
+
 .dropdown-value {
   min-width: 0;
   overflow: hidden;
