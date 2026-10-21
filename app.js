@@ -27,7 +27,7 @@ const sessionHandles = new Map();
 
 // Default document shown on first load and when starting a new file.
 const DEFAULT_TITLE = "Welcome to Quorly";
-const DEFAULT_BODY = "<h2>Overview</h2><p>Quorly is a quiet, local-first writing space. Select any text to format it, or use the panel on the right.</p><blockquote>Everything stays on your device.</blockquote><p>Start writing...</p>";
+const DEFAULT_BODY = "<h2>Overview</h2><p>Quorly is a quiet, local-first writing space. Select any text to format it, or use the panel on the left.</p><blockquote>Everything stays on your device.</blockquote><p>Start writing...</p>";
 
 // --- SAFETY & UTILITIES ---
 
