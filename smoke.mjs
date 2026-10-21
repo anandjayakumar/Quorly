@@ -61,6 +61,19 @@ await checkDocument('/privacy/', {
   notContains: ['mailto:', '@quorly', 'Version History', 'doc_versions_v13'],
 });
 
+await checkDocument('/compare/', {
+  type: 'text/html',
+  contains: [
+    'Quorly vs',
+    'Dillinger',
+    'StackEdit',
+    'https://quorly.us.ci/compare/',
+    'Works offline',
+    'No account',
+  ],
+  notContains: ['quorly.pages.dev', 'style="', '<script'],
+});
+
 // --- agent discovery surface (llms.txt, skill, catalogs, robots signal) -----------
 
 await checkDocument('/llms.txt', {

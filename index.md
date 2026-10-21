@@ -4,6 +4,7 @@
 
 - Editor: <https://quorly.us.ci/app/>
 - Privacy: <https://quorly.us.ci/privacy/>
+- Compare: <https://quorly.us.ci/compare/>
 - Canonical page: <https://quorly.us.ci/>
 
 ## A minimalist browser writing app built for focus and privacy

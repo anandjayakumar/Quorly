@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Compare — Quorly vs Dillinger, StackEdit, Typora</title>
+<meta name="description" content="Quorly vs the free browser rivals Dillinger and StackEdit: works offline, no account, no cloud, no tracking. Plus an honest one-line contrast with the desktop app Typora." />
+<link rel="canonical" href="https://quorly.us.ci/compare/" />
+<meta name="theme-color" content="#0e0e0e" />
+<link rel="icon" href="/favicon.png" type="image/png" />
+<link rel="stylesheet" href="/landing.css" />
+</head>
+<body>
+
+<header class="nav">
+  <a class="brand" href="/">
+    <img src="/quorly.png" alt="" width="30" height="30" />
+    <span>Quorly</span>
+  </a>
+  <nav class="nav-links">
+    <a href="/">Home</a>
+    <a href="/app/">Editor</a>
+    <a href="/privacy/">Privacy</a>
+    <a class="nav-cta" href="/app/">Open editor</a>
+  </nav>
+</header>
+
+<main>
+  <section class="section prose">
+    <h1>Quorly compared to the browser-based rivals</h1>
+    <p class="micro">As of October 2026 — competitor facts verified against their public sites.</p>
+
+    <h2>What Quorly is</h2>
+    <p>
+      Quorly is a private, local-first browser writing app: it runs entirely in your browser,
+      requires no account (No account, no sign-up, no login, no email), sends nothing besides an anonymous visit count, and works offline
+      once loaded. Documents stay in this browser (localStorage for the open draft,
+      IndexedDB for parked snapshots, versions and images). It exports Markdown, PDF,
+      plain text and <code>.quorly</code>, has Focus Mode, themes and five typefaces,
+      a Recents library, and in-browser WebMCP tools for AI agents.
+    </p>
+
+    <h2>Feature comparison</h2>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>Quorly</th>
+          <th>Dillinger</th>
+          <th>StackEdit</th>
+          <th>Typora</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Runs in browser</th>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>Yes</td>
+          <td>No — desktop app</td>
+        </tr>
+        <tr>
+          <th scope="row">Account required</th>
+          <td>No</td>
+          <td>No (optional for cloud sync)</td>
+          <td>No (optional for cloud sync)</td>
+          <td>No — but $14.99 license</td>
+        </tr>
+        <tr>
+          <th scope="row">Works offline</th>
+          <td>Yes — full PWA</td>
+          <td>Yes — localStorage drafts only</td>
+          <td>Yes — service-worker PWA</td>
+          <td>Yes — local files</td>
+        </tr>
+        <tr>
+          <th scope="row">Documents stored</th>
+          <td>Local browser only</td>
+          <td>Browser localStorage (+ optional cloud)</td>
+          <td>Browser (+ optional cloud)</td>
+          <td>Local file system</td>
+        </tr>
+        <tr>
+          <th scope="row">Cloud sync</th>
+          <td>None — never leaves device</td>
+          <td>GitHub, Dropbox, Drive, OneDrive, Bitbucket</td>
+          <td>Google Drive, Dropbox, GitHub</td>
+          <td>None built-in</td>
+        </tr>
+        <tr>
+          <th scope="row">No tracking (besides anonymous visits)</th>
+          <td>Yes</td>
+          <td>No — analytics present</td>
+          <td>No — analytics present</td>
+          <td>Yes — local app</td>
+        </tr>
+        <tr>
+          <th scope="row">Installable PWA</th>
+          <td>Yes</td>
+          <td>No</td>
+          <td>Yes</td>
+          <td>N/A (desktop install)</td>
+        </tr>
+        <tr>
+          <th scope="row">Export formats</th>
+          <td>Markdown, PDF, plain text, <code>.quorly</code></td>
+          <td>Markdown, HTML, PDF</td>
+          <td>Markdown, HTML (PDF sponsor-only)</td>
+          <td>Markdown, PDF, Word, HTML, LaTeX, EPUB</td>
+        </tr>
+        <tr>
+          <th scope="row">Rich text editor</th>
+          <td>Yes — headings, bold/italic, lists, quotes, links, inline code, aligned text, tables, images, code blocks</td>
+          <td>Markdown source + live preview</td>
+          <td>Markdown source + live preview</td>
+          <td>WYSIWYG inline Markdown</td>
+        </tr>
+        <tr>
+          <th scope="row">Focus Mode</th>
+          <td>Yes</td>
+          <td>Yes (Zen Mode)</td>
+          <td>Not present</td>
+          <td>Typewriter / focus mode</td>
+        </tr>
+        <tr>
+          <th scope="row">Themes + typefaces</th>
+          <td>Light/dark + 5 fonts, adjustable size/width</td>
+          <td>Dark mode only</td>
+          <td>Multiple themes</td>
+          <td>Custom CSS themes</td>
+        </tr>
+        <tr>
+          <th scope="row">WebMCP / AI agent tools</th>
+          <td>In-browser (W3C CG draft)</td>
+          <td>No</td>
+          <td>No</td>
+          <td>No</td>
+        </tr>
+        <tr>
+          <th scope="row">Pricing</th>
+          <td>Free — no tier</td>
+          <td>Free — no tier</td>
+          <td>Free — $5 sponsorship unlocks PDF + more</td>
+          <td>$14.99 one-time (3 devices)</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="micro">Sources: dillinger.io, stackedit.io, typora.io/store.typora.io, verified October 2026.</p>
+
+    <h2>Dillinger</h2>
+    <p>
+      <strong>What it is.</strong> A free, no-signup browser Markdown editor built on the same
+      Monaco engine that powers VS Code. It offers side-by-side live preview, optional cloud sync
+      to GitHub, Dropbox, Google Drive, OneDrive and Bitbucket, and exports to Markdown, styled
+      HTML or PDF. Drafts persist in <code>localStorage</code>, and it claims to work offline once
+      loaded. (Verified at <a href="https://dillinger.io/">dillinger.io</a> and its public
+      comparison pages, October 2026.)
+    </p>
+    <p>
+      <strong>Where Quorly differs — honestly.</strong> Dillinger is a Markdown source editor,
+      not a rich-text editor: you write Markdown syntax (hashes for headings, asterisks for bold),
+      and see a rendered preview beside it. Quorly edits the rendered page directly — headings,
+      bold, italic, lists, quotes, links, inline code, aligned text, tables, images and code blocks
+      — without switching to source view. Dillinger's cloud sync requires connecting a third-party
+      account; Quorly has none. Dillinger does not offer an installable PWA, a local document
+      library with version snapshots, or in-browser agent tools. Its offline support is
+      <code>localStorage</code>-only; Quorly uses a service worker, IndexedDB snapshots, and
+      keeps working after the browser restarts.
+    </p>
+    <p>
+      <strong>Who Dillinger is for.</strong> Writers who prefer source Markdown, want instant
+      cloud sync to GitHub or Dropbox, and don't need a library of saved drafts or agent tools.
+    </p>
+
+    <h2>StackEdit</h2>
+    <p>
+      <strong>What it is.</strong> A free in-browser Markdown editor with split-pane live preview,
+      scroll sync, and optional sync to Google Drive, Dropbox and GitHub. Most cloud features
+      require signing in with a Google account; the free tier saves locally. PDF export requires
+      a sponsorship (around $5 for 3 months). It supports Mermaid diagrams and KaTeX math, and
+      offers a service-worker-based offline mode. (Verified at <a href="https://stackedit.io/">stackedit.io</a>
+      and third-party reviews checked in October 2026; the project's last commit was May 2023.)
+    </p>
+    <p>
+      <strong>Where Quorly differs — honestly.</strong> StackEdit is a Markdown source editor;
+      Quorly is a rich-text editor that edits the rendered page. StackEdit's cloud sync requires
+      a Google sign-in; Quorly has zero accounts. StackEdit's offline mode depends on a service
+      worker but does not offer a full PWA install or an IndexedDB-based document library with
+      snapshots and images. StackEdit does not claim to block tracking, while Quorly sends only
+      an anonymous visit count to the same origin. StackEdit does not register WebMCP tools.
+    </p>
+    <p>
+      <strong>Who StackEdit is for.</strong> Writers who want live Markdown rendering with
+      scroll sync, need Mermaid or math diagrams, and are comfortable with a Google-linked account
+      for cloud features.
+    </p>
+
+    <h2>Typora — an honest one-line contrast</h2>
+    <ul class="checklist">
+      <li><strong>Typora is the polished desktop app.</strong> It is a native macOS / Windows / Linux
+      application ($14.99 one-time, 3 devices, 15-day trial) with seamless WYSIWYG Markdown editing,
+      custom CSS themes, and extensive exports (PDF, Word, HTML, LaTeX, EPUB). It works on local
+      files and needs no browser, no account, and sends nothing to a server. It does not offer
+      web-based collaboration, an installable PWA, or in-browser agent tools.</li>
+      <li><strong>Quorly is the browser-first alternative.</strong> It needs no install, runs on any device
+      with a browser, keeps everything in the browser (no desktop files), works offline as a PWA,
+      and includes WebMCP agent tools — at the cost of not being a native desktop experience.</li>
+    </ul>
+
+    <h2>The bottom line</h2>
+    <p>
+      If you want a source Markdown editor that syncs to your cloud accounts, Dillinger or
+      StackEdit are the free browser options. If you want a polished desktop WYSIWYG editor,
+      Typora is the paid standard. If you want a private, local-first browser writing app with
+      no account, no cloud, no tracking, installable offline support, a saved-document library,
+      rich-text editing, and in-browser agent tools — Quorly is built for that.
+    </p>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <a class="brand small" href="/"><img src="/quorly.png" alt="" width="22" height="22" /><span>Quorly</span></a>
+    <nav>
+      <a href="/app/">Editor</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="/#features">Features</a>
+      <a href="/compare/">Compare</a>
+    </nav>
+    <p class="copy">Your words stay on your device.</p>
+  </div>
+</footer>
+
+</body>
+</html>
