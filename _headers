@@ -37,24 +37,42 @@
 # each file part and keys assets by content hash, so a stored type cannot be corrected
 # without changing the file bytes. These pins make the served type independent of that.
 # (Cloudflare Pages derives MIME from the extension; the pins are harmless there.)
+#
+# The HTML documents also carry `Cache-Control: public, max-age=0, must-revalidate,
+# no-transform`. The first half is what Pages already sends for HTML, so the documents stay
+# revalidated and a deploy is never masked by a cached copy. `no-transform` is the part
+# that matters here: on the custom domain Cloudflare rewrites the published contact
+# address into an obfuscated `__cfemail__` link, which hides the address from the reader
+# and rewrites the mailto: href. With `no-transform` the HTML is served exactly as
+# authored. The address is also wrapped in `<!--email_off-->` in the markup, which is
+# Cloudflare's own per-address opt-out, so the two agree.
 /
   Content-Type: text/html; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
 /index.html
   Content-Type: text/html; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
 /404.html
   Content-Type: text/html; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
 /app/
   Content-Type: text/html; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
 /app/index.html
   Content-Type: text/html; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
 /privacy/
   Content-Type: text/html; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
 /privacy/index.html
   Content-Type: text/html; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
 /compare/
   Content-Type: text/html; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
 /compare/index.html
   Content-Type: text/html; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
 /styles.css
   Content-Type: text/css; charset=utf-8
 /landing.css

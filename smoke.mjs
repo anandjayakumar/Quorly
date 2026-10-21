@@ -34,8 +34,12 @@ await checkDocument('/', {
     'Private Browser Writing App', '"@type": "WebApplication"', '"@type": "FAQPage"',
     'rel="alternate" type="text/markdown"',
     // Accuracy: the copy must not advertise features that no longer exist.
-    'A minimalist browser writing app built for focus and privacy'],
-  notContains: ['Version history', 'no tracking'],
+    'A minimalist browser writing app built for focus and privacy',
+    // The published contact address must survive to the reader. On the custom domain
+    // Cloudflare rewrites an unprotected address into an obfuscated `__cfemail__` link,
+    // which hides it and breaks the mailto: — so this is the tripwire for that.
+    'mailto:hello@quorly.us.ci'],
+  notContains: ['Version history', 'no tracking', '__cfemail__', 'email-protection#'],
 });
 
 await checkDocument('/index.md', {
@@ -58,7 +62,7 @@ await checkDocument('/app/', {
 await checkDocument('/privacy/', {
   type: 'text/html',
   contains: ['Privacy', 'No accounts', 'hello@quorly.us.ci', 'mailto:hello@quorly.us.ci'],
-  notContains: ['legal@', 'support@', 'Version History', 'doc_versions_v13'],
+  notContains: ['legal@', 'support@', 'Version History', 'doc_versions_v13', '__cfemail__', 'email-protection#'],
 });
 
 // The privacy notice has to stay true: the editor's own counter must be disclosed, and the
