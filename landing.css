@@ -421,32 +421,42 @@ body::before {
 .features-section { max-width: 1408px; padding: 10px 36px 55px; }
 .feature-highlights { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; margin: 0 0 34px; }.feature-highlight { display: flex; gap: 21px; }.feature-highlight h3 { margin: 9px 0 6px; font-size: 1rem; }.feature-highlight p { color: #b5bdbe; font-size: .86rem; line-height: 1.45; margin: 0; }.feature-icon { flex: 0 0 57px; width: 57px; height: 57px; display: grid; place-items: center; border: 1px solid; border-radius: 14px; font-size: 30px; }.privacy-icon { color: #54f5ce; background: rgba(0, 109, 85, .23); border-color: rgba(66, 225, 188, .2); }.focus-icon { color: #51bcff; background: rgba(0, 91, 149, .24); border-color: rgba(74, 179, 237, .2); }.edit-icon { color: #ffda61; background: rgba(123, 88, 0, .22); border-color: rgba(241, 191, 71, .2); }.offline-icon { color: #d281ff; background: rgba(100, 35, 145, .25); border-color: rgba(201, 98, 255, .2); }
 .showcase { display: grid; grid-template-columns: 42% 58%; gap: 25px; border: 1px solid var(--border); border-radius: 16px; padding: 25px 40px; background: linear-gradient(105deg, rgba(10,15,16,.94), rgba(5,8,9,.7)); }.showcase-copy h2 { font-family: 'Lora', Georgia, serif; font-size: 2.2rem; font-weight: 500; letter-spacing: -.04em; }.showcase-copy p:last-child { max-width: 460px; color: #c1c7c8; font-size: 1rem; line-height: 1.62; }.showcase-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }.showcase-modes > article > h3 { margin: 9px 0 0; font-size: .9rem; }.showcase-modes > article > p { margin: 0; color: #aeb7b8; font-size: .82rem; }.mode-preview { height: 191px; position: relative; overflow: hidden; border: 1px solid #243033; border-radius: 9px; padding: 26px 29px 12px; background: #020405; color: #eef1f1; font-size: 7px; }.dots { position: absolute; top: 8px; left: 13px; color: #f25553; font-size: 7px; word-spacing: 2px; }.mode-preview h3 { font-size: 14px; margin: 0 0 7px; }.mode-preview small, .mode-preview p, .mode-preview ol { color: #c4caca; }.mode-preview hr { border: 0; border-top: 1px solid #172021; margin: 12px 0; }.mode-preview p { line-height: 1.35; }.mode-preview ol { padding-left: 12px; line-height: 1.5; }.focused-preview { padding-left: 43px; }.narrow-copy { width: 73%; }.mini-tools { position: absolute; right: 0; top: 0; width: 20%; height: 100%; border-left: 1px solid #263032; background: repeating-linear-gradient(#0a0e0f 0 16px, #131b1d 17px 18px); }
-/* Two screens, stacked. The dark layer is the window itself; the light reader is laid over
-   it and pushed down and right, so only the dark layer's top and left edges show through. */
+/* Two screens in one frame: a dark writer behind, the light reader laid over it. The dark
+   layer keeps its own outline and window dots, so its top and left edges read as a screen
+   rather than as a border. */
 .personalize-preview {
   padding: 0;
   border-color: #243033;
-  background: #05080a;
+  background: #020405;
 }
+.personalize-back {
+  position: absolute;
+  inset: 0;
+  border: 1px solid #3a4d52;
+  border-radius: 8px;
+  background: linear-gradient(155deg, #1e2a2e 0%, #101a1d 42%, #080d0f 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+.personalize-back .dots { top: 6px; left: 9px; font-size: 6px; }
 .light-reader {
   position: absolute;
-  top: 15px;
-  left: 18px;
+  top: 22px;
+  left: 26px;
   right: 0;
   bottom: 0;
-  padding: 18px 22px 16px;
+  padding: 16px 20px 14px;
   overflow: hidden;
   border-radius: 10px;
   background: #fff;
   color: #18202a;
-  box-shadow: -1px -1px 0 rgba(255, 255, 255, .06), 0 8px 20px rgba(2, 4, 6, .5);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, .55), 0 2px 6px rgba(0, 0, 0, .35);
 }
 .light-reader h3 { color: #16202a; font-size: 13px; margin: 0 0 6px; }
-.light-reader h4 { margin: 13px 0 5px; color: #16202a; font-size: 9px; }
+.light-reader h4 { margin: 11px 0 4px; color: #16202a; font-size: 9px; }
 .light-reader small, .light-reader p, .light-reader ol { color: #475564; }
 .light-reader hr { margin: 10px 0; border-color: #dde1e4; }
 .light-reader p { margin: 0; line-height: 1.42; }
-.light-reader ol { margin: 0; padding-left: 13px; line-height: 1.55; }
+.light-reader ol { margin: 0; padding-left: 13px; line-height: 1.5; }
 .legacy-features { display: none; }
 
 @media (max-width: 900px) { .hero { grid-template-columns: 1fr; padding-top: 44px; }.editor-preview { justify-self: center; margin-top: 42px; }.feature-highlights { grid-template-columns: repeat(2, 1fr); }.showcase { grid-template-columns: 1fr; }.nav { padding-inline: 24px; } }
@@ -455,6 +465,9 @@ body::before {
   .nav-links { gap: 10px; }
   .nav-cta { padding: .58em .75em; }
   .hero, .features-section { padding-left: 20px; padding-right: 20px; }
+  /* Tighter stack on a phone, so the light reader keeps every line of the sample. */
+  .personalize-back .dots { top: 4px; left: 7px; font-size: 5px; }
+  .light-reader { top: 16px; left: 20px; padding: 13px 16px 11px; }
   .hero h1 { font-size: 2.7rem; }
 
   /* On a phone, present the writing surface as an iPhone rather than a tiny laptop. */
