@@ -1579,6 +1579,139 @@ function htmlToPlainText(html) {
     return lines.join('\n');
 }
 
+// --- N-11: the app-level undo for the last paste ---------------------------------
+// The paste is inserted with a Range and a DocumentFragment, because Chrome's
+// execCommand('insertHTML') merges the pasted blocks into a heading context and the
+// paragraphs arrive wrapped in the preceding heading. A programmatic insertion is
+// invisible to Chrome's undo stack, so the last paste keeps its own record here: the
+// body is snapshotted before the insertion and Ctrl+Z puts it back in one keystroke.
+// The record is dropped as soon as the user makes a native edit, after which Chrome's
+// own undo stack is back in charge.
+let pasteUndo = { armed: false, snapshot: null, selection: null };
+let pasteUndoInputGuard = false; // true while we dispatch our own input event
+
+// The path from the body root to a node, as child indexes. Paths survive the body being
+// replaced by the snapshot's copy, so a selection captured before the paste can be
+// restored afterwards.
+function bodyNodePath(node) {
+    if (!node) return null;
+    const path = [];
+    let cur = node;
+    while (cur && cur !== editBody) {
+        const parent = cur.parentNode;
+        if (!parent) return null;
+        path.unshift(Array.prototype.indexOf.call(parent.childNodes, cur));
+        cur = parent;
+    }
+    return cur === editBody ? path : null;
+}
+
+function bodyNodeAtPath(path) {
+    if (!path) return null;
+    let cur = editBody;
+    for (const index of path) {
+        if (!cur || !cur.childNodes[index]) return null;
+        cur = cur.childNodes[index];
+    }
+    return cur;
+}
+
+// The selection as two (path, offset) pairs, or null when it is not inside the body.
+function captureBodySelection() {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return null;
+    const anchor = bodyNodePath(sel.anchorNode);
+    const focus = bodyNodePath(sel.focusNode);
+    if (!anchor || !focus) return null;
+    return { anchor, anchorOffset: sel.anchorOffset, focus, focusOffset: sel.focusOffset };
+}
+
+// Put a captured selection back. The snapshot has the same text, but a stale offset must
+// never throw, so both ends are clamped to what the node can hold.
+function restoreBodySelection(saved) {
+    if (!saved) return;
+    const anchor = bodyNodeAtPath(saved.anchor);
+    const focus = bodyNodeAtPath(saved.focus);
+    if (!anchor || !focus) return;
+    const limit = (node, offset) => Math.max(0, Math.min(offset,
+        node.nodeType === 3 ? (node.nodeValue || '').length : node.childNodes.length));
+    try {
+        const range = document.createRange();
+        range.setStart(anchor, limit(anchor, saved.anchorOffset));
+        range.setEnd(focus, limit(focus, saved.focusOffset));
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    } catch (err) {
+        // Leave the caret where it is; the content is what matters.
+    }
+}
+
+// --- N-11: inserting block-level content into the editor ---------------------------
+// A block cannot live inside a paragraph, a heading or a list item: the DOM would take
+// it, but the saved HTML would not survive a round trip through the parser, and the
+// pasted blocks would render inside the heading they were pasted into. So the block that
+// holds the caret is split at the caret — the text before the caret stays, the pasted
+// blocks go next, the text after the caret moves into a new block behind them. This is
+// what an editor does when you paste a paragraph into the middle of a sentence.
+const SPLITTABLE_BLOCK = /^(P|H1|H2|H3|H4|H5|H6|LI)$/;
+
+// True when a range covers something visible: text, or an element such as an image.
+function rangeHasContent(range) {
+    const frag = range.cloneContents();
+    if (frag.textContent && frag.textContent.trim()) return true;
+    return !!frag.querySelector('img,br,hr,table,input,video,iframe');
+}
+
+// The block that holds an insertion point.
+function blockOf(node) {
+    let el = node.nodeType === 1 ? node : node.parentElement;
+    while (el && el !== editBody) {
+        if (SPLITTABLE_BLOCK.test(el.tagName)) return el;
+        el = el.parentElement;
+    }
+    return null;
+}
+
+// Where the pasted blocks go, given a collapsed insertion point inside the editor.
+// Returns the range to insert at, plus the block to drop if it ends up empty.
+function prepareBlockInsertion(range) {
+    const block = blockOf(range.startContainer);
+    if (!block) return null;
+
+    const head = document.createRange();
+    head.setStart(block, 0);
+    head.setEnd(range.startContainer, range.startOffset);
+    const headHas = rangeHasContent(head);
+
+    const tail = document.createRange();
+    tail.setStart(range.startContainer, range.startOffset);
+    if (block.lastChild) tail.setEndAfter(block.lastChild);
+    else tail.setEnd(block, block.childNodes.length);
+    const tailHas = rangeHasContent(tail);
+
+    if (!headHas && !tailHas) {
+        // The block is empty: the pasted blocks take its place.
+        const gap = document.createRange();
+        gap.setStartBefore(block);
+        gap.collapse(true);
+        return { range: gap, remove: block };
+    }
+
+    // The text after the caret moves into a new block of the same kind.
+    const moved = tail.extractContents();
+    const second = document.createElement(block.tagName);
+    if (block.className) second.className = block.className;
+    second.appendChild(moved);
+    block.parentNode.insertBefore(second, block.nextSibling);
+
+    // The pasted blocks go between the two halves.
+    const gap = document.createRange();
+    gap.setStartBefore(second);
+    gap.collapse(true);
+    return { range: gap, remove: headHas ? null : block };
+}
+
 // The editor's only paste hook. It is bound to #editBody alone, so the title field, the rename and
 // search boxes and dialogs keep the browser's own paste.
 // Escape hatch: Shift+paste inserts the clipboard text as plain text, bypassing normalisation, for
@@ -1618,37 +1751,61 @@ editBody.addEventListener('paste', (e) => {
         : html.trim() ? normalizePastedHTML(html)
         : plainTextToHTML(text);
 
-    // One execCommand keeps the whole paste a single undo step and leaves the caret after it. The
-    // existing `input` listener on #editBody already runs the debounced save and the first_keystroke
-    // counter, so nothing extra is saved here.
+    // The paste is inserted with a Range and a DocumentFragment rather than with
+    // execCommand('insertHTML'): when the insertion context is a heading, Chrome merges the
+    // pasted blocks into that heading and the paragraphs arrive wrapped inside it
+    // (<h2><p>paragraph</p></h2>). Direct node insertion produces the correct sibling
+    // structure. The cost is that Chrome's undo stack does not see the edit, which is why
+    // the paste keeps its own undo record (see pasteUndo above).
+    //
     // preventDefault() has already taken the clipboard away from the browser, so a paste that rebuilds
     // to nothing (whitespace only, an image whose src we keep none of) or that the browser refuses to
     // insert must still land as plain text rather than disappear.
-    // Range + DocumentFragment avoids Chrome's execCommand insertHTML block-merging
-    // bug where paragraphs get wrapped inside preceding headings when inserting over a
-    // selection that spans multiple blocks. Direct node insertion produces the correct
-    // sibling structure (verified in reproduction).
-    const selection = window.getSelection();
     const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
     if (insert && range) {
         try {
+            // Snapshot the body and the selection BEFORE the insertion, so the undo can put
+            // both back exactly. A deep clone keeps the real DOM (including the table
+            // chrome), so the restore is not a re-parse of a string.
+            const snapshot = editBody.cloneNode(true);
+            const savedSelection = captureBodySelection();
+
             const container = document.createElement('div');
             container.innerHTML = sanitizeHTML(insert);
             const fragment = document.createDocumentFragment();
             while (container.firstChild) {
                 fragment.appendChild(container.firstChild);
             }
+            const lastInserted = fragment.lastChild;
             range.deleteContents();
-            range.insertNode(fragment);
-            // Leave caret after the pasted content (same contract as the original execCommand).
-            const newRange = document.createRange();
-            newRange.selectNodeContents(editBody);
-            newRange.collapse(false);
-            const sel = window.getSelection();
-            sel.removeAllRanges();
-            sel.addRange(newRange);
+            // The pasted content is block level, so it cannot go inside the block that holds
+            // the caret: the block is split at the caret and the blocks go between the halves.
+            const prepared = prepareBlockInsertion(range);
+            const target = prepared ? prepared.range : range;
+            target.insertNode(fragment);
+            // A block that was emptied by the split has nothing left to show: drop it.
+            if (prepared && prepared.remove) prepared.remove.remove();
+            // The caret goes after the pasted content (the contract the execCommand path had).
+            if (lastInserted) {
+                const after = document.createRange();
+                after.setStartAfter(lastInserted);
+                after.collapse(true);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(after);
+            }
             // A pasted table gets the same wrapper and menu button as one made from the toolbar.
             if (insert.includes('<table')) applyTableWidths();
+            // Arm the app-level undo for this paste.
+            pasteUndo = { armed: true, snapshot, selection: savedSelection };
+            // A programmatic change fires no input event of its own, so the autosave and the
+            // first_keystroke counter are driven by the same event the browser used to fire.
+            pasteUndoInputGuard = true;
+            try {
+                editBody.dispatchEvent(new Event('input', { bubbles: true }));
+            } finally {
+                pasteUndoInputGuard = false;
+            }
             return;
         } catch (err) {
             // If direct insertion fails for any reason, fall through to the fallback.
@@ -2592,6 +2749,45 @@ document.addEventListener('keydown', (e) => {
     }
     toggleFocus();
 });
+
+// N-11: Ctrl+Z right after a paste restores the pre-paste document in one keystroke.
+    // Chrome's undo stack does not know about the programmatic insertion, so this answers the
+    // undo itself. The keydown is caught in the capture phase, before anything else sees it.
+    document.addEventListener('keydown', (e) => {
+        if (!pasteUndo.armed) return;
+        if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+        if (e.key !== 'z' && e.key !== 'Z') return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        const snapshot = pasteUndo.snapshot;
+        const saved = pasteUndo.selection;
+        pasteUndo = { armed: false, snapshot: null, selection: null };
+        if (!snapshot) return;
+        editBody.replaceChildren(...Array.from(snapshot.childNodes));
+        restoreBodySelection(saved);
+        // The restore is a programmatic change too, so it dispatches its own input event and
+        // the autosave keeps the document on disk in step with the screen.
+        pasteUndoInputGuard = true;
+        try {
+            editBody.dispatchEvent(new Event('input', { bubbles: true }));
+        } finally {
+            pasteUndoInputGuard = false;
+        }
+    }, true);
+
+    // Any native edit after the paste hands the undo back to Chrome's own stack. beforeinput
+    // fires for real user edits only — a programmatic change fires neither beforeinput nor
+    // input — so the insertion above can never disarm its own record. The paste's own
+    // beforeinput is skipped: that is the paste this record belongs to.
+    editBody.addEventListener('beforeinput', (e) => {
+        if (e.inputType === 'insertFromPaste') return;
+        pasteUndo = { armed: false, snapshot: null, selection: null };
+    });
+    editBody.addEventListener('input', () => {
+        if (pasteUndoInputGuard) return;
+        pasteUndo = { armed: false, snapshot: null, selection: null };
+    });
 
 const debouncedLocalSave = debounce(saveToLocalStorage, 400);
 [editTitle, editBody].forEach(el => el.addEventListener('input', debouncedLocalSave));
