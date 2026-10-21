@@ -51,6 +51,10 @@
   Content-Type: text/html; charset=utf-8
 /privacy/index.html
   Content-Type: text/html; charset=utf-8
+/compare/
+  Content-Type: text/html; charset=utf-8
+/compare/index.html
+  Content-Type: text/html; charset=utf-8
 /styles.css
   Content-Type: text/css; charset=utf-8
 /landing.css

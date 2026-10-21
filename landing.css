@@ -279,3 +279,44 @@ kbd {
   .nav-links a:not(.nav-cta) { display: none; }
   .section { padding: 52px 24px; }
 }
+
+/* ---------- comparison table ---------- */
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .88rem;
+  margin: 24px 0;
+}
+.compare-table th,
+.compare-table td {
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+.compare-table thead th {
+  background: var(--panel);
+  font-weight: 600;
+  color: var(--text);
+  font-size: .82rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.compare-table tbody th[scope="row"] {
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 600;
+  width: 26%;
+  white-space: normal;
+}
+.compare-table tbody td {
+  color: var(--muted);
+}
+
+/* ---------- table scroll wrapper ---------- */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}

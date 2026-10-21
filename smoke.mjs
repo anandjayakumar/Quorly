@@ -69,6 +69,20 @@ await checkDocument('/privacy/', {
   notContains: ['The only thing we measure is anonymous page visits'],
 });
 
+await checkDocument('/compare/', {
+  type: 'text/html',
+  contains: [
+    'Quorly vs',
+    'Dillinger',
+    'StackEdit',
+    'https://quorly.us.ci/compare/',
+    'Works offline',
+    'requires no account',
+    '/landing.js',
+  ],
+  notContains: ['quorly.pages.dev', 'style="', 'onclick=', 'onload=', 'onerror='],
+});
+
 // --- agent discovery surface (llms.txt, skill, catalogs, robots signal) -----------
 
 await checkDocument('/llms.txt', {
