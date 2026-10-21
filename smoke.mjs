@@ -230,6 +230,8 @@ try {
   record('/app.js library markers', false, String(e.message || e));
 }
 
+// --- N-11: paste fix — Range + DocumentFragment insertion -------------------
+
 // --- WebMCP tool layer (W3C CG draft) -------------------------------------------
 
 try {
@@ -420,6 +422,22 @@ try {
   record('/functions/e.js is not public', status === 404, `status=${status} (expected 404)`);
 } catch (e) {
   record('/functions/e.js is not public', false, String(e.message || e));
+}
+
+// --- N-11: paste fix — markers only ----------------------------------------------
+// The real test is tools/paste-test.js, which runs inside the editor page and drives a
+// genuine paste and a genuine Ctrl+Z. These markers only prove the code shape.
+
+try {
+  const { body } = await get('/app.js');
+  record('N-11 Range-based insertion', body.includes('range.deleteContents') && body.includes('range.insertNode'),
+    'Range.deleteContents / range.insertNode missing');
+  record('N-11 app-level paste undo', body.includes('pasteUndo') && body.includes('replaceChildren'),
+    'paste undo record missing');
+  record('N-11 paste undo disarmed on a native edit', body.includes('beforeinput'),
+    'beforeinput guard missing');
+} catch (e) {
+  record('N-11 paste fix markers', false, String(e.message || e));
 }
 
 // --- metafiles and unknown paths must NOT be public -------------------------------
