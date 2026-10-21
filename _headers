@@ -133,3 +133,8 @@
   Content-Type: image/png
 /icon-512.png
   Content-Type: image/png
+# The hero photograph. One self-hosted WebP; the type is pinned for the same `nosniff`
+# reason as the scripts. Not `immutable`: the scene may be replaced in place.
+/landing-bg.webp
+  Content-Type: image/webp
+  Cache-Control: public, max-age=604800

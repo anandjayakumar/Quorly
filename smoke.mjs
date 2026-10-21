@@ -28,7 +28,7 @@ async function get(path) {
 
 await checkDocument('/', {
   type: 'text/html',
-  contains: ['never sees', 'og:image', 'rel="canonical"', 'application/ld+json', '/app/', 'rel="manifest"',
+  contains: ['keeps your words on your device', 'og:image', 'rel="canonical"', 'application/ld+json', '/app/', 'rel="manifest"',
     // SEO hygiene pass: accurate category title/description, a WebApplication + FAQPage graph,
     // and the Markdown alternate used by the agent mirror.
     'Private Offline Text Editor', 'The private, offline text editor', '"@type": "WebApplication"', '"@type": "FAQPage"',
@@ -204,8 +204,8 @@ try {
     // UI-17: alignment is a class. execCommand's inline style is blocked by `style-src 'self'`.
     'function applyAlignment',
     'q-align-center',
-    // UI-19: the welcome sample ends with a plain "Start writing.." line.
-    'Start writing..',
+    // UI-19: the welcome sample ends with a plain "Start writing..." line.
+    'Start writing...',
     // S-2b: images are downscaled and re-encoded on the way in, and oversized ones refused.
     'const MAX_IMAGE_EDGE',
     'const MAX_IMAGE_BYTES',

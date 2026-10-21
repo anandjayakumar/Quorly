@@ -30,7 +30,7 @@
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: clip; }
 
 body {
   margin: 0;
@@ -327,6 +327,8 @@ body {
   background: #06090a;
   background-image: radial-gradient(ellipse 62% 37% at 52% 13%, rgba(20, 163, 150, .23), transparent 66%),
     radial-gradient(ellipse 25% 21% at 93% 33%, rgba(0, 124, 109, .19), transparent 70%);
+  /* The hero photograph is wider than the page; clip instead of scrolling. */
+  overflow-x: clip;
 }
 
 body::before {
@@ -340,29 +342,29 @@ body::before {
   pointer-events: none;
 }
 
-:root { --maxw: 1320px; --panel: #0a0d0e; --border: rgba(179, 213, 211, .14); --accent: #62e9c7; }
+:root { --maxw: 1408px; --panel: #0a0d0e; --border: rgba(179, 213, 211, .14); --accent: #62e9c7; }
 
-.nav { padding: 17px 36px; max-width: 1380px; }
-.brand { font-size: 1.25rem; gap: 9px; }
+.nav { padding: 17px 36px; max-width: 1408px; }
+.brand { font-size: 1.3rem; gap: 9px; }
 .brand img { width: 38px; height: 38px; object-fit: contain; }
-.nav-links { gap: 36px; font-size: .87rem; }
+.nav-links { gap: 40px; font-size: .95rem; }
 .nav-links a { color: #d9dddd; }
-.nav-cta { padding: .72em 1.35em; border-radius: 16px; }
+.nav-cta { padding: .78em 1.45em; border-radius: 12px; }
 .nav-cta::after { content: "→"; display: inline-block; margin-left: 12px; font-size: 1.1em; }
-.btn-primary b { display: inline-block; margin-left: 12px; font-size: 1.1em; }
+.btn-primary b { display: inline-block; margin-left: 2px; font-size: 1.05em; }
 
 .hero {
-  max-width: 1320px;
-  min-height: 510px;
-  padding: 49px 36px 22px;
+  max-width: 1408px;
+  min-height: 0;
+  padding: 30px 36px 18px;
   display: grid;
-  grid-template-columns: 42% 58%;
+  grid-template-columns: 40% 60%;
   align-items: center;
   position: relative;
 }
 .hero-copy { position: relative; z-index: 1; padding-top: 1px; }
 .eyebrow { font-size: .7rem; letter-spacing: .31em; margin-bottom: 17px; }
-.hero h1 { font-family: 'Lora', Georgia, serif; font-size: clamp(2.8rem, 4.2vw, 4.15rem); font-weight: 500; letter-spacing: -.04em; margin-bottom: .37em; }
+.hero h1 { font-family: 'Lora', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); font-weight: 500; letter-spacing: -.04em; line-height: 1.08; margin-bottom: .37em; text-wrap: balance; }
 .hero h1 em { color: #76d5bb; }
 .hero-subheadline {
   margin: 0 0 16px;
@@ -373,41 +375,63 @@ body::before {
   letter-spacing: .01em;
 }
 .lede { max-width: 480px; color: #c2c7c8; font-size: 1rem; line-height: 1.5; }
-.cta-row { margin: 25px 0 13px; }
-.btn-primary, .btn-ghost { border-radius: 15px; padding: .82em 1.3em; font-size: .91rem; }
-.btn-primary span { font-size: 1.35em; margin-right: 8px; vertical-align: -1px; }
+.cta-row { margin: 25px 0 13px; gap: 18px; }
+.btn-primary, .btn-ghost { display: inline-flex; align-items: center; gap: 10px; border-radius: 11px; padding: .95em 1.6em; font-size: 1rem; }
+.btn-primary svg, .btn-ghost svg { width: 18px; height: 18px; flex: 0 0 18px; }
 .btn-ghost { background: rgba(7, 10, 11, .62); border-color: rgba(255,255,255,.13); }
 .micro { color: #b7bdbe; font-size: .79rem; }
 
-.editor-preview { position: relative; width: min(100%, 770px); justify-self: end; filter: drop-shadow(0 24px 18px rgba(0, 0, 0, .5)); }
+.editor-preview { position: relative; width: min(100%, 810px); justify-self: end; }
+
+/* The room the mock sits in: one self-hosted WebP, no third-party request. It is anchored to the
+   mock rather than to the viewport, so the photographed laptop's screen lines up with the mock's
+   screen at every width. 225.7% wide and shifted left by 47.25% of that, which lands the photo's
+   screen edge exactly on the mock's; the vertical shift is 14.35% of the photo's own height. */
+.editor-preview::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: -106.65%;
+  top: 0;
+  width: 225.7%;
+  aspect-ratio: 1672 / 941;
+  transform: translateY(-14.35%);
+  background: url('/landing-bg.webp') 0 0 / 100% 100% no-repeat;
+  /* Fade the desk out before the image ends, so there is no hard edge down the page. */
+  mask-image: linear-gradient(to bottom, #000 0 60%, transparent 88%);
+  pointer-events: none;
+}
+.screen { filter: drop-shadow(0 24px 18px rgba(0, 0, 0, .5)); }
 .screen { border: 2px solid #76c6c4; border-radius: 20px 20px 7px 7px; background: #030506; padding: 16px 12px 12px; box-shadow: inset 0 0 0 3px #071417, 0 0 24px rgba(82, 230, 214, .18); }
 .laptop-top { position: absolute; top: 5px; left: 50%; width: 44%; transform: translateX(-50%); height: 8px; border-radius: 0 0 8px 8px; background: #122b2e; z-index: 1; }
 .laptop-top span { display: block; width: 4px; height: 4px; margin: 2px auto; border-radius: 50%; background: #1c7474; }
 .window-bar { height: 20px; border: 1px solid #1b3638; border-bottom: 0; border-radius: 10px 10px 0 0; background: #070b0d; padding: 7px 8px; }
 .window-bar i { display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: #fb5c50; }
 .window-bar i:nth-child(2) { background: #f4b83c; }.window-bar i:nth-child(3) { background: #38c66e; }
-.preview-page { min-height: 353px; border: 1px solid #172123; border-radius: 0 0 8px 8px; overflow: hidden; background: #060809; }
-.preview-document { position: relative; padding: 37px 48px 27px; font-size: 10px; color: #eef1f1; }
-.preview-document h2 { font-size: 23px; margin: 0 0 10px; }.preview-document h3 { font-size: 15px; margin: 17px 0 4px; }
+.preview-page { min-height: 392px; border: 1px solid #172123; border-radius: 0 0 8px 8px; overflow: hidden; background: #060809; }
+.preview-document { position: relative; padding: 42px 56px 30px; font-size: 11.2px; color: #eef1f1; }
+.preview-document h2 { font-size: 26px; margin: 0 0 11px; }.preview-document h3 { font-size: 17px; margin: 19px 0 5px; }
 .preview-document small, .preview-document p, .preview-document ol { color: #c4cbcc; }.preview-document p { line-height: 1.48; margin: 17px 0; }.preview-document hr { margin-top: 16px; border: 0; border-top: 1px solid #152021; }.preview-document ol { padding-left: 18px; margin: 0; }
 .mobile-preview-more { display: block; }
-.word-count { position: absolute; right: auto; bottom: 11px; left: 50%; transform: translateX(-50%); padding: 5px 13px; border: 1px solid #243235; border-radius: 13px; color: #a7b0b1; font-size: 8px; white-space: nowrap; }
+.word-count { position: absolute; right: auto; bottom: 12px; left: 50%; transform: translateX(-50%); padding: 5px 13px; border: 1px solid #243235; border-radius: 13px; color: #a7b0b1; font-size: 9px; white-space: nowrap; }
 .preview-tools { display: none; }
-/* The base overhangs the screen by 36px, which is exactly the hero's side padding, so the
-   mock never pushes a horizontal scrollbar onto the page. */
-.laptop-base { height: 16px; margin: 0 -36px; border-radius: 0 0 50% 50%; background: linear-gradient(#89c7c8, #1b4e52 15%, #071314 47%, #020506); border-top: 1px solid #a3e2df; }.laptop-base::after { content: ""; display: block; width: 18%; height: 4px; margin: 0 auto; border: 1px solid #37676a; border-top: 0; border-radius: 0 0 6px 6px; }
+/* The photograph supplies the laptop's lid, rim and base, so the drawn shell stands down. */
+.laptop-top, .laptop-base { display: none; }
 
-.features-section { max-width: 1320px; padding: 22px 36px 55px; }
+.features-section { max-width: 1408px; padding: 10px 36px 55px; }
 .feature-highlights { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; margin: 0 0 34px; }.feature-highlight { display: flex; gap: 21px; }.feature-highlight h3 { margin: 9px 0 6px; font-size: 1rem; }.feature-highlight p { color: #b5bdbe; font-size: .86rem; line-height: 1.45; margin: 0; }.feature-icon { flex: 0 0 57px; width: 57px; height: 57px; display: grid; place-items: center; border: 1px solid; border-radius: 14px; font-size: 30px; }.privacy-icon { color: #54f5ce; background: rgba(0, 109, 85, .23); border-color: rgba(66, 225, 188, .2); }.focus-icon { color: #51bcff; background: rgba(0, 91, 149, .24); border-color: rgba(74, 179, 237, .2); }.edit-icon { color: #ffda61; background: rgba(123, 88, 0, .22); border-color: rgba(241, 191, 71, .2); }.offline-icon { color: #d281ff; background: rgba(100, 35, 145, .25); border-color: rgba(201, 98, 255, .2); }
 .showcase { display: grid; grid-template-columns: 42% 58%; gap: 25px; border: 1px solid var(--border); border-radius: 16px; padding: 25px 40px; background: linear-gradient(105deg, rgba(10,15,16,.94), rgba(5,8,9,.7)); }.showcase-copy h2 { font-family: 'Lora', Georgia, serif; font-size: 2.2rem; font-weight: 500; letter-spacing: -.04em; }.showcase-copy p:last-child { max-width: 460px; color: #c1c7c8; font-size: 1rem; line-height: 1.62; }.showcase-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }.showcase-modes > article > h3 { margin: 9px 0 0; font-size: .9rem; }.showcase-modes > article > p { margin: 0; color: #aeb7b8; font-size: .82rem; }.mode-preview { height: 191px; position: relative; overflow: hidden; border: 1px solid #243033; border-radius: 9px; padding: 26px 29px 12px; background: #020405; color: #eef1f1; font-size: 7px; }.dots { position: absolute; top: 8px; left: 13px; color: #f25553; font-size: 7px; word-spacing: 2px; }.mode-preview h3 { font-size: 14px; margin: 0 0 7px; }.mode-preview small, .mode-preview p, .mode-preview ol { color: #c4caca; }.mode-preview hr { border: 0; border-top: 1px solid #172021; margin: 12px 0; }.mode-preview p { line-height: 1.35; }.mode-preview ol { padding-left: 12px; line-height: 1.5; }.focused-preview { padding-left: 43px; }.narrow-copy { width: 73%; }.mini-tools { position: absolute; right: 0; top: 0; width: 20%; height: 100%; border-left: 1px solid #263032; background: repeating-linear-gradient(#0a0e0f 0 16px, #131b1d 17px 18px); }
+/* The light reader sits where it always did. A dark reader is laid over it, starting 30% in
+   from the top and left, so the light screen shows through as an L down its top and left. */
 .personalize-preview {
   padding: 14px 20px;
   border-color: #d7d7d7;
   background: #ededed;
 }
+.reader-stack { position: absolute; inset: 14px 20px; }
 .light-reader {
-  position: relative;
-  height: 100%;
+  position: absolute;
+  inset: 0;
   padding: 21px 24px 24px;
   overflow: hidden;
   border-radius: 14px;
@@ -415,13 +439,33 @@ body::before {
   color: #18202a;
   box-shadow: 0 5px 14px rgba(18, 26, 33, .13), 0 1px 3px rgba(18, 26, 33, .08);
 }
+.dark-reader {
+  position: absolute;
+  top: 30%;
+  left: 30%;
+  right: 0;
+  bottom: 0;
+  padding: 13px 15px;
+  overflow: hidden;
+  border: 1px solid #263336;
+  border-radius: 10px;
+  background: linear-gradient(160deg, #0c1416, #05090a 62%, #020405);
+  color: #eef1f1;
+  font-size: 6px;
+  box-shadow: 0 16px 30px rgba(6, 10, 12, .55), 0 -1px 0 rgba(255, 255, 255, .06);
+}
+.dark-reader h3 { color: #fff; font-size: 10px; margin: 0 0 4px; }
+.dark-reader h4 { margin: 8px 0 3px; color: #e8eded; font-size: 7px; }
+.dark-reader small, .dark-reader p, .dark-reader ol { color: #b9c1c2; }
+.dark-reader hr { margin: 8px 0; border: 0; border-top: 1px solid #172021; }
+.dark-reader p { margin: 0; line-height: 1.42; }
+.dark-reader ol { margin: 0; padding-left: 11px; line-height: 1.45; }
 .light-reader h3 { color: #16202a; font-size: 13px; margin: 0 0 6px; }
-.light-reader h4 { margin: 13px 0 5px; color: #16202a; font-size: 9px; }
+.light-reader h4 { margin: 11px 0 4px; color: #16202a; font-size: 9px; }
 .light-reader small, .light-reader p, .light-reader ol { color: #475564; }
 .light-reader hr { margin: 10px 0; border-color: #dde1e4; }
 .light-reader p { margin: 0; line-height: 1.42; }
-.light-reader ol { margin: 0; padding-left: 13px; line-height: 1.55; }
-.light-word-count { position: absolute; right: 18px; bottom: 10px; padding: 5px 11px; border-radius: 12px; background: #fff; box-shadow: 0 4px 10px rgba(18, 26, 33, .16); color: #747d85; font-size: 7px; }
+.light-reader ol { margin: 0; padding-left: 13px; line-height: 1.5; }
 .legacy-features { display: none; }
 
 @media (max-width: 900px) { .hero { grid-template-columns: 1fr; padding-top: 44px; }.editor-preview { justify-self: center; margin-top: 42px; }.feature-highlights { grid-template-columns: repeat(2, 1fr); }.showcase { grid-template-columns: 1fr; }.nav { padding-inline: 24px; } }
@@ -439,6 +483,8 @@ body::before {
     justify-self: center;
     padding: 0;
   }
+  /* The photographed laptop belongs to the desktop composition only. */
+  .editor-preview::before { display: none; }
   .screen {
     position: relative;
     padding: 5px;

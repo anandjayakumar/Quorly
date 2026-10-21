@@ -23,7 +23,7 @@
 <!-- class="q-app" scopes the /app/ app-shell rules in styles.css: the editor page itself never
      scrolls (its panel and main column are the scroll owners), which keeps the landing page and
      the single-file build scrolling like normal documents. -->
-<body class="q-app">
+<body class="q-app sidebar-collapsed">
 
 <div id="commandPalette">
     <div class="cmd-item" data-cmd="image">@image — Insert Image</div>
@@ -95,7 +95,7 @@
           <svg class="icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
           <svg class="icon-sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
         </button>
-        <button class="icon-btn" type="button" id="sidebarCollapse" data-action="toggle-sidebar" title="Hide panel" aria-label="Hide panel" aria-controls="sidebarPanel" aria-expanded="true">
+        <button class="icon-btn" type="button" id="sidebarCollapse" data-action="toggle-sidebar" title="Hide panel" aria-label="Hide panel" aria-controls="sidebarPanel" aria-expanded="false">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
       </div>
@@ -182,9 +182,9 @@
             <li role="option" tabindex="-1" data-value="720" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="10" y="4" width="4" height="8" rx="1" fill="currentColor"/></svg></li>
             <li role="option" tabindex="-1" data-value="840" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="8" y="4" width="8" height="8" rx="1" fill="currentColor"/></svg></li>
             <li role="option" tabindex="-1" data-value="960" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="6" y="4" width="12" height="8" rx="1" fill="currentColor"/></svg></li>
-            <li role="option" tabindex="-1" data-value="1080" aria-selected="true"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="4" y="4" width="16" height="8" rx="1" fill="currentColor"/></svg></li>
+            <li role="option" tabindex="-1" data-value="1080" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="4" y="4" width="16" height="8" rx="1" fill="currentColor"/></svg></li>
             <li role="option" tabindex="-1" data-value="1200" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="2" y="4" width="20" height="8" rx="1" fill="currentColor"/></svg></li>
-            <li role="option" tabindex="-1" data-value="1320" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="0" y="4" width="24" height="8" rx="1" fill="currentColor"/></svg></li>
+            <li role="option" tabindex="-1" data-value="1320" aria-selected="true"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="0" y="4" width="24" height="8" rx="1" fill="currentColor"/></svg></li>
           </ul>
         </div>
       </div>

@@ -123,10 +123,14 @@
   --accent:#3b82f6;
   --radius:20px;
   --body-font-size: 17px;
-  --editor-width: 1080px;
+  --editor-width: 1320px;
   --sidebar-width: 400px;
   --app-gap: 28px;
   --focus-dur: 0.42s;
+  /* The panel slide and the reader's re-centring share one duration and one curve, so they
+     read as a single gesture. Ease-out-expo: fast off the mark, long soft landing. */
+  --panel-dur: 0.46s;
+  --panel-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --title-font: 'Montserrat', sans-serif;
   --body-font: 'Inter', system-ui, sans-serif;
 }
@@ -145,7 +149,7 @@ body.q-app{
 
 body{
   margin:0;
-  background: #0e0e0e;
+  background: #030303;
   color:var(--text);
   font-family:'Inter',system-ui;
   padding:16px;
@@ -710,10 +714,14 @@ body.light-mode #chatInput::placeholder {
 body.focus-mode .sidebar {
   opacity: 0;
   pointer-events: none;
-  transform: translateX(24px);
+  /* Docked on the left now, so it leaves the way it came: all the way off the edge, in
+     lockstep with the reader's padding. */
+  transform: translateX(-100%);
+  visibility: hidden;
   transition:
-    opacity 0.2s ease,
-    transform var(--focus-dur) cubic-bezier(0.4, 0, 0.2, 1);
+    transform var(--panel-dur) var(--panel-ease),
+    opacity 0.18s ease,
+    visibility 0s linear var(--panel-dur);
 }
 
 body.focus-mode .app {
@@ -781,10 +789,56 @@ body.q-app .sidebar {
      reader's own top margin is only the remaining 16px — otherwise the reading column sits
      16px lower than the panel at the top of the page. */
   body.q-app .reader {
-    margin: 16px 0 32px;
+    margin: 16px auto 32px;
     min-height: calc(100vh - 48px);
   }
-  body.q-app .sidebar { top: 32px; }
+
+  /* The panel is docked to the left edge of the window the way a side menu is: fixed, full
+     height, square against the screen, with the reader taking the room beside it. It used to
+     be a rounded card in the second grid column, on the right. */
+  body.q-app .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    height: auto;
+    width: var(--sidebar-width);
+    border-radius: 0;
+    border-top: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-right: 1px solid rgba(255, 255, 255, .08);
+    z-index: 40;
+    /* An opaque surface instead of a blurred translucent one: the panel now sits on a flat
+       page, so the blur bought nothing and cost a full-height backdrop pass on every frame of
+       the slide. That was the stutter. A soft right shadow keeps it reading as a layer. */
+    background: #080808;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 12px 0 32px rgba(0, 0, 0, .55);
+    will-change: transform;
+    transition:
+      transform var(--panel-dur) var(--panel-ease),
+      opacity 0.18s ease,
+      visibility 0s linear 0s;
+  }
+  body.q-app.light-mode .sidebar {
+    background: #ffffff;
+    border-right-color: rgba(0, 0, 0, .08);
+    box-shadow: 12px 0 32px rgba(0, 0, 0, .07);
+  }
+
+  body.q-app .app {
+    display: block;
+    max-width: none;
+    padding: 16px 16px 16px var(--sidebar-width);
+    transition: padding-left var(--panel-dur) var(--panel-ease);
+  }
+  /* No panel — collapsed or in focus mode — the reader takes the whole width again. */
+  body.sidebar-collapsed .app,
+  body.focus-mode .app {
+    padding-left: 16px;
+    max-width: none;
+    grid-template-columns: none;
+  }
 }
 
 /* Ensure the reader itself doesn't overflow */
@@ -799,6 +853,12 @@ body.q-app .sidebar {
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   position: relative;
   overflow: visible;
+}
+
+/* The page is near-black now, so the pure-black sheet needs a hairline to keep its edge
+   (a black drop shadow cannot read against a black page). */
+body:not(.light-mode) .reader {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .doc{max-width:calc(var(--editor-width) - 140px);margin:0 auto}
@@ -1253,12 +1313,23 @@ body.light-mode .sidebar {
 }
 
 /* UI-13: the header chevron hides the panel; a fixed button brings it back. Unlike focus
-   mode (immersive, Esc to leave) this only affects the panel — the reader keeps its
-   layout. Not persisted: a reload starts with the panel open. */
-body.sidebar-collapsed .sidebar { display: none; }
-body.sidebar-collapsed .app {
-  grid-template-columns: minmax(0, var(--editor-width)) 0px;
-  gap: 0;
+   mode (immersive, Esc to leave) this only affects the panel — the reader keeps its layout.
+   Not persisted, and the editor now opens folded, so a first visit lands on the page rather
+   than on the controls. Scoped above the drawer breakpoint: on a phone the panel is a
+   drawer, and this class must not keep it at `display: none`.
+   `display` cannot animate, so collapsed is a slide off the edge (same motion and timing as
+   focus mode) rather than a snap; `visibility` flips only once the slide has finished. */
+@media (min-width: 1181px) {
+  body.sidebar-collapsed .sidebar {
+    transform: translateX(-100%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      transform var(--panel-dur) var(--panel-ease),
+      opacity 0.18s ease,
+      visibility 0s linear var(--panel-dur);
+  }
 }
 
 /* Sidebar header: brand on the left, panel controls on the right (UI-13). */
@@ -1316,11 +1387,29 @@ body.sidebar-collapsed .app {
 .sidebar-expand {
   position: fixed;
   top: 24px;
-  right: 24px;
+  left: 24px;
   z-index: 1500;
-  display: none;
+  display: flex;
+  /* Fades in just after the panel has cleared the edge, so the two never fight. */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-6px);
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease,
+    transform var(--panel-dur) var(--panel-ease),
+    visibility 0s linear var(--panel-dur);
 }
-body.sidebar-collapsed .sidebar-expand { display: flex; }
+body.sidebar-collapsed .sidebar-expand {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  pointer-events: auto;
+  transition:
+    opacity 0.18s ease 0.12s,
+    transform var(--panel-dur) var(--panel-ease) 0.06s,
+    visibility 0s linear 0s;
+}
 .brand-icon {
   width: 32px;
   height: 32px;
