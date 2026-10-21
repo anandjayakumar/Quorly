@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Quorly — Private Browser Writing App &amp; Markdown Editor</title>
-<meta name="description" content="Quorly is a private, distraction-free browser writing app and Markdown editor that works offline. No account, no sign-up, no upload, no ads, no cookies — your words stay on your device." />
+<title>Quorly — Private Offline Text Editor</title>
+<meta name="description" content="Quorly is a private, distraction-free text editor that works offline. No account, no sign-up, no upload, no ads, no cookies — your words stay on your device." />
 <link rel="canonical" href="https://quorly.us.ci/" />
 <link rel="alternate" type="text/markdown" href="https://quorly.us.ci/index.md" />
 <meta name="theme-color" content="#0e0e0e" />
@@ -14,16 +14,16 @@
 
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Quorly" />
-<meta property="og:title" content="Quorly — Private Browser Writing App &amp; Markdown Editor" />
-<meta property="og:description" content="A private, distraction-free browser writing app and Markdown editor that works offline. No account, no upload, no ads, no cookies." />
+<meta property="og:title" content="Quorly — Private Offline Text Editor" />
+<meta property="og:description" content="A private, distraction-free text editor that works offline. No account, no upload, no ads, no cookies." />
 <meta property="og:url" content="https://quorly.us.ci/" />
 <meta property="og:image" content="https://quorly.us.ci/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="Quorly — private, local-first writing in your browser." />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Quorly — Private Browser Writing App &amp; Markdown Editor" />
-<meta name="twitter:description" content="A private, distraction-free browser writing app and Markdown editor that works offline. No account, no upload, no ads, no cookies." />
+<meta name="twitter:title" content="Quorly — Private Offline Text Editor" />
+<meta name="twitter:description" content="A private, distraction-free text editor that works offline. No account, no upload, no ads, no cookies." />
 <meta name="twitter:image" content="https://quorly.us.ci/og.png" />
 
 <link rel="stylesheet" href="/landing.css" />
@@ -37,9 +37,9 @@
       "name": "Quorly",
       "url": "https://quorly.us.ci/",
       "applicationCategory": "WritingApplication",
-      "applicationSubCategory": "Markdown editor",
+      "applicationSubCategory": "Private offline text editor",
       "operatingSystem": "Any (web browser)",
-      "description": "A private, distraction-free browser writing app and Markdown editor that runs entirely in your browser and works offline. No account, no sign-up, no upload, no ads, no cookies.",
+      "description": "A private, distraction-free text editor that runs entirely in your browser and works offline. No account, no sign-up, no upload, no ads, no cookies.",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
       "featureList": [
         "Rich-text editing with headings, lists, quotes and tables",
@@ -112,11 +112,12 @@
 
 <header class="nav">
   <a class="brand" href="/">
-    <img src="/quorly.png" alt="" width="40" height="40" />
+    <img src="/quorly.png" alt="Quorly private editor logo" width="40" height="40" />
     <span>Quorly</span>
   </a>
   <nav class="nav-links">
     <a href="#features">Features</a>
+    <a href="/privacy/">Privacy</a>
     <a href="#faq">FAQ</a>
     <a class="nav-cta" href="/app/">Open editor</a>
   </nav>
@@ -125,24 +126,73 @@
 <main>
 
   <section class="hero">
-    <p class="eyebrow">Private by architecture</p>
-    <h1>A writing app that<br><em>never sees</em> your words.</h1>
-    <p class="lede">
-      Quorly is a private, distraction-free browser writing app and Markdown editor that runs
-      entirely in your browser — and keeps working offline. No account, no sign-up, no upload,
-      no ads, no cookies. Your draft never leaves your device.
-    </p>
-    <p class="cta-row">
-      <a class="btn-primary" href="/app/">Start writing</a>
-      <a class="btn-ghost" href="#features">See what it does</a>
-    </p>
-    <p class="micro">Free · No sign-up · Works offline · Nothing installed</p>
+    <div class="hero-copy">
+      <p class="eyebrow">Private by design</p>
+      <h1>A writing app that<br><em>never sees</em> your words.</h1>
+      <h2 class="hero-subheadline">The private, offline text editor.</h2>
+      <p class="lede">
+        Quorly is a private, distraction-free text editor that runs
+        entirely in your browser. No account, no sign-up, no upload, no ads, no cookies.<br>
+        Your draft saves as you type, works online and offline, and never leaves your device.
+      </p>
+      <p class="cta-row">
+        <a class="btn-primary" href="/app/"><span aria-hidden="true">✎</span> Start writing <b aria-hidden="true">→</b></a>
+        <a class="btn-ghost" href="#features"><span aria-hidden="true">▷</span> See what it does</a>
+      </p>
+      <p class="micro">Free&nbsp; · &nbsp;No sign-up&nbsp; · &nbsp;Works offline&nbsp; · &nbsp;Nothing installed</p>
+    </div>
+
+    <div class="editor-preview" aria-label="Preview of the Quorly editor">
+      <div class="laptop-top"><span></span></div>
+      <div class="screen">
+        <div class="window-bar"><i></i><i></i><i></i></div>
+        <div class="preview-page">
+          <div class="preview-document">
+            <h2>A calmer way to write</h2>
+            <small>Estimated read · 1 min</small>
+            <hr>
+            <p>Ideas flow better when there are fewer distractions. Quorly gives you a clean, minimal space to write, think and organize your thoughts — right in your browser.</p>
+            <h3>Built for focus</h3>
+            <ol><li>Distraction-free writing</li><li>Works offline</li><li>Your data never leaves your device</li></ol>
+            <div class="mobile-preview-more">
+              <h3>Private by design</h3>
+              <p>Your work lives in your browser, on your device. There is no account to create and no draft to upload.</p>
+              <p>Open a blank page, settle into your thoughts, and keep writing — even when you are offline.</p>
+            </div>
+            <div class="word-count">80 words&nbsp;&nbsp;&nbsp; 464 chars</div>
+          </div>
+          <aside class="preview-tools">
+            <strong>◱&nbsp; Quorly</strong>
+            <div class="tool-heading">Document</div>
+            <div class="tool-actions"><span>▱<br>New</span><span>▱<br>Import</span><span>⇩<br>Export</span><span>▱<br>Focus</span></div>
+            <div class="tool-heading">Formatting</div>
+            <div class="format-select">Tᵣ&nbsp; Default&nbsp;⌄</div>
+            <div class="format-grid"><b>B</b><i>I</i><u>U</u><b>+</b><b>⌁</b><b>❞</b><b>☷</b><b>☷</b></div>
+            <div class="tool-heading">Recents</div>
+            <div class="tool-search">⌕&nbsp; Search documents</div>
+            <div class="recent-file">▱ &nbsp; A calmer way to write<br><small>just now · 80 words</small></div>
+          </aside>
+        </div>
+      </div>
+      <div class="laptop-base"></div>
+    </div>
   </section>
 
-  <section id="features" class="section">
-    <h2>A minimalist browser writing app built for focus and privacy.</h2>
-    <p class="micro">Everything you need to finish a draft. Nothing you don't.</p>
-    <div class="grid">
+  <section id="features" class="section features-section">
+    <div class="feature-highlights">
+      <article class="feature-highlight"><span class="feature-icon privacy-icon">♧</span><div><h3>Completely private</h3><p>No account, no ads, no cookies.<br>Your writing stays on your device.</p></div></article>
+      <article class="feature-highlight"><span class="feature-icon focus-icon">ϟ</span><div><h3>Distraction-free</h3><p>A clean, minimal interface to<br>help you focus on what matters.</p></div></article>
+      <article class="feature-highlight"><span class="feature-icon edit-icon">▤</span><div><h3>Rich editing</h3><p>Headings, lists, quotes, links,<br>inline code and more — with<br>live preview.</p></div></article>
+      <article class="feature-highlight"><span class="feature-icon offline-icon">▱</span><div><h3>Works offline</h3><p>Runs entirely in your browser,<br>so you can write anytime,<br>anywhere.</p></div></article>
+    </div>
+    <div class="showcase">
+      <div class="showcase-copy"><p class="eyebrow">Write your way</p><h2>Minimal. Powerful. Yours.</h2><p>Everything you need to finish a draft. Nothing you don't. Quorly gives you a clean, flexible writing experience — from a full editor with tools, to a distraction-free dark mode, to a centered, focused view.</p></div>
+      <div class="showcase-modes">
+        <article><div class="mode-preview centered-preview"><span class="dots">● ● ●</span><h3>A calmer way to write</h3><small>Estimated read · 1 min</small><hr><p>Ideas flow better when there are fewer distractions. Quorly gives you a clean, minimal space to write, think and organize your thoughts.</p><b>Built for focus</b><ol><li>Distraction-free writing</li><li>Works offline</li><li>Your data never leaves your device</li></ol></div><h3>Distraction-free mode</h3><p>A clean, immersive writing experience.</p></article>
+        <article><div class="mode-preview personalize-preview"><div class="light-reader"><h3>A calmer way to write</h3><small>Estimated read · 1 min</small><hr><p>Ideas flow better when there are fewer distractions. Quorly gives you a clean, minimal space to write, think and organize your thoughts.</p><h4>Built for focus</h4><ol><li>Distraction-free writing</li><li>Works offline</li><li>Your data never leaves your device</li></ol><span class="light-word-count">80 words&nbsp;&nbsp;&nbsp;464 chars</span></div></div><h3>Personalize your space</h3><p>Choose a light reader, your preferred type, and a comfortable reading width.</p></article>
+      </div>
+    </div>
+    <div class="legacy-features grid">
       <article class="card">
         <h3>Write without friction</h3>
         <p>Rich text with headings, bold and italic, lists, quotes, links, inline code and aligned text — plus a floating toolbar that appears right where your cursor is.</p>
@@ -208,7 +258,7 @@
 
 <footer class="footer">
   <div class="footer-inner">
-    <a class="brand small" href="/"><img src="/quorly.png" alt="" width="22" height="22" /><span>Quorly</span></a>
+    <a class="brand small" href="/"><img src="/quorly.png" alt="Quorly private editor logo" width="22" height="22" /><span>Quorly</span></a>
     <nav>
       <a href="/app/">Editor</a>
       <a href="/privacy/">Privacy</a>
@@ -216,7 +266,7 @@
       <a href="/compare/">Compare</a>
     </nav>
     <p class="copy">Your words stay on your device.</p>
-    <p class="micro">Reach us: <!--email_off--><a href="mailto:hello@quorly.us.ci">hello@quorly.us.ci</a><!--/email_off--> (best-effort, no SLA)</p>
+    <p class="micro">Reach us: <!--email_off--><a href="mailto:hello@quorly.us.ci">hello@quorly.us.ci</a><!--/email_off--></p>
   </div>
 </footer>
 
