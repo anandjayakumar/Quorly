@@ -32,7 +32,9 @@
     <p>
       Quorly is a writing app that runs entirely in your browser. We do not receive your
       documents, your titles, your images, your keystrokes or your file names. There is no
-      server that stores your writing. The only thing we measure is anonymous page visits.
+      server that stores your writing. What we count is anonymous and coarse: page visits,
+      and a cookie-free counter that notes that the editor was opened, that you started
+      typing and which export format you chose — never a word of what you wrote.
     </p>
 
     <h2>What never leaves your device</h2>
@@ -58,6 +60,26 @@
       aggregate data is handled by Cloudflare under their
       <a href="https://www.cloudflare.com/privacypolicy/">privacy policy</a>.
     </p>
+    <p>
+      <strong>Quorly's own counter.</strong> The editor counts a few things itself, so we can
+      tell whether the app is being used. The browser sends one small request to
+      <code>/e</code> on this same site, and the whole payload is a single event name:
+    </p>
+    <ul class="checklist">
+      <li>you opened the editor from the home page</li>
+      <li>you started typing in a document</li>
+      <li>you exported a file, and in which format</li>
+      <li>the browser's storage was full</li>
+      <li>you returned to a document you had written before</li>
+      <li>an AI agent called one of the editor's tools</li>
+    </ul>
+    <p>
+      It carries no cookie, no identifier and no document content, and it never carries what
+      you typed — the event name is the whole payload, sent with <code>sendBeacon</code> so it
+      cannot delay what you are doing. The counts are kept as aggregate rows in Cloudflare's
+      analytics service. We can see that the editor was used; we cannot see what was written
+      in it, because that was never sent.
+    </p>
 
     <h2>What we store on your device</h2>
     <p>
@@ -68,10 +90,13 @@
       site data deletes them permanently — so export anything important.
     </p>
 
-    <h2>No accounts, no email</h2>
+    <h2>No accounts, but you can reach us</h2>
     <p>
-      Quorly has no sign-up, no login and no newsletter. We do not have a way to contact you
-      and you do not have a way to give us your email address.
+      Quorly has no sign-up, no login and no newsletter. We never ask for your email address,
+      and your draft never leaves your device. If you want to reach us — to report a problem,
+      report a security issue, or ask a question — write to
+      <a href="mailto:hello@quorly.us.ci">hello@quorly.us.ci</a>. That is a best-effort
+      contact with no SLA: nobody is obligated to reply, and there is no support desk.
     </p>
 
     <p class="micro"><a href="/">← Back to Quorly</a></p>

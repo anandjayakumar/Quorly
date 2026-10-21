@@ -65,3 +65,5 @@ You can paste or drop images, and insert tables, dividers and code blocks. Image
 Free · No sign-up · Works offline · Nothing installed
 
 [Open the editor](https://quorly.us.ci/app/)
+
+Reach us: [hello@quorly.us.ci](mailto:hello@quorly.us.ci) (best-effort, no SLA)
