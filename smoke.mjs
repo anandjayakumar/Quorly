@@ -69,7 +69,8 @@ await checkDocument('/compare/', {
     'StackEdit',
     'https://quorly.us.ci/compare/',
     'Works offline',
-    'No account',
+    'requires no account',
+    '/landing.js',
   ],
   notContains: ['quorly.pages.dev', 'style="', '<script'],
 });

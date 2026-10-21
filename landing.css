@@ -308,8 +308,15 @@ kbd {
   color: var(--text);
   font-weight: 600;
   width: 26%;
-  white-space: nowrap;
+  white-space: normal;
 }
 .compare-table tbody td {
   color: var(--muted);
+}
+
+/* ---------- table scroll wrapper ---------- */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }

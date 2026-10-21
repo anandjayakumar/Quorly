@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Compare — Quorly vs Dillinger, StackEdit, Typora</title>
-<meta name="description" content="Quorly vs the free browser rivals Dillinger and StackEdit: works offline, no account, no cloud, no tracking. Plus an honest one-line contrast with the desktop app Typora." />
+<meta name="description" content="Quorly vs Dillinger and StackEdit: works offline, no account, no cloud. Honest comparison with desktop app Typora." />
 <link rel="canonical" href="https://quorly.us.ci/compare/" />
 <meta name="theme-color" content="#0e0e0e" />
 <link rel="icon" href="/favicon.png" type="image/png" />
@@ -33,14 +33,18 @@
     <h2>What Quorly is</h2>
     <p>
       Quorly is a private, local-first browser writing app: it runs entirely in your browser,
-      requires no account (No account, no sign-up, no login, no email), sends nothing besides an anonymous visit count, and works offline
-      once loaded. Documents stay in this browser (localStorage for the open draft,
+      requires no account and sends no cookies, no identifiers and no document content — the only
+      first-party network request is a cookie-free POST of a named event name (e.g. started typing,
+      exported, storage limit reached) to our own `/e` endpoint, plus Cloudflare's anonymous visit count.
+      Everything else stays on your device. It works offline once loaded. Documents stay in this
+      browser (localStorage for the open draft, IndexedDB for parked snapshots, versions and images).
       IndexedDB for parked snapshots, versions and images). It exports Markdown, PDF,
       plain text and <code>.quorly</code>, has Focus Mode, themes and five typefaces,
       a Recents library, and in-browser WebMCP tools for AI agents.
     </p>
 
     <h2>Feature comparison</h2>
+    <div class="table-scroll">
     <table class="compare-table">
       <thead>
         <tr>
@@ -88,17 +92,17 @@
           <td>None built-in</td>
         </tr>
         <tr>
-          <th scope="row">No tracking (besides anonymous visits)</th>
-          <td>Yes</td>
-          <td>No — analytics present</td>
-          <td>No — analytics present</td>
-          <td>Yes — local app</td>
+          <th scope="row">Cookies / identifiers / document content</th>
+          <td>None sent (named event name only to `/e`)</td>
+          <td>No privacy claim of no-tracking (third-party analytics likely)</td>
+          <td>No privacy claim of no-tracking (analytics present)</td>
+          <td>None needed (local app)</td>
         </tr>
         <tr>
           <th scope="row">Installable PWA</th>
           <td>Yes</td>
-          <td>No</td>
-          <td>Yes</td>
+          <td>No (service worker only — partial)</td>
+          <td>Partial (service worker, not full install)</td>
           <td>N/A (desktop install)</td>
         </tr>
         <tr>
@@ -125,7 +129,7 @@
         <tr>
           <th scope="row">Themes + typefaces</th>
           <td>Light/dark + 5 fonts, adjustable size/width</td>
-          <td>Dark mode only</td>
+          <td>Light + dark toggle (default light)</td>
           <td>Multiple themes</td>
           <td>Custom CSS themes</td>
         </tr>
@@ -145,7 +149,8 @@
         </tr>
       </tbody>
     </table>
-    <p class="micro">Sources: dillinger.io, stackedit.io, typora.io/store.typora.io, verified October 2026.</p>
+    </div>
+    <p class="micro">Sources: dillinger.io (features + compare pages), stackedit.io (features + docs), typora.io/store.typora.io; StackEdit reviews verified via third-party comparison sites (e.g. Phoenix Code comparison, July 2026). All as of October 2026.</p>
 
     <h2>Dillinger</h2>
     <p>
@@ -185,9 +190,10 @@
       <strong>Where Quorly differs — honestly.</strong> StackEdit is a Markdown source editor;
       Quorly is a rich-text editor that edits the rendered page. StackEdit's cloud sync requires
       a Google sign-in; Quorly has zero accounts. StackEdit's offline mode depends on a service
-      worker but does not offer a full PWA install or an IndexedDB-based document library with
-      snapshots and images. StackEdit does not claim to block tracking, while Quorly sends only
-      an anonymous visit count to the same origin. StackEdit does not register WebMCP tools.
+      worker (partial PWA, not a full install) and lacks an IndexedDB-based document library
+      with snapshots and images. StackEdit does not claim to block tracking, while Quorly sends
+      only named event names (no cookies, no identifiers, no document content) to its own
+      endpoint. StackEdit does not register WebMCP tools.
     </p>
     <p>
       <strong>Who StackEdit is for.</strong> Writers who want live Markdown rendering with
@@ -200,7 +206,8 @@
       <li><strong>Typora is the polished desktop app.</strong> It is a native macOS / Windows / Linux
       application ($14.99 one-time, 3 devices, 15-day trial) with seamless WYSIWYG Markdown editing,
       custom CSS themes, and extensive exports (PDF, Word, HTML, LaTeX, EPUB). It works on local
-      files and needs no browser, no account, and sends nothing to a server. It does not offer
+      files, needs no account to write, and works primarily offline. Optional updates and
+      cross-device theme sync may contact the server, but no document content is sent. It does not offer
       web-based collaboration, an installable PWA, or in-browser agent tools.</li>
       <li><strong>Quorly is the browser-first alternative.</strong> It needs no install, runs on any device
       with a browser, keeps everything in the browser (no desktop files), works offline as a PWA,
@@ -231,5 +238,6 @@
   </div>
 </footer>
 
+<script src="/landing.js" defer></script>
 </body>
 </html>
