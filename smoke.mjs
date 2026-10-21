@@ -72,7 +72,7 @@ await checkDocument('/compare/', {
     'requires no account',
     '/landing.js',
   ],
-  notContains: ['quorly.pages.dev', 'style="', '<script'],
+  notContains: ['quorly.pages.dev', 'style="', 'onclick=', 'onload=', 'onerror='],
 });
 
 // --- agent discovery surface (llms.txt, skill, catalogs, robots signal) -----------
