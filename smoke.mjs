@@ -61,6 +61,14 @@ await checkDocument('/privacy/', {
   notContains: ['legal@', 'support@', 'Version History', 'doc_versions_v13'],
 });
 
+// The privacy notice has to stay true: the editor's own counter must be disclosed, and the
+// old wording ("the only thing we measure is anonymous page visits") must not come back.
+await checkDocument('/privacy/', {
+  type: 'text/html',
+  contains: ["Quorly's own counter", 'sendBeacon', 'no cookie, no identifier and no document content'],
+  notContains: ['The only thing we measure is anonymous page visits'],
+});
+
 // --- agent discovery surface (llms.txt, skill, catalogs, robots signal) -----------
 
 await checkDocument('/llms.txt', {
