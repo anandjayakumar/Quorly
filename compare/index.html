@@ -34,8 +34,8 @@
     <p>
       Quorly is a private, local-first browser writing app: it runs entirely in your browser,
       requires no account and sends no cookies, no identifiers and no document content — the only
-      first-party network request is a cookie-free POST of a named event name (e.g. started typing,
-      exported, storage limit reached) to our own `/e` endpoint, plus Cloudflare's anonymous visit count.
+      first-party network request is a cookie-free POST of a single event name (e.g. "started typing",
+      "exported", "storage limit reached") to our own `/e` endpoint, plus Cloudflare's anonymous visit count.
       Everything else stays on your device. It works offline once loaded. Documents stay in this
       browser (localStorage for the open draft, IndexedDB for parked snapshots, versions and images).
       It exports Markdown, PDF,
@@ -73,7 +73,7 @@
         <tr>
           <th scope="row">Works offline</th>
           <td>Yes — full PWA</td>
-          <td>Yes — localStorage drafts only</td>
+          <td>Yes — once loaded (localStorage drafts)</td>
           <td>Yes — service-worker PWA</td>
           <td>Yes — local files</td>
         </tr>
@@ -101,7 +101,7 @@
         <tr>
           <th scope="row">Installable PWA</th>
           <td>Yes</td>
-          <td>No (service worker only — partial)</td>
+          <td>No — not installable</td>
           <td>Partial (service worker, not full install)</td>
           <td>N/A (desktop install)</td>
         </tr>
@@ -168,9 +168,9 @@
       bold, italic, lists, quotes, links, inline code, aligned text, tables, images and code blocks
       — without switching to source view. Dillinger's cloud sync requires connecting a third-party
       account; Quorly has none. Dillinger does not offer an installable PWA, a local document
-      library with version snapshots, or in-browser agent tools. Its offline support is
-      <code>localStorage</code>-only; Quorly uses a service worker, IndexedDB snapshots, and
-      keeps working after the browser restarts.
+      library with version snapshots, or in-browser agent tools. Its own offline promise is that
+      "once loaded, the editor keeps working" with drafts in <code>localStorage</code>; Quorly ships
+      a service worker and IndexedDB snapshots, and keeps working after the browser restarts.
     </p>
     <p>
       <strong>Who Dillinger is for.</strong> Writers who prefer source Markdown, want instant
