@@ -425,7 +425,7 @@ body::before {
    from the top and left, so the light screen shows through as an L down its top and left. */
 .personalize-preview {
   padding: 14px 20px;
-  border-color: #d7d7d7;
+  border-color: #243033;
   background: #020405;
 }
 .reader-stack { position: absolute; inset: 14px 20px; }
