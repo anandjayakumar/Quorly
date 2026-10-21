@@ -1,0 +1,11 @@
+#!/bin/sh
+# Quorly post-merge hook.
+#
+# `git merge` does not run post-commit, so merging a worktree branch into `dev` - the normal
+# path here - shipped nothing and the preview stayed on the previous commit. This delegates to
+# post-commit so both entry points share one implementation, one branch check and one node
+# lookup. A duplicate launch is harmless: the second `run` sees the live lock and exits.
+#
+# Never fail the merge - a broken pipeline must not stop you from merging.
+
+exec sh "$(git rev-parse --show-toplevel)/.githooks/post-commit"
