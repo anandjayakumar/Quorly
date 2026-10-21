@@ -1624,10 +1624,35 @@ editBody.addEventListener('paste', (e) => {
     // preventDefault() has already taken the clipboard away from the browser, so a paste that rebuilds
     // to nothing (whitespace only, an image whose src we keep none of) or that the browser refuses to
     // insert must still land as plain text rather than disappear.
-    if (insert && document.execCommand('insertHTML', false, sanitizeHTML(insert))) {
-        // A pasted table gets the same wrapper and menu button as one made from the toolbar.
-        if (insert.includes('<table')) applyTableWidths();
-        return;
+    // Range + DocumentFragment avoids Chrome's execCommand insertHTML block-merging
+    // bug where paragraphs get wrapped inside preceding headings when inserting over a
+    // selection that spans multiple blocks. Direct node insertion produces the correct
+    // sibling structure (verified in reproduction).
+    const selection = window.getSelection();
+    const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    if (insert && range) {
+        try {
+            const container = document.createElement('div');
+            container.innerHTML = sanitizeHTML(insert);
+            const fragment = document.createDocumentFragment();
+            while (container.firstChild) {
+                fragment.appendChild(container.firstChild);
+            }
+            range.deleteContents();
+            range.insertNode(fragment);
+            // Leave caret after the pasted content (same contract as the original execCommand).
+            const newRange = document.createRange();
+            newRange.selectNodeContents(editBody);
+            newRange.collapse(false);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            // A pasted table gets the same wrapper and menu button as one made from the toolbar.
+            if (insert.includes('<table')) applyTableWidths();
+            return;
+        } catch (err) {
+            // If direct insertion fails for any reason, fall through to the fallback.
+        }
     }
     const fallback = text || htmlToPlainText(html);
     if (fallback) document.execCommand('insertText', false, fallback);

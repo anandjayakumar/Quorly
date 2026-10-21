@@ -208,6 +208,19 @@ try {
   record('/app.js library markers', false, String(e.message || e));
 }
 
+// --- N-11: paste fix — Range + DocumentFragment insertion -------------------
+try {
+  const { status, body } = await get('/app.js');
+  // The fix must use Range + DocumentFragment instead of execCommand insertHTML,
+  // so that inserting over a selection spanning blocks does not wrap pasted paragraphs
+  // inside preceding headings.
+  record('N-11 Range-based insertion', body.includes('range.deleteContents'), 'Range.deleteContents missing');
+  record('N-11 DocumentFragment insertion', body.includes('range.insertNode'), 'Range.insertNode missing');
+  record('N-11 Fragment from sanitized HTML', body.includes('DocumentFragment'), 'DocumentFragment missing');
+} catch (e) {
+  record('N-11 paste fix markers', false, String(e.message || e));
+}
+
 // --- WebMCP tool layer (W3C CG draft) -------------------------------------------
 
 try {
