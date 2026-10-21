@@ -123,7 +123,7 @@
   --accent:#3b82f6;
   --radius:20px;
   --body-font-size: 17px;
-  --editor-width: 1080px;
+  --editor-width: 1320px;
   --sidebar-width: 400px;
   --app-gap: 28px;
   --focus-dur: 0.42s;
@@ -1253,12 +1253,16 @@ body.light-mode .sidebar {
 }
 
 /* UI-13: the header chevron hides the panel; a fixed button brings it back. Unlike focus
-   mode (immersive, Esc to leave) this only affects the panel — the reader keeps its
-   layout. Not persisted: a reload starts with the panel open. */
-body.sidebar-collapsed .sidebar { display: none; }
-body.sidebar-collapsed .app {
-  grid-template-columns: minmax(0, var(--editor-width)) 0px;
-  gap: 0;
+   mode (immersive, Esc to leave) this only affects the panel — the reader keeps its layout.
+   Not persisted, and the editor now opens folded, so a first visit lands on the page rather
+   than on the controls. Scoped above the drawer breakpoint: on a phone the panel is a
+   drawer, and this class must not keep it at `display: none`. */
+@media (min-width: 1181px) {
+  body.sidebar-collapsed .sidebar { display: none; }
+  body.sidebar-collapsed .app {
+    grid-template-columns: minmax(0, var(--editor-width)) 0px;
+    gap: 0;
+  }
 }
 
 /* Sidebar header: brand on the left, panel controls on the right (UI-13). */

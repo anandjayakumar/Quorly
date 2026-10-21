@@ -1,7 +1,7 @@
 
 let fileHandle = null;
 let bodyFontSize = 17;
-let editorWidth = 1080;
+let editorWidth = 1320;
 // UI-14: at ≤1180px the panel is a drawer and the Formatting section moves under the top bar.
 const MOBILE_LAYOUT = window.matchMedia('(max-width: 1180px)');
 let savedRange = null;
@@ -27,7 +27,7 @@ const sessionHandles = new Map();
 
 // Default document shown on first load and when starting a new file.
 const DEFAULT_TITLE = "Welcome to Quorly";
-const DEFAULT_BODY = "<h2>Overview</h2><p>Quorly is a quiet, local-first writing space. Select any text to format it, or use the panel on the right.</p><blockquote>Everything stays on your device.</blockquote><p>Start writing..</p>";
+const DEFAULT_BODY = "<h2>Overview</h2><p>Quorly is a quiet, local-first writing space. Select any text to format it, or use the panel on the right.</p><blockquote>Everything stays on your device.</blockquote><p>Start writing...</p>";
 
 // --- SAFETY & UTILITIES ---
 

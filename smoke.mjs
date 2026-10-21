@@ -204,8 +204,8 @@ try {
     // UI-17: alignment is a class. execCommand's inline style is blocked by `style-src 'self'`.
     'function applyAlignment',
     'q-align-center',
-    // UI-19: the welcome sample ends with a plain "Start writing.." line.
-    'Start writing..',
+    // UI-19: the welcome sample ends with a plain "Start writing..." line.
+    'Start writing...',
     // S-2b: images are downscaled and re-encoded on the way in, and oversized ones refused.
     'const MAX_IMAGE_EDGE',
     'const MAX_IMAGE_BYTES',
