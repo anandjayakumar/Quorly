@@ -1,13 +1,13 @@
-# Quorly — Private Browser Writing App & Markdown Editor
+# Quorly — Private Offline Text Editor
 
-> A private, distraction-free browser writing app and Markdown editor that runs entirely in your browser — and keeps working offline. No account, no sign-up, no upload, no ads, no cookies. Your draft never leaves your device.
+> A private, distraction-free text editor that runs entirely in your browser. No account, no sign-up, no upload, no ads, no cookies. Your draft saves as you type, works online and offline, and never leaves your device.
 
 - Editor: <https://quorly.us.ci/app/>
 - Privacy: <https://quorly.us.ci/privacy/>
 - Compare: <https://quorly.us.ci/compare/>
 - Canonical page: <https://quorly.us.ci/>
 
-## A minimalist browser writing app built for focus and privacy
+## The private, offline text editor
 
 Everything you need to finish a draft. Nothing you don't.
 
@@ -67,4 +67,4 @@ Free · No sign-up · Works offline · Nothing installed
 
 [Open the editor](https://quorly.us.ci/app/)
 
-Reach us: [hello@quorly.us.ci](mailto:hello@quorly.us.ci) (best-effort, no SLA)
+Reach us: [hello@quorly.us.ci](mailto:hello@quorly.us.ci)

@@ -29,12 +29,14 @@ async function get(path) {
 await checkDocument('/', {
   type: 'text/html',
   contains: ['never sees', 'og:image', 'rel="canonical"', 'application/ld+json', '/app/', 'rel="manifest"',
-    // SEO hygiene pass (2026-10-20): keyword-bearing title/description, a WebApplication +
-    // FAQPage graph, and the Markdown alternate.
-    'Private Browser Writing App', '"@type": "WebApplication"', '"@type": "FAQPage"',
+    // SEO hygiene pass: accurate category title/description, a WebApplication + FAQPage graph,
+    // and the Markdown alternate used by the agent mirror.
+    'Private Offline Text Editor', 'The private, offline text editor', '"@type": "WebApplication"', '"@type": "FAQPage"',
     'rel="alternate" type="text/markdown"',
     // Accuracy: the copy must not advertise features that no longer exist.
-    'A minimalist browser writing app built for focus and privacy',
+    'Everything you need to finish a draft', 'Minimal. Powerful. Yours.',
+    // The logo images must describe themselves.
+    'alt="Quorly private editor logo"',
     // The published contact address must survive to the reader. On the custom domain
     // Cloudflare rewrites an unprotected address into an obfuscated `__cfemail__` link,
     // which hides it and breaks the mailto: — so this is the tripwire for that.
