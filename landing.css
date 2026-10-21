@@ -364,7 +364,7 @@ body::before {
 }
 .hero-copy { position: relative; z-index: 1; padding-top: 1px; }
 .eyebrow { font-size: .7rem; letter-spacing: .31em; margin-bottom: 17px; }
-.hero h1 { font-family: 'Lora', Georgia, serif; font-size: clamp(2.1rem, 3.3vw, 3rem); font-weight: 500; letter-spacing: -.04em; line-height: 1.08; margin-bottom: .37em; }
+.hero h1 { font-family: 'Lora', Georgia, serif; font-size: clamp(2.1rem, 3.5vw, 3rem); font-weight: 500; letter-spacing: -.04em; line-height: 1.08; margin-bottom: .37em; text-wrap: balance; }
 .hero h1 em { color: #76d5bb; }
 .hero-subheadline {
   margin: 0 0 16px;

@@ -28,7 +28,7 @@ async function get(path) {
 
 await checkDocument('/', {
   type: 'text/html',
-  contains: ['never sees', 'og:image', 'rel="canonical"', 'application/ld+json', '/app/', 'rel="manifest"',
+  contains: ['keeps your words on your device', 'og:image', 'rel="canonical"', 'application/ld+json', '/app/', 'rel="manifest"',
     // SEO hygiene pass: accurate category title/description, a WebApplication + FAQPage graph,
     // and the Markdown alternate used by the agent mirror.
     'Private Offline Text Editor', 'The private, offline text editor', '"@type": "WebApplication"', '"@type": "FAQPage"',
