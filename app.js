@@ -2714,8 +2714,11 @@ function initDropdown(root, onSelect, reset, keepSelected) {
     });
 
     menu.addEventListener('click', (e) => {
-        const li = e.target.closest('[role="option"]');
-        if (li) choose(li);
+        // Validate against the same option set the keyboard path uses. Matching a role selector
+        // here once silently disabled the whole export menu: its items are role="menuitem"
+        // (a real menu) while the other dropdowns use role="option" (listbox).
+        const li = e.target.closest('li');
+        if (li && options().includes(li)) choose(li);
     });
 
     menu.addEventListener('keydown', (e) => {
