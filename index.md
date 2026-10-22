@@ -67,4 +67,4 @@ Free · No sign-up · Works offline · Nothing installed
 
 [Open the editor](https://quorly.dev/app/)
 
-Reach us: [hello@quorly.us.ci](mailto:hello@quorly.us.ci)
+Reach us: [hello@quorly.dev](mailto:hello@quorly.dev)
