@@ -2345,7 +2345,7 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
   .sidebar, #toolbar, .footer-stats, .inline-dropzone, .title-add-btn, .title-image-delete, .img-delete,
   .mobile-topbar, .mobile-fmtbar, .panel-scrim, .print-footer {display:none !important}
   body{padding:0 !important; margin:0;}
-  .reader{box-shadow: none; padding: 20px; border-radius: 0; min-height: auto; margin: 0; max-width: 100%;}
+  .reader{box-shadow: none; padding: 40px 44px; border-radius: 0; min-height: auto; margin: 0; max-width: 100%;}
   .app{display: block; max-width: 100%; grid-template-columns: none;}
   .doc{max-width: 100%;}
 
@@ -2357,6 +2357,13 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
   body.print-theme-light .content-divider {background: rgba(0,0,0,0.12) !important;}
   body.print-theme-light #editBody pre {background: #f5f5f5 !important; border-color: #e0e0e0 !important; color: #2d2d2d !important; white-space: pre-wrap !important; word-break: break-word !important; overflow: visible !important;}
   body.print-theme-light #editBody a {color: #2563eb !important;}
+  /* Blockquotes, inline code and tables carry their own dark-mode colours; without these the
+     quote text stays #e0e0e0 (near-invisible on white) and table borders vanish. */
+  body.print-theme-light #editBody blockquote { color: #333333 !important; border-left-color: #c4c4c4 !important; }
+  body.print-theme-light #editBody code { background: rgba(0,0,0,0.06) !important; }
+  body.print-theme-light #editBody table.editor-table th,
+  body.print-theme-light #editBody table.editor-table td { border-color: rgba(0,0,0,0.15) !important; }
+  body.print-theme-light #editBody table.editor-table th { background: rgba(0,0,0,0.04) !important; }
   body.print-theme-light #editBody pre .keyword { color: #d73a49; }
   body.print-theme-light #editBody pre .string { color: #22863a; }
   body.print-theme-light #editBody pre .number { color: #005cc5; }
@@ -2378,14 +2385,13 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
   body.print-theme-dark #editBody pre .function { color: #8be9fd; }
   body.print-theme-dark #editBody pre .operator { color: #ff79c6; }
 
-  /* Title page: visible only when content exists */
-  .meta { display: none !important; }
-  body.print-has-content .meta { display: block !important; page-break-after: always; margin-bottom: 32px; }
-  body.print-has-content .meta-divider { display: block !important; }
+  /* Read time and its rule are screen-only; the PDF opens straight into the body. */
+  .meta, .meta-divider { display: none !important; }
 
-  /* Page numbers via fixed footer (works in Chrome; best available approximation) */
-  .print-footer { display: block !important; position: fixed; bottom: 12px; left: 0; width: 100%; text-align: center; font-size: 9px; color: #888; font-family: 'Inter', sans-serif; z-index: 9999; }
-  .print-page-num::after { content: counter(page); }
+  /* No page-number footer: counter(page) does not resolve inside the page body, so the fixed
+     footer printed "Page 0" on every sheet. Omitted until a real @page margin box is used. */
+  .print-footer { display: none !important; }
+  .print-page-num::after { content: none; }
 }
 
 /* --- Added for strict CSP: replaces former inline style attributes --- */
