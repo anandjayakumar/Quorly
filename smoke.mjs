@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 // Post-deploy smoke test for Quorly.
 //
-//   node smoke.mjs https://quorly.us.ci
+//   node smoke.mjs https://quorly.dev
 //
 // Exits non-zero if anything regresses. It exists because a direct upload once stored
 // assets with `Content-Type: application/octet-stream`; combined with `nosniff` the
 // browser downloaded index.html instead of rendering it. Nothing in the deploy pipeline
 // noticed. This does. Run it after every deploy.
 
-const BASE = (process.argv[2] || 'https://quorly.us.ci').replace(/\/+$/, '');
+const BASE = (process.argv[2] || 'https://quorly.dev').replace(/\/+$/, '');
 
 const results = [];
 let failed = 0;
@@ -46,7 +46,7 @@ await checkDocument('/', {
 
 await checkDocument('/index.md', {
   type: 'text/markdown',
-  contains: ['# Quorly', '](https://quorly.us.ci/app/)', 'Focus Mode', 'Is Quorly really free?'],
+  contains: ['# Quorly', '](https://quorly.dev/app/)', 'Focus Mode', 'Is Quorly really free?'],
   notContains: ['Version history'],
 });
 
@@ -81,7 +81,7 @@ await checkDocument('/compare/', {
     'Quorly vs',
     'Dillinger',
     'StackEdit',
-    'https://quorly.us.ci/compare/',
+    'https://quorly.dev/compare/',
     'Works offline',
     'requires no account',
     '/landing.js',
@@ -93,7 +93,7 @@ await checkDocument('/compare/', {
 
 await checkDocument('/llms.txt', {
   type: 'text/plain',
-  contains: ['# Quorly', '](https://quorly.us.ci/agent-skill.md)', 'WebMCP'],
+  contains: ['# Quorly', '](https://quorly.dev/agent-skill.md)', 'WebMCP'],
 });
 await checkDocument('/agent-skill.md', {
   type: 'text/markdown',
@@ -136,7 +136,7 @@ for (const path of ['/.well-known/ai-catalog.json', '/.well-known/ard.json']) {
 try {
   const { body } = await get('/robots.txt');
   record('/robots.txt has the Content-Signal', body.includes('Content-Signal: search=yes, ai-input=yes, ai-train=no'), 'missing');
-  record('/robots.txt advertises the Agentmap', body.includes('Agentmap: https://quorly.us.ci/.well-known/ard.json'), 'missing');
+  record('/robots.txt advertises the Agentmap', body.includes('Agentmap: https://quorly.dev/.well-known/ard.json'), 'missing');
   record('/robots.txt groups AI crawlers', body.includes('User-agent: GPTBot') && body.includes('User-agent: ClaudeBot'), 'missing');
   record('/robots.txt still allows everything', /User-agent: \*\r?\nAllow: \//.test(body), 'base group changed');
 } catch (e) {

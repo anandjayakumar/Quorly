@@ -84,12 +84,13 @@ git config core.hooksPath .githooks
 Prefer a scoped `CLOUDFLARE_API_TOKEN` for unattended runs; the cached wrangler OAuth token expires
 in about an hour, and the runner reports which one it used in `authWarning`.
 
-Production URL: <https://quorly.us.ci> (the canonical domain; `quorly.pages.dev` 301s to it).
+Production URL: <https://quorly.dev> (the canonical domain; `quorly.us.ci`,
+`www.quorly.us.ci`, `www.quorly.dev` and `quorly.pages.dev` all 301 to it).
 
 ### Verify after every deploy
 
 ```sh
-node smoke.mjs https://quorly.us.ci
+node smoke.mjs https://quorly.dev
 ```
 
 This asserts every asset's `Content-Type` (including `/sw.js`), that `nosniff` is present, that
