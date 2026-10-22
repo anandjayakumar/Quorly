@@ -17,6 +17,7 @@ const FILES_INDEX_KEY = 'quorly_files_v1';
 const CURRENT_ID_KEY = 'quorly_current_id_v1';
 // Reading typeface, same value set as the Theme menu (see changeTypography).
 const READING_FONT_KEY = 'quorly_typeface_v1';
+const PRINT_THEME_KEY = 'print_theme'; // N-4 print theme (light/dark), independent of editor mode
 const MAX_RECENTS = 10;
 // Version history is capped per document.
 const MAX_VERSIONS = 20;
@@ -120,6 +121,7 @@ function track(event, props) {
         const payload = { e: event };
         if (props && typeof props.format === 'string') payload.format = props.format.slice(0, 32);
         if (props && typeof props.tool === 'string') payload.tool = props.tool.slice(0, 32);
+        if (props && typeof props.theme === 'string') payload.theme = props.theme.slice(0, 32);
         navigator.sendBeacon('/e', JSON.stringify(payload));
     } catch (err) {
         // Analytics must never be able to break the editor or delay a navigation.
@@ -233,6 +235,7 @@ async function init() {
         document.body.classList.add('light-mode');
     }
     syncModeButton();
+    applyPrintTheme();
 
     // UI-09: reopen the last-worked document, but only if it was touched within 48 h.
     const savedId = localStorage.getItem(CURRENT_ID_KEY);
@@ -2313,9 +2316,19 @@ function applyHeading(value) {
     saveToLocalStorage();
 }
 
-function handleExport(value) {
+function handleExport(value, theme) {
     if (value === 'quorly') { track('export', { format: 'quorly' }); exportQuorly(); }
-    else if (value === 'pdf') { track('export', { format: 'pdf' }); window.print(); }
+    else if (value === 'pdf') {
+        const themeValue = theme || getPrintTheme();
+        if (theme) setPrintTheme(themeValue);
+        track('export', { format: 'pdf', theme: themeValue });
+        const hasContent = !!((editTitle.textContent || '').trim() || (editBody.innerText || '').trim());
+        if (hasContent) document.body.classList.add('print-has-content');
+        else document.body.classList.remove('print-has-content');
+        // Print layout is pure CSS (natural flow + box-decoration-break: clone);
+        // no pagination script needed.
+        window.print();
+    }
     else if (value === 'md') { track('export', { format: 'md' }); exportMarkdown(); }
     else if (value === 'txt') { track('export', { format: 'txt' }); exportText(); }
 }
@@ -2452,11 +2465,25 @@ function syncModeButton() {
     btn.setAttribute('aria-label', label);
     btn.title = label;
 }
-function toggleMode() { 
-    document.body.classList.toggle('light-mode'); 
+function toggleMode() {
+    document.body.classList.toggle('light-mode');
     const light = document.body.classList.contains('light-mode');
     localStorage.setItem('mode', light ? 'light' : 'dark');
     syncModeButton();
+}
+
+function getPrintTheme() {
+    const saved = localStorage.getItem(PRINT_THEME_KEY);
+    return (saved === 'dark') ? 'dark' : 'light';
+}
+function applyPrintTheme() {
+    const theme = getPrintTheme();
+    document.body.classList.remove('print-theme-light', 'print-theme-dark');
+    document.body.classList.add('print-theme-' + theme);
+}
+function setPrintTheme(value) {
+    localStorage.setItem(PRINT_THEME_KEY, value);
+    applyPrintTheme();
 }
 // UI-15: the A−/A+ and ←/→ button pairs became numeric dropdowns, so these take an absolute
 // value. `resetFontSize` stays because Ctrl/Cmd+0 still uses it.
@@ -2842,7 +2869,7 @@ function initDropdown(root, onSelect, reset, keepSelected) {
     const valueEl = root.querySelector('.dropdown-value');
     if (!toggle || !menu || !valueEl) return;
     if (root.id) menu.setAttribute('data-owner', root.id);
-    const options = () => Array.from(menu.querySelectorAll('[role="option"]'));
+    const options = () => Array.from(menu.querySelectorAll('[role="option"], [role="menuitem"]'));
     const placeholder = root.getAttribute('data-placeholder') || '';
 
     function close() {
@@ -2878,7 +2905,7 @@ function initDropdown(root, onSelect, reset, keepSelected) {
     }
     function choose(li) {
         options().forEach((o) => o.setAttribute('aria-selected', String(o === li)));
-        onSelect(li.getAttribute('data-value'), li.textContent.trim());
+        onSelect(li.getAttribute('data-value'), li.textContent.trim(), li);
         if (reset) {
             if (!keepSelected) options().forEach((o) => o.setAttribute('aria-selected', 'false'));
             if (placeholder) valueEl.textContent = placeholder;
@@ -2905,8 +2932,11 @@ function initDropdown(root, onSelect, reset, keepSelected) {
     });
 
     menu.addEventListener('click', (e) => {
-        const li = e.target.closest('[role="option"]');
-        if (li) choose(li);
+        // Validate against the same option set the keyboard path uses. Matching a role selector
+        // here once silently disabled the whole export menu: its items are role="menuitem"
+        // (a real menu) while the other dropdowns use role="option" (listbox).
+        const li = e.target.closest('li');
+        if (li && options().includes(li)) choose(li);
     });
 
     menu.addEventListener('keydown', (e) => {
@@ -2940,7 +2970,7 @@ function wireUI() {
                 case 'new-file': newFile(); break;
                 case 'open-file': openFile(); break;
                 case 'export-md': track('export', { format: 'md' }); exportMarkdown(); break;
-                case 'export-pdf': track('export', { format: 'pdf' }); window.print(); break;
+                case 'export-pdf': handleExport('pdf'); break;
                 case 'export-txt': track('export', { format: 'txt' }); exportText(); break;
 
                 case 'toggle-focus': toggleFocus(); break;
@@ -2966,7 +2996,23 @@ function wireUI() {
     if (widthDrop) initDropdown(widthDrop, (value) => setWidth(Number(value)));
 
     const exportDrop = document.getElementById('exportDropdown');
-    if (exportDrop) initDropdown(exportDrop, (value) => handleExport(value), true);
+    if (exportDrop) initDropdown(exportDrop, (value, label, li) => {
+        const theme = li ? li.getAttribute('data-theme') : null;
+        if (theme) handleExport('pdf', theme);
+        else handleExport(value);
+    }, true);
+
+    // Ctrl+P and the Export menu share one path: the theme is resolved and the has-content guard
+    // is applied just before Chrome lays out the pages. Print layout itself is pure CSS now.
+    window.addEventListener('beforeprint', () => {
+        if (!document.body.classList.contains('print-theme-light') &&
+            !document.body.classList.contains('print-theme-dark')) {
+            applyPrintTheme();
+        }
+    });
+    window.addEventListener('afterprint', () => {
+        document.body.classList.remove('print-has-content');
+    });
 
     const fmtInsertDrop = document.getElementById('fmtInsertDropdown');
     if (fmtInsertDrop) initDropdown(fmtInsertDrop, (value) => handleInsert(value), true);

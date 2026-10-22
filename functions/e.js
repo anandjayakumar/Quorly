@@ -56,9 +56,10 @@ export async function onRequest(context) {
       if (typeof event === 'string' && EVENTS.has(event) && env.ANALYTICS) {
         const format = typeof data.format === 'string' ? data.format.slice(0, MAX_PROP) : '';
         const tool = typeof data.tool === 'string' ? data.tool.slice(0, MAX_PROP) : '';
+        const theme = typeof data.theme === 'string' ? data.theme.slice(0, MAX_PROP) : '';
         env.ANALYTICS.writeDataPoint({
           indexes: [event],
-          blobs: [event, format, tool],
+          blobs: [event, format, tool, theme],
           doubles: [1],
         });
       }

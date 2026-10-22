@@ -2030,6 +2030,43 @@ body.light-mode .dropdown-menu li[aria-selected="true"]::before {
   color: #000000;
 }
 
+/* Typography, heading, width and insert menus follow the export menu's type
+   treatment: --text (#f5f6f7), 12px, weight 350. */
+#typographyDropdown .dropdown-menu li,
+#headingDropdown .dropdown-menu li,
+#docWidthDropdown .dropdown-menu li,
+#fmtInsertDropdown .dropdown-menu li {
+  color: var(--text, #f5f6f7);
+  font-size: 12px;
+  font-weight: 350;
+}
+
+body.light-mode #typographyDropdown .dropdown-menu li,
+body.light-mode #headingDropdown .dropdown-menu li,
+body.light-mode #docWidthDropdown .dropdown-menu li,
+body.light-mode #fmtInsertDropdown .dropdown-menu li {
+  color: rgba(0,0,0,0.7);
+}
+
+/* The width menu holds small page swatches, so it does not need the 160px
+   minimum the text menus use. */
+#docWidthDropdown .dropdown-menu {
+  min-width: 0;
+  width: 88px;
+}
+/* Keep the swatches centred: park the selection tick instead of letting it
+   shift the swatch inside the narrow row. */
+#docWidthDropdown .width-menu li {
+  position: relative;
+}
+#docWidthDropdown .width-menu li[aria-selected="true"]::before {
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+
 .sidebar-writeassist {
   flex: 1;
   display: flex;
@@ -2392,28 +2429,89 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
 }
 
 @media print{
-  /* UI-OVF: unlock the app shell so printing flows across pages again. */
+  /* A zero @page margin leaves Chrome no margin band to draw its own header/footer
+     (date, title, URL, page number) and lets the theme background reach the paper edge,
+     so dark exports stop printing white borders. Content now flows naturally; padding
+     repeats on every fragment via `box-decoration-break: clone`. */
+  @page { size: A4; margin: 0; }
+  html.q-app { background: #ffffff !important; }
+  html.q-app:has(body.print-theme-dark) { background: #0e0e0e !important; }
   html.q-app, body.q-app { height: auto; overflow: visible; }
   body.q-app .app { height: auto; overflow: visible; padding: 0; }
-  .sidebar, #toolbar, .footer-stats, .meta, .inline-dropzone, .title-add-btn, .title-image-delete, .img-delete,
+  .sidebar, #toolbar, .footer-stats, .inline-dropzone, .title-add-btn, .title-image-delete, .img-delete,
   .mobile-topbar, .mobile-fmtbar, .panel-scrim {display:none !important}
   body{padding:0 !important; margin:0;}
-  
-  /* Dark mode print */
-  body:not(.light-mode) {background:white !important;}
-  body:not(.light-mode) .reader{background: white !important; color: #000 !important; box-shadow: none;}
-  body:not(.light-mode) #editTitle,
-  body:not(.light-mode) #editBody {color: #000 !important;}
-  body:not(.light-mode) .content-divider {background: rgba(0,0,0,0.12);}
-  body:not(.light-mode) #editBody pre {background: #f5f5f5 !important; border-color: #e0e0e0 !important; color: #2d2d2d !important;}
-  body:not(.light-mode) #editBody a {color: #2563eb !important;}
-  
-  /* Light mode print - preserve existing styles */
-  body.light-mode .reader {box-shadow: none;}
-  
-  .reader{box-shadow: none; padding: 20px; border-radius: 0; min-height: auto; margin: 0; max-width: 100%;}
+
+  /* Natural flow: the reader is a single fragmentable container with clone padding. */
+  .reader {
+    padding: 16mm 15mm;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    overflow: visible !important;
+    box-shadow: none;
+    border-radius: 0;
+    min-height: 0;
+    margin: 0;
+    max-width: 100%;
+  }
   .app{display: block; max-width: 100%; grid-template-columns: none;}
   .doc{max-width: 100%;}
+  #editBody { min-height: 0 !important; }
+
+  /* Print theme: independently of on-screen theme (default = light) */
+  body.print-theme-light {background: #fff !important;}
+  body.print-theme-light .reader{background: #fff !important; color: #1a1a1a !important;}
+  body.print-theme-light #editTitle,
+  body.print-theme-light #editBody {color: #1a1a1a !important;}
+  body.print-theme-light .content-divider {background: rgba(0,0,0,0.12) !important;}
+  body.print-theme-light #editBody pre {background: #f5f5f5 !important; border-color: #e0e0e0 !important; color: #2d2d2d !important; white-space: pre-wrap !important; word-break: break-word !important; overflow: visible !important;}
+  body.print-theme-light #editBody a {color: #2563eb !important;}
+  /* Blockquotes, inline code and tables carry their own dark-mode colours; without these the
+     quote text stays #e0e0e0 (near-invisible on white) and table borders vanish. */
+  body.print-theme-light #editBody blockquote { color: #333333 !important; border-left-color: #c4c4c4 !important; }
+  body.print-theme-light #editBody code { background: rgba(0,0,0,0.06) !important; }
+  body.print-theme-light #editBody table.editor-table th,
+  body.print-theme-light #editBody table.editor-table td { border-color: rgba(0,0,0,0.15) !important; }
+  body.print-theme-light #editBody table.editor-table th { background: rgba(0,0,0,0.04) !important; }
+  body.print-theme-light #editBody pre .keyword { color: #d73a49; }
+  body.print-theme-light #editBody pre .string { color: #22863a; }
+  body.print-theme-light #editBody pre .number { color: #005cc5; }
+  body.print-theme-light #editBody pre .comment { color: #6a737d; }
+  body.print-theme-light #editBody pre .function { color: #6f42c1; }
+  body.print-theme-light #editBody pre .operator { color: #d73a49; }
+
+  body.print-theme-dark {background: #0e0e0e !important;}
+  body.print-theme-dark .reader{background: #0e0e0e !important; color: #f5f6f7 !important;}
+  body.print-theme-dark #editTitle,
+  body.print-theme-dark #editBody {color: #f5f6f7 !important;}
+  body.print-theme-dark .content-divider {background: rgba(255,255,255,0.12) !important;}
+  body.print-theme-dark #editBody pre {background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.1) !important; color: #e8e8e8 !important; white-space: pre-wrap !important; word-break: break-word !important; overflow: visible !important;}
+  body.print-theme-dark #editBody a {color: #3b82f6 !important;}
+  /* Neutralise the on-screen light theme: body.light-mode is still on <body> while the PDF is
+     exported in dark, and its blockquote / inline code / table colours would otherwise leak in
+     (dark quote text on a dark page). */
+  body.print-theme-dark #editBody blockquote { color: #e0e0e0 !important; border-left-color: #444444 !important; }
+  body.print-theme-dark #editBody code { background: rgba(255,255,255,0.08) !important; }
+  body.print-theme-dark #editBody table.editor-table th,
+  body.print-theme-dark #editBody table.editor-table td { border-color: rgba(255,255,255,0.15) !important; }
+  body.print-theme-dark #editBody table.editor-table th { background: rgba(255,255,255,0.06) !important; }
+  body.print-theme-dark #editBody pre .keyword { color: #ff79c6; }
+  body.print-theme-dark #editBody pre .string { color: #50fa7b; }
+  body.print-theme-dark #editBody pre .number { color: #bd93f9; }
+  body.print-theme-dark #editBody pre .comment { color: #6272a4; }
+  body.print-theme-dark #editBody pre .function { color: #8be9fd; }
+  body.print-theme-dark #editBody pre .operator { color: #ff79c6; }
+
+  /* Flow hygiene */
+  #editBody p { orphans: 2; widows: 2; }
+  #editBody h2, #editBody h3, #editBody h4 { break-after: avoid; page-break-after: avoid; }
+  #editBody img, #editBody .img-container, #editBody .title-image-container { break-inside: avoid; page-break-inside: avoid; }
+  #editBody table.editor-table thead { display: table-header-group; }
+  #editBody table.editor-table tr { break-inside: avoid; page-break-inside: avoid; }
+  #titleImage { width: 100%; height: auto; }
+
+  /* Read time and its rule are screen-only; the PDF opens straight into the body. */
+  .meta, .meta-divider { display: none !important; }
 }
 
 /* --- Added for strict CSP: replaces former inline style attributes --- */
@@ -2436,3 +2534,123 @@ body.light-mode #historyModal h2 { color: #1a1a1a; }
 }
 body.light-mode .modal-close { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.15); color: #1a1a1a; }
 .version-empty { color: var(--muted); }
+
+/* --- Export dropdown (N-4) --- */
+#exportDropdown.open .dropdown-toggle {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.2);
+}
+#exportDropdown .tile-label-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+#exportDropdown .dropdown-caret {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  opacity: 0.75;
+  margin: 0;
+}
+#exportDropdown .dropdown-caret svg {
+  display: block;
+}
+#exportDropdown .dropdown-caret {
+  transition: transform 0.2s ease;
+}
+#exportDropdown.open .dropdown-caret {
+  transform: rotate(180deg);
+}
+#exportDropdown .dropdown-menu {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: -15px;
+  min-width: 195px;
+  width: 195px;
+  max-width: calc(var(--sidebar-width) - 15px);
+  background: #131314;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+  padding: 5px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.5);
+  gap: 0;
+}
+#exportDropdown .dropdown-menu li {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 0 10px;
+  border-radius: 6px;
+  height: 29px;
+  font-size: 12px;
+  font-weight: 350;
+  color: var(--text, #f5f6f7);
+  letter-spacing: 0;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.15s ease;
+}
+#exportDropdown .dropdown-menu li:hover,
+#exportDropdown .dropdown-menu li:focus {
+  background: rgba(255,255,255,0.035);
+}
+#exportDropdown .dropdown-menu li .export-row-icon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: #ffffff;
+}
+#exportDropdown .dropdown-menu li .export-row-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+#exportDropdown .dropdown-menu li .export-row-label {
+  flex: 1 1 auto;
+  align-self: center;
+  height: 29px;
+  line-height: 29px;
+  margin-left: 2px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#exportDropdown .dropdown-menu .separator {
+  height: 1px;
+  background: rgba(255,255,255,0.14);
+  border-radius: 0;
+  padding: 0;
+  margin: 2px 3px;
+  pointer-events: none;
+  display: block;
+}
+#exportDropdown .dropdown-menu .separator span {
+  display: none;
+}
+
+/* Light mode for export dropdown */
+body.light-mode #exportDropdown .dropdown-menu {
+  background: #ffffff;
+  border-color: rgba(0,0,0,0.12);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+}
+body.light-mode #exportDropdown.open .dropdown-toggle {
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.2);
+}
+body.light-mode #exportDropdown .dropdown-menu li {
+  color: #1a1a1a;
+}
+body.light-mode #exportDropdown .dropdown-menu li:hover,
+body.light-mode #exportDropdown .dropdown-menu li:focus {
+  background: rgba(0,0,0,0.04);
+}
+body.light-mode #exportDropdown .dropdown-menu .separator {
+  background: rgba(0,0,0,0.1);
+}

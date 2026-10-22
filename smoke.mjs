@@ -228,6 +228,9 @@ try {
     'function plainTextToHTML',
     'function pasteTable',
     "addEventListener('paste'",
+    // N-4: the export menu uses role="menuitem" while the other menus use role="option"; a role
+    // selector in the shared click handler silently made every export option a no-op.
+    'options().includes(li)',
   ];
   for (const marker of markers) {
     record(`/app.js has ${marker}`, body.includes(marker), 'missing');
@@ -237,6 +240,21 @@ try {
 }
 
 // --- N-11: paste fix — Range + DocumentFragment insertion -------------------
+
+// --- print flow markers (N-4): natural pagination, clone padding --------------
+try {
+  const { body } = await get('/styles.css');
+  const markers = [
+    'box-decoration-break: clone',
+    '-webkit-box-decoration-break: clone',
+    '@page { size: A4; margin: 0; }',
+  ];
+  for (const marker of markers) {
+    record(`/styles.css has ${marker}`, body.includes(marker), 'missing');
+  }
+} catch (e) {
+  record('/styles.css print markers', false, String(e.message || e));
+}
 
 // --- WebMCP tool layer (W3C CG draft) -------------------------------------------
 
