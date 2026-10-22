@@ -2339,33 +2339,55 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
   #historyModal .version-empty { font-size: 12px; }
 }
 
+/* Off-canvas probe used by buildPrintPages() in app.js to measure blocks at the printed page
+   width (A4 minus the 15mm side padding) before the sheets are assembled. */
+.print-measure {
+  position: absolute;
+  left: -20000px;
+  top: 0;
+  width: 180mm;
+  visibility: hidden;
+  pointer-events: none;
+}
+.print-measure .doc { max-width: none; width: 100%; margin: 0; }
+.print-measure #editBody { min-height: 0; }
+
 @media print{
-  /* Per-sheet margins. Padding on .reader only applies to the first and last page fragment,
-     so every continuation page used to run to the paper edge; @page is the only margin that
-     repeats. The root background is painted over the whole sheet (margins included), so a
-     dark export stays dark edge to edge instead of gaining white bands. */
-  @page { margin: 16mm 15mm; }
+  /* The sheet is the page. A zero @page margin leaves Chrome no margin band to draw its own
+     header/footer in (date, "Editor — Quorly", URL, page number) and lets the theme background
+     reach the paper edge, so dark exports stop printing white borders. All spacing lives inside
+     the sheet instead: app.js splits the document into .print-page blocks, one per sheet, each
+     carrying its own 16/15mm padding. Box padding on .reader cannot do that job because it only
+     lands on the first and last page fragment. */
+  @page { size: A4; margin: 0; }
   html.q-app { background: #ffffff !important; }
   html.q-app:has(body.print-theme-dark) { background: #0e0e0e !important; }
-  /* The page canvas stops at the margin box, so a @page margin would leave white bands around a
-     dark export. A fixed layer that overhangs the sheet by 40mm paints edge to edge instead. */
-  body.print-theme-dark::before {
-    content: ''; position: fixed; top: -40mm; left: -40mm; width: 300mm; height: 400mm;
-    background: #0e0e0e; z-index: -1;
-  }
   html.q-app, body.q-app { height: auto; overflow: visible; }
   body.q-app .app { height: auto; overflow: visible; padding: 0; }
   .sidebar, #toolbar, .footer-stats, .inline-dropzone, .title-add-btn, .title-image-delete, .img-delete,
-  .mobile-topbar, .mobile-fmtbar, .panel-scrim, .print-footer {display:none !important}
+  .mobile-topbar, .mobile-fmtbar, .panel-scrim {display:none !important}
   body{padding:0 !important; margin:0;}
-  /* Small extra inset on top of @page, so a print dialog set to "Margins: None" still has breathing room. */
-  .reader{box-shadow: none; padding: 16px 20px; border-radius: 0; min-height: auto; margin: 0; max-width: 100%;}
+  /* Fallback spacing when pagination is skipped (empty document). */
+  .reader{box-shadow: none; padding: 16mm 15mm; border-radius: 0; min-height: auto; margin: 0; max-width: 100%;}
   .app{display: block; max-width: 100%; grid-template-columns: none;}
   .doc{max-width: 100%;}
+  #editBody { min-height: 0 !important; }
+
+  /* Paginated sheets: one .print-page per sheet, every one keeps the full padding. */
+  body.print-paginated > *:not(.print-pages) { display: none !important; }
+  .print-pages { display: block !important; }
+  .print-page {
+    padding: 16mm 15mm;
+    break-after: page; page-break-after: always;
+    color: inherit;
+  }
+  .print-page:last-child { break-after: auto; page-break-after: auto; }
+  .print-page #editTitle, .print-page #editBody { width: 100%; max-width: 100%; }
 
   /* Print theme: independently of on-screen theme (default = light) */
   body.print-theme-light {background: #fff !important;}
   body.print-theme-light .reader{background: #fff !important; color: #1a1a1a !important;}
+  body.print-theme-light .print-page { color: #1a1a1a !important; }
   body.print-theme-light #editTitle,
   body.print-theme-light #editBody {color: #1a1a1a !important;}
   body.print-theme-light .content-divider {background: rgba(0,0,0,0.12) !important;}
@@ -2387,6 +2409,7 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
 
   body.print-theme-dark {background: #0e0e0e !important;}
   body.print-theme-dark .reader{background: #0e0e0e !important; color: #f5f6f7 !important;}
+  body.print-theme-dark .print-page { color: #f5f6f7 !important; }
   body.print-theme-dark #editTitle,
   body.print-theme-dark #editBody {color: #f5f6f7 !important;}
   body.print-theme-dark .content-divider {background: rgba(255,255,255,0.12) !important;}
@@ -2409,11 +2432,6 @@ body.light-mode #appToast { background: rgba(255,255,255,0.98); border-color: rg
 
   /* Read time and its rule are screen-only; the PDF opens straight into the body. */
   .meta, .meta-divider { display: none !important; }
-
-  /* No page-number footer: counter(page) does not resolve inside the page body, so the fixed
-     footer printed "Page 0" on every sheet. Omitted until a real @page margin box is used. */
-  .print-footer { display: none !important; }
-  .print-page-num::after { content: none; }
 }
 
 /* --- Added for strict CSP: replaces former inline style attributes --- */
