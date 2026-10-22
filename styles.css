@@ -1941,6 +1941,19 @@ body.light-mode .dropdown-menu li[aria-selected="true"]::before {
   color: #000000;
 }
 
+/* Typography + heading menus follow the export menu's type treatment:
+   --text (#f5f6f7) at weight 350 instead of rgba(255,255,255,0.78)/500. */
+#typographyDropdown .dropdown-menu li,
+#headingDropdown .dropdown-menu li {
+  color: var(--text, #f5f6f7);
+  font-weight: 350;
+}
+
+body.light-mode #typographyDropdown .dropdown-menu li,
+body.light-mode #headingDropdown .dropdown-menu li {
+  color: rgba(0,0,0,0.7);
+}
+
 .sidebar-writeassist {
   flex: 1;
   display: flex;
