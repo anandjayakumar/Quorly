@@ -2,10 +2,10 @@
 
 > A private, distraction-free text editor that runs entirely in your browser. No account, no sign-up, no upload, no ads, no cookies. Your draft saves as you type, works online and offline, and never leaves your device.
 
-- Editor: <https://quorly.us.ci/app/>
-- Privacy: <https://quorly.us.ci/privacy/>
-- Compare: <https://quorly.us.ci/compare/>
-- Canonical page: <https://quorly.us.ci/>
+- Editor: <https://quorly.dev/app/>
+- Privacy: <https://quorly.dev/privacy/>
+- Compare: <https://quorly.dev/compare/>
+- Canonical page: <https://quorly.dev/>
 
 ## The private, offline text editor
 
@@ -65,6 +65,6 @@ You can paste or drop images, and insert tables, dividers and code blocks. Image
 
 Free · No sign-up · Works offline · Nothing installed
 
-[Open the editor](https://quorly.us.ci/app/)
+[Open the editor](https://quorly.dev/app/)
 
 Reach us: [hello@quorly.us.ci](mailto:hello@quorly.us.ci)

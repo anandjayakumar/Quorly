@@ -40,7 +40,7 @@ const PRODUCTION = path.join(REL, 'production.json');
 
 const PROJECT = 'quorly';
 const PREVIEW_ALIAS = 'https://preview.quorly.pages.dev';
-const PROD_ALIAS = 'https://quorly.us.ci';
+const PROD_ALIAS = 'https://quorly.dev';
 const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID || '07e6e9a6b18b4cae4d21fccba4dae17a';
 const API = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/pages/projects/${PROJECT}/deployments`;
 

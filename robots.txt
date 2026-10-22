@@ -17,6 +17,6 @@ Allow: /
 Content-Signal: search=yes, ai-input=yes, ai-train=no
 
 # Agentic Resource Discovery: the catalog of agent-facing resources (the WebMCP skill).
-Agentmap: https://quorly.us.ci/.well-known/ard.json
+Agentmap: https://quorly.dev/.well-known/ard.json
 
-Sitemap: https://quorly.us.ci/sitemap.xml
+Sitemap: https://quorly.dev/sitemap.xml
