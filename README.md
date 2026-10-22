@@ -35,8 +35,8 @@ There is no sign-up, no tour and nothing to set up first.
 | Writing | Keeping | Moving |
 |---|---|---|
 | Rich text, tables, images | Autosave as you type | Export to Markdown, PDF, plain text or `.quorly` |
-| Focus mode, light and dark | A library of your last 10 documents | Import `.md`, `.html` or `.quorly` |
-| Five reading faces, adjustable width | 20 versions per document | Write straight to disk via the file picker |
+| Focus mode, light and dark | A local library of your documents | Import `.md`, `.html` or `.quorly` |
+| Five reading faces, adjustable width | A version history for each document | Write straight to disk via the file picker |
 | Distraction-free by default | Your last document reopens within 48 hours | Print with its own light/dark theme |
 
 ## Your words stay on your device
@@ -48,18 +48,10 @@ There is no sign-up, no tour and nothing to set up first.
 | Your disk, if you ask | A file you choose through the browser's own file picker |
 | A server | Nothing — no title, no body, no image |
 
-The editor makes exactly one kind of request: a same-origin `POST /e` when something
-notable happens — a first keystroke, an export, a storage-quota error, a returning writer,
-a WebMCP tool call. The endpoint accepts an event name from a fixed list and at most one
-short property (an export format, a theme or a tool name). It carries no document content, no
-identifier and no cookie, it answers `204`, and it fails silently by design, so a dropped
-beacon can never interrupt writing.
-
-Fonts, scripts, styles and icons are all served from this origin. The one third-party request
-on the page is Cloudflare Web Analytics, which counts anonymous visits and sets no cookie;
-`script-src` and `connect-src` allow that host and nothing else. No document content is ever
-sent. The AI write-assist feature is absent from this build — there is no API call, no key
-prompt and no model ID anywhere in the shipped code.
+Fonts, scripts, styles and icons are all served from this origin. The only third-party request
+on the page is Cloudflare Web Analytics, which counts anonymous visits and sets no cookie.
+No document content is ever sent. The AI write-assist feature is absent from this build —
+there is no API call, no key prompt and no model ID anywhere in the shipped code.
 
 ## Try it
 
@@ -68,19 +60,6 @@ prompt and no model ID anywhere in the shipped code.
    in the address bar, Safari uses Share → Add to Home Screen.
 3. On a fresh machine, open the same browser and your documents are already there. On a
    different one, export a `.quorly` file and import it.
-
-## Run it locally
-
-There is no build step, no package manager and no bundler — the site is plain HTML, CSS and
-JavaScript. Serve the repository root over HTTP:
-
-```sh
-python -m http.server 8080      # or: npx serve .
-```
-
-Then open `http://localhost:8080/` for the landing page or `/app/` for the editor. Use HTTP
-rather than opening `index.html` directly: the service worker, the file picker and the
-install prompt all need a real origin.
 
 ## Layout
 
@@ -93,7 +72,6 @@ install prompt all need a real origin.
 | `webmcp.js` | In-browser agent tools (WebMCP), registered only while the page is open |
 | `styles.css` | Editor styles, including the mobile breakpoints |
 | `sw.js` | Service worker — must stay at the root for scope `/` |
-| `functions/e.js` | `POST /e`, the cookieless counter |
 | `_headers` | CSP, MIME pins and caching |
 | `smoke.mjs` | Post-deploy verification (not published) |
 | `tools/release/` | Release runner (not published) |
