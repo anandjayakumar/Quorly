@@ -2134,11 +2134,12 @@ function applyHeading(value) {
     saveToLocalStorage();
 }
 
-function handleExport(value) {
+function handleExport(value, theme) {
     if (value === 'quorly') { track('export', { format: 'quorly' }); exportQuorly(); }
     else if (value === 'pdf') {
-        const theme = getPrintTheme();
-        track('export', { format: 'pdf', theme: theme });
+        const themeValue = theme || getPrintTheme();
+        if (theme) setPrintTheme(themeValue);
+        track('export', { format: 'pdf', theme: themeValue });
         const hasContent = !!((editTitle.textContent || '').trim() || (editBody.innerText || '').trim());
         if (hasContent) document.body.classList.add('print-has-content');
         else document.body.classList.remove('print-has-content');
@@ -2650,7 +2651,7 @@ function initDropdown(root, onSelect, reset, keepSelected) {
     const valueEl = root.querySelector('.dropdown-value');
     if (!toggle || !menu || !valueEl) return;
     if (root.id) menu.setAttribute('data-owner', root.id);
-    const options = () => Array.from(menu.querySelectorAll('[role="option"]'));
+    const options = () => Array.from(menu.querySelectorAll('[role="option"], [role="menuitem"]'));
     const placeholder = root.getAttribute('data-placeholder') || '';
 
     function close() {
@@ -2686,7 +2687,7 @@ function initDropdown(root, onSelect, reset, keepSelected) {
     }
     function choose(li) {
         options().forEach((o) => o.setAttribute('aria-selected', String(o === li)));
-        onSelect(li.getAttribute('data-value'), li.textContent.trim());
+        onSelect(li.getAttribute('data-value'), li.textContent.trim(), li);
         if (reset) {
             if (!keepSelected) options().forEach((o) => o.setAttribute('aria-selected', 'false'));
             if (placeholder) valueEl.textContent = placeholder;
@@ -2774,24 +2775,14 @@ function wireUI() {
     if (widthDrop) initDropdown(widthDrop, (value) => setWidth(Number(value)));
 
     const exportDrop = document.getElementById('exportDropdown');
-    if (exportDrop) initDropdown(exportDrop, (value) => handleExport(value), true);
+    if (exportDrop) initDropdown(exportDrop, (value, label, li) => {
+        const theme = li ? li.getAttribute('data-theme') : null;
+        if (theme) handleExport('pdf', theme);
+        else handleExport(value);
+    }, true);
 
     const fmtInsertDrop = document.getElementById('fmtInsertDropdown');
     if (fmtInsertDrop) initDropdown(fmtInsertDrop, (value) => handleInsert(value), true);
-
-    const printThemeDrop = document.getElementById('printThemeDropdown');
-    if (printThemeDrop) {
-        initDropdown(printThemeDrop, (value) => setPrintTheme(value), false);
-        // Initialize label from saved theme
-        const savedTheme = getPrintTheme();
-        const themeOptions = Array.from(printThemeDrop.querySelectorAll('[role="option"]'));
-        const selected = themeOptions.find(o => o.getAttribute('data-value') === savedTheme);
-        if (selected) selected.setAttribute('aria-selected', 'true');
-        else if (themeOptions[0]) themeOptions[0].setAttribute('aria-selected', 'true');
-        themeOptions.forEach(o => { if (o !== selected && o !== themeOptions[0] && o.getAttribute('data-value') !== savedTheme) o.setAttribute('aria-selected', 'false'); });
-        const valueEl = printThemeDrop.querySelector('.dropdown-value');
-        if (valueEl) valueEl.textContent = selected ? selected.textContent.trim() : 'Light PDF';
-    }
 
     document.addEventListener('selectionchange', () => { syncHeadingDropdown(); });
 
