@@ -18,9 +18,11 @@ const CURRENT_ID_KEY = 'quorly_current_id_v1';
 // Reading typeface, same value set as the Theme menu (see changeTypography).
 const READING_FONT_KEY = 'quorly_typeface_v1';
 const PRINT_THEME_KEY = 'print_theme'; // N-4 print theme (light/dark), independent of editor mode
-const MAX_RECENTS = 10;
 // Version history is capped per document.
 const MAX_VERSIONS = 20;
+const RECENTS_PAGE = 40;
+let recentsLimit = RECENTS_PAGE;
+let recentsTotal = 0;
 const RESTORE_WINDOW_MS = 48 * 60 * 60 * 1000; // reopen the last document only if touched within 48 h
 let currentId = null;
 // File handles cannot be stored in localStorage, so disk links live for this session only.
@@ -658,20 +660,6 @@ function readIndex() {
 // Version history is per document, so opening a different document doesn't show someone else's
 // snapshots. The storage layer owns both the key and the IndexedDB store behind it; the legacy
 // global key `doc_versions_v13` is read once, for migration.
-// Keep only the newest MAX_RECENTS entries. The document that is currently open is never evicted.
-// Anything that falls off goes with its version history: the storage layer deletes both, and a
-// document whose snapshot is gone would be unreachable from Recents anyway.
-function trimIndex(list) {
-    if (list.length <= MAX_RECENTS) return list;
-    const evicted = list.slice(MAX_RECENTS).filter((entry) => entry.id !== currentId);
-    if (evicted.length) {
-        QuorlyStore.evict(evicted.map((entry) => entry.id)).catch((err) => {
-            console.warn('Recents: could not clean up evicted documents.', err);
-        });
-    }
-    return list.slice(0, MAX_RECENTS);
-}
-
 function countWords() {
     const text = editBody.innerText || '';
     return text.trim() ? text.trim().split(/\s+/).length : 0;
@@ -707,17 +695,10 @@ function snapshotFromLiveKeys() {
     };
 }
 
-// Write a snapshot for `id` through the storage layer. If storage is full, evict the oldest parked
-// documents and retry. Resolves true only when the snapshot is actually durable.
+// Write a snapshot for `id` through the storage layer. On a failed put it simply
+// returns false; `parkCurrentDocument()` already toasts and refuses to switch.
 async function writeSnapshot(id, snapshot) {
-    if (await QuorlyStore.putSnapshot(id, snapshot)) return true;
-
-    const victims = readIndex().filter((e) => e.id !== id && e.id !== currentId).slice(-3);
-    for (const v of victims) {
-        await QuorlyStore.evict([v.id]);
-        if (await QuorlyStore.putSnapshot(id, snapshot)) return true;
-    }
-    return false;
+    return await QuorlyStore.putSnapshot(id, snapshot);
 }
 
 // Park the open document before anything overwrites the live keys. Callers must NOT switch
@@ -748,7 +729,7 @@ function touchCurrentDocument() {
         updatedAt: Date.now(),
         wordCount: countWords()
     });
-    safeSetItem(FILES_INDEX_KEY, JSON.stringify(trimIndex(list)));
+    safeSetItem(FILES_INDEX_KEY, JSON.stringify(list));
     renderRecents();
 }
 
@@ -810,14 +791,21 @@ function closeRowMenu(refocus) {
     rowMenuDocId = null;
 }
 
-function renderRecents() {
+function renderRecents(resetLimit) {
     const list = document.getElementById('recentsList');
     if (!list) return;
+
+    // Only a new search resets the window. Autosaves re-render on every keystroke, and
+    // resetting there would yank a reader who has scrolled down back to the top.
+    if (resetLimit === true) {
+        recentsLimit = RECENTS_PAGE;
+    }
 
     const searchEl = document.getElementById('recentsSearch');
     const query = (searchEl ? searchEl.value : '').trim().toLowerCase();
     const files = readIndex();
     const shown = query ? files.filter((f) => (f.title || '').toLowerCase().includes(query)) : files;
+    recentsTotal = shown.length;
 
     list.textContent = '';
 
@@ -836,7 +824,8 @@ function renderRecents() {
         return;
     }
 
-    shown.forEach((entry) => {
+    const slice = shown.slice(0, recentsLimit);
+    slice.forEach((entry) => {
         const row = document.createElement('div');
         row.className = 'recent-item' + (entry.id === currentId ? ' is-current' : '');
 
@@ -879,6 +868,28 @@ function renderRecents() {
         row.append(icon, open, more);
         list.appendChild(row);
     });
+
+    // Bounded re-render: if more documents exist than rendered but the list box does not
+    // actually overflow (short rows, tall panel), raise the limit by a page and render again.
+    // Bound the loop so it can never spin infinitely.
+    if (shown.length > recentsLimit && shown.length > slice.length) {
+        const hasOverflow = list.scrollHeight > list.clientHeight;
+        if (!hasOverflow) {
+            const prevLimit = recentsLimit;
+            recentsLimit += RECENTS_PAGE;
+            if (recentsLimit > shown.length) recentsLimit = shown.length;
+            if (recentsLimit !== prevLimit) {
+                // Only re-render if the limit actually changed, preventing loops.
+                renderRecents(false);
+            }
+        }
+    }
+}
+
+function loadMoreRecents() {
+    if (recentsLimit >= recentsTotal) return;
+    recentsLimit = Math.min(recentsLimit + RECENTS_PAGE, recentsTotal);
+    renderRecents(false);
 }
 
 async function deleteRecent(id) {
@@ -3319,7 +3330,16 @@ function wireUI() {
     document.addEventListener('selectionchange', () => { syncHeadingDropdown(); });
 
     const recentsSearch = document.getElementById('recentsSearch');
-    if (recentsSearch) recentsSearch.addEventListener('input', renderRecents);
+    if (recentsSearch) recentsSearch.addEventListener('input', () => renderRecents(true));
+
+    const recentsList = document.getElementById('recentsList');
+    if (recentsList) {
+        recentsList.addEventListener('scroll', () => {
+            if (recentsList.scrollTop + recentsList.clientHeight >= recentsList.scrollHeight - 80) {
+                loadMoreRecents();
+            }
+        }, { passive: true });
+    }
 
     document.querySelectorAll('#commandPalette .cmd-item[data-cmd]').forEach(item => {
         item.addEventListener('mousedown', (e) => {

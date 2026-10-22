@@ -518,15 +518,6 @@
 
     // --- housekeeping ------------------------------------------------------------------
 
-    async function evict(ids) {
-        for (const id of ids) {
-            await deleteSnapshot(id);
-            await deleteVersions(id);
-        }
-        scheduleSweep();
-        return ids.length;
-    }
-
     // Move everything an index still points at out of localStorage. Safe to run repeatedly and
     // never required for correctness: reads adopt on their own.
     async function migrate(indexIds) {
@@ -638,7 +629,6 @@
         getSnapshot: getSnapshot,
         putSnapshot: putSnapshot,
         deleteSnapshot: deleteSnapshot,
-        evict: evict,
 
         listVersions: listVersions,
         appendVersion: appendVersion,

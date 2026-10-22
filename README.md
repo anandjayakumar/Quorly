@@ -35,7 +35,7 @@ There is no sign-up, no tour and nothing to set up first.
 | Writing | Keeping | Moving |
 |---|---|---|
 | Rich text, tables, images | Autosave as you type | Export to Markdown, PDF, plain text or `.quorly` |
-| Focus mode, light and dark | A local library of your documents | Import `.md`, `.html` or `.quorly` |
+| Focus mode, light and dark | A local library of every document you write | Import `.md`, `.html` or `.quorly` |
 | Five reading faces, adjustable width | A version history for each document | Write straight to disk via the file picker |
 | Distraction-free by default | Your last document reopens within 48 hours | Print with its own light/dark theme |
 
