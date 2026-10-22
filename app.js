@@ -82,6 +82,241 @@ function toast(message, ms) {
     toastTimer = setTimeout(() => el.classList.remove('show'), ms || 4000);
 }
 
+// --- IN-APP DIALOGS (replace native confirm / prompt) ----------------------------
+// Keep Tab inside the open dialog: Chromium does not guarantee that sequential
+// focus stops at a modal dialog's edge, so wrap it ourselves.
+function trapTab(e) {
+  if (e.key !== 'Tab') return false;
+  const dialog = e.currentTarget;
+  const focusables = Array.from(dialog.querySelectorAll('button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])'))
+    .filter(function (el) { return !el.disabled && (el.offsetWidth || el.offsetHeight || el.getClientRects().length); });
+  if (!focusables.length) return false;
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  const active = document.activeElement;
+  if (e.shiftKey) {
+    if (active === first || !dialog.contains(active)) { e.preventDefault(); last.focus(); return true; }
+  } else if (active === last || !dialog.contains(active)) {
+    e.preventDefault(); first.focus(); return true;
+  }
+  return false;
+}
+
+window.quorlyConfirm = function (opts) {
+  opts = opts || {};
+  const title = opts.title || '';
+  const body = opts.body || '';
+  const confirmLabel = opts.confirmLabel || 'Confirm';
+  const cancelLabel = opts.cancelLabel || 'Cancel';
+  const tone = opts.tone || 'default';
+  return new Promise(function (resolve) {
+    let resolved = false;
+    function finish(val) {
+      if (resolved) return;
+      resolved = true;
+      document.body.classList.remove('dialog-open');
+      const prevFocus = dialog.getAttribute('data-prev-focus');
+      dialog.close();
+      // A fresh dialog per call means no stale `close` event can cancel the
+      // next one; drop the element once it has served its purpose.
+      dialog.remove();
+      if (prevFocus && document.contains(document.getElementById(prevFocus))) {
+        try { document.getElementById(prevFocus).focus(); } catch (_) {}
+      } else if (prevFocusActive && document.contains(prevFocusActive)) {
+        try { prevFocusActive.focus(); } catch (_) {}
+      }
+      resolve(val);
+    }
+    const prevFocusActive = document.activeElement;
+    const dialog = document.createElement('dialog');
+    dialog.className = 'q-dialog';
+    document.body.appendChild(dialog);
+    dialog.setAttribute('data-prev-focus', prevFocusActive ? (prevFocusActive.id || '') : '');
+    // Panel container so backdrop clicks only land on dialog when outside
+    const panel = document.createElement('div');
+    panel.className = 'q-dialog-panel';
+    const titleEl = document.createElement('h3');
+    titleEl.className = 'q-dialog-title';
+    titleEl.id = 'q-dialog-title';
+    titleEl.textContent = title;
+    panel.appendChild(titleEl);
+    if (body) {
+      const bodyEl = document.createElement('p');
+      bodyEl.className = 'q-dialog-body';
+      bodyEl.id = 'q-dialog-body';
+      bodyEl.textContent = body;
+      panel.appendChild(bodyEl);
+    }
+    const actions = document.createElement('div');
+    actions.className = 'q-dialog-actions';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'q-dialog-btn';
+    cancelBtn.textContent = cancelLabel;
+    actions.appendChild(cancelBtn);
+    const confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button';
+    confirmBtn.className = 'q-dialog-btn is-primary' + (tone === 'danger' ? ' is-danger' : '');
+    confirmBtn.textContent = confirmLabel;
+    actions.appendChild(confirmBtn);
+    panel.appendChild(actions);
+    dialog.appendChild(panel);
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-labelledby', 'q-dialog-title');
+    if (body) dialog.setAttribute('aria-describedby', 'q-dialog-body');
+
+    document.body.classList.add('dialog-open');
+
+    cancelBtn.addEventListener('click', function () { finish(false); }, { once: true });
+    confirmBtn.addEventListener('click', function () { finish(true); }, { once: true });
+    dialog.addEventListener('close', function () {
+      if (!resolved) finish(false);
+    }, { once: true });
+    dialog.addEventListener('cancel', function (e) {
+      e.preventDefault();
+      finish(false);
+    }, { once: true });
+    dialog.addEventListener('click', function (e) {
+      if (e.target === dialog) finish(false);
+    }, { once: true });
+    // Key handling
+    function onKey(e) {
+      if (e.key === 'Tab') { trapTab(e); e.stopPropagation(); return; }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        finish(false);
+      } else if (e.key === 'Enter' && !e.defaultPrevented) {
+        // Enter follows the focused button: a destructive confirm starts on
+        // Cancel, so Enter must not delete by reflex.
+        // Swallow the event: finish() restores editor focus synchronously, and
+        // a bubbling Enter would then reach the app's document-level handlers.
+        e.preventDefault();
+        e.stopPropagation();
+        finish(document.activeElement === cancelBtn ? false : true);
+      }
+    }
+    dialog.addEventListener('keydown', onKey);
+
+    dialog.showModal();
+    // A destructive confirm opens on Cancel so a reflexive Enter cannot
+    // trigger the destructive action.
+    if (tone === 'danger') cancelBtn.focus();
+    else confirmBtn.focus();
+  });
+};
+
+window.quorlyPrompt = function (opts) {
+  opts = opts || {};
+  const title = opts.title || '';
+  const label = opts.label || '';
+  const placeholder = opts.placeholder || '';
+  const value = opts.value || '';
+  const confirmLabel = opts.confirmLabel || 'Confirm';
+  const inputType = opts.inputType || 'text';
+  return new Promise(function (resolve) {
+    let resolved = false;
+    function finish(val) {
+      if (resolved) return;
+      resolved = true;
+      document.body.classList.remove('dialog-open');
+      const prevFocus = dialog.getAttribute('data-prev-focus');
+      dialog.close();
+      // A fresh dialog per call means no stale `close` event can cancel the
+      // next one; drop the element once it has served its purpose.
+      dialog.remove();
+      if (prevFocus && document.contains(document.getElementById(prevFocus))) {
+        try { document.getElementById(prevFocus).focus(); } catch (_) {}
+      } else if (prevFocusActive && document.contains(prevFocusActive)) {
+        try { prevFocusActive.focus(); } catch (_) {}
+      }
+      resolve(val);
+    }
+    const prevFocusActive = document.activeElement;
+    const dialog = document.createElement('dialog');
+    dialog.className = 'q-dialog';
+    document.body.appendChild(dialog);
+    dialog.setAttribute('data-prev-focus', prevFocusActive ? (prevFocusActive.id || '') : '');
+    const panel = document.createElement('div');
+    panel.className = 'q-dialog-panel';
+    const titleEl = document.createElement('h3');
+    titleEl.className = 'q-dialog-title';
+    titleEl.id = 'q-dialog-title';
+    titleEl.textContent = title;
+    panel.appendChild(titleEl);
+    if (label) {
+      const labelEl = document.createElement('label');
+      labelEl.className = 'q-dialog-label';
+      labelEl.htmlFor = 'q-dialog-input';
+      labelEl.textContent = label;
+      panel.appendChild(labelEl);
+    }
+    const input = document.createElement('input');
+    input.type = inputType;
+    input.id = 'q-dialog-input';
+    input.className = 'q-dialog-input';
+    input.placeholder = placeholder;
+    input.value = value;
+    panel.appendChild(input);
+    const actions = document.createElement('div');
+    actions.className = 'q-dialog-actions';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'q-dialog-btn';
+    cancelBtn.textContent = opts.cancelLabel || 'Cancel';
+    actions.appendChild(cancelBtn);
+    const confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button';
+    confirmBtn.className = 'q-dialog-btn is-primary';
+    confirmBtn.textContent = confirmLabel;
+    actions.appendChild(confirmBtn);
+    panel.appendChild(actions);
+    dialog.appendChild(panel);
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-labelledby', 'q-dialog-title');
+
+    document.body.classList.add('dialog-open');
+
+    cancelBtn.addEventListener('click', function () { finish(null); }, { once: true });
+    confirmBtn.addEventListener('click', function () {
+      const v = input.value;
+      finish(v === '' ? '' : v);
+    }, { once: true });
+    dialog.addEventListener('close', function () {
+      if (!resolved) finish(null);
+    }, { once: true });
+    dialog.addEventListener('cancel', function (e) {
+      e.preventDefault();
+      finish(null);
+    }, { once: true });
+    dialog.addEventListener('click', function (e) {
+      if (e.target === dialog) finish(null);
+    }, { once: true });
+    function onKey(e) {
+      if (e.key === 'Tab') { trapTab(e); e.stopPropagation(); return; }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        finish(null);
+      } else if (e.key === 'Enter') {
+        // Swallow the event: finish() restores editor focus synchronously, and
+        // a bubbling Enter would then reach the app's document-level handlers.
+        e.preventDefault();
+        e.stopPropagation();
+        const v = input.value;
+        finish(v === '' ? '' : v);
+      }
+    }
+    dialog.addEventListener('keydown', onKey);
+
+    dialog.showModal();
+    setTimeout(function () {
+      input.focus();
+      input.select();
+    }, 0);
+  });
+};
+
 // localStorage write that can't crash the app when the quota is exceeded
 function safeSetItem(key, value) {
     try {
@@ -649,7 +884,13 @@ function renderRecents() {
 async function deleteRecent(id) {
     const entry = readIndex().find((e) => e.id === id);
     if (!entry) return;
-    if (!confirm('Delete "' + entry.title + '" from this browser? This cannot be undone.')) return;
+    const ok = await window.quorlyConfirm({
+      title: 'Delete this document?',
+      body: '"' + entry.title + '" will be removed from this browser, along with its version history. This cannot be undone.',
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!ok) return;
 
     // The open document's content is in the live keys, so deleting its index entry alone would
     // leave it alive; the branch below gives it a fresh id instead. Either way the parked copy
@@ -2175,14 +2416,8 @@ function format(cmd) {
     if (['h1', 'h2', 'h3', 'h4', 'blockquote', 'p'].includes(cmd)) {
         document.execCommand('formatBlock', false, cmd);
     } else if (cmd === 'link') {
-        const url = prompt('Enter URL:');
-        if (url) {
-            if (window.getSelection().isCollapsed) {
-                document.execCommand('insertHTML', false, '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(url) + '</a>');
-            } else {
-                document.execCommand('createLink', false, url);
-            }
-        }
+        openLinkDialog();
+        return;
     } else if (cmd === 'code') {
         formatInlineCode();
         return; // formatInlineCode saves the document itself
@@ -2194,6 +2429,70 @@ function format(cmd) {
         document.execCommand(cmd, false, null);
     }
     saveToLocalStorage();
+}
+
+async function openLinkDialog() {
+  const sel = window.getSelection();
+  const range = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+  let existing = null;
+  if (range) {
+    try {
+      const anchor = range.startContainer.parentElement ? range.startContainer.parentElement.closest('a') : null;
+      if (anchor && editBody.contains(anchor)) existing = anchor;
+    } catch (_) {}
+  }
+  const result = await window.quorlyPrompt({
+    title: existing ? 'Edit link' : 'Insert link',
+    label: 'URL',
+    placeholder: 'https://example.com',
+    value: existing ? existing.getAttribute('href') || '' : '',
+    confirmLabel: existing ? 'Update' : 'Insert',
+    inputType: 'url',
+  });
+  if (result === null || result === undefined) return;
+  const urlRaw = String(result).trim();
+  if (!urlRaw) return;
+  let url = urlRaw;
+  if (!/^https?:\/\//i.test(url) && !/^\//.test(url) && !/^#/.test(url) && !/^mailto:/i.test(url) && !/^tel:/i.test(url)) {
+    url = 'https://' + url;
+  }
+  editBody.focus();
+  const newRange = (range && editBody.contains(range.startContainer)) ? range : null;
+  const newSel = window.getSelection();
+  if (newRange && newSel) {
+    newSel.removeAllRanges();
+    newSel.addRange(newRange);
+  } else {
+    // Fallback: insert at end of body
+    const endRange = document.createRange();
+    endRange.selectNodeContents(editBody);
+    endRange.collapse(false);
+    if (newSel) {
+      newSel.removeAllRanges();
+      newSel.addRange(endRange);
+    }
+  }
+  if (newSel && newSel.isCollapsed) {
+    document.execCommand('insertHTML', false, '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(url) + '</a>');
+  } else {
+    document.execCommand('createLink', false, url);
+    // Set target/rel on the created anchor
+    const created = editBody.querySelector('a[href="' + url.replace(/"/g, '\\"') + '"]');
+    if (created) {
+      created.setAttribute('target', '_blank');
+      created.setAttribute('rel', 'noopener');
+    } else {
+      // If the exact href didn't match (e.g. URL was normalised differently), find the last inserted anchor
+      const anchors = editBody.querySelectorAll('a');
+      if (anchors.length) {
+        const lastAnchor = anchors[anchors.length - 1];
+        lastAnchor.setAttribute('target', '_blank');
+        lastAnchor.setAttribute('rel', 'noopener');
+      }
+    }
+  }
+  saveToLocalStorage();
+  updateStats();
 }
 
 // --- UI-17: alignment ---------------------------------------------------------------

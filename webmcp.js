@@ -241,11 +241,19 @@
         if (!markdown.trim()) return err('Markdown content is required.');
         const parsed = markdownToClean(markdown);
         if (!parsed) return err('The Markdown renderer is unavailable.');
-        if (hasContent() && typeof window.confirm === 'function') {
+        if (hasContent()) {
           const title = (editTitle.textContent || '').trim() || 'this untitled document';
-          if (!window.confirm('Replace the whole body of "' + title + '"? This cannot be undone.')) {
-            return err('The person declined the replacement.');
-          }
+          const confirmed = typeof window.quorlyConfirm === 'function'
+            ? await window.quorlyConfirm({
+                title: 'Replace the document body?',
+                body: '"' + title + '" will be overwritten with the new content. This cannot be undone.',
+                confirmLabel: 'Replace',
+                tone: 'danger',
+              })
+            : (typeof window.confirm === 'function'
+                ? window.confirm('Replace the whole body of "' + title + '"? This cannot be undone.')
+                : true);
+          if (!confirmed) return err('The person declined the replacement.');
         }
         isLoading = true;
         editBody.textContent = '';

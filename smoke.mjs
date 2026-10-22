@@ -239,6 +239,22 @@ try {
   record('/app.js library markers', false, String(e.message || e));
 }
 
+try {
+  const { body } = await get('/app.js');
+  const dialogMarkers = [
+    'quorlyConfirm',
+    'quorlyPrompt',
+    'showModal',
+  ];
+  for (const marker of dialogMarkers) {
+    record(`/app.js dialog has ${marker}`, body.includes(marker), 'missing');
+  }
+  record(`/app.js no longer has native confirm delete`, !body.includes("confirm('Delete"), 'still present');
+  record(`/app.js no longer has native URL prompt`, !body.includes("prompt('Enter URL:"), 'still present');
+} catch (e) {
+  record('/app.js dialog markers', false, String(e.message || e));
+}
+
 // --- N-11: paste fix — Range + DocumentFragment insertion -------------------
 
 // --- print flow markers (N-4): natural pagination, clone padding --------------
@@ -273,8 +289,8 @@ try {
     'readOnlyHint',
     'untrustedContentHint',
     'consequentialHint',
-    // Destructive paths keep a human confirmation step in the page.
-    'window.confirm',
+    // Destructive paths keep a human confirmation step in the page (with fallback).
+    'quorlyConfirm',
   ];
   for (const marker of markers) {
     record(`/webmcp.js has ${marker}`, body.includes(marker), 'missing');
