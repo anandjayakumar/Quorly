@@ -124,7 +124,7 @@ for (const path of ['/.well-known/ai-catalog.json', '/.well-known/ard.json']) {
     const doc = JSON.parse(body);
     const entry = Array.isArray(doc.entries) ? doc.entries[0] : null;
     record(`${path} has an ARD entry`, !!(entry && entry.identifier && entry.displayName && entry.type && entry.url), 'missing required fields');
-    record(`${path} identifier is a domain URN`, !!entry && /^urn:air:quorly\.us\.ci:/.test(entry.identifier || ''), entry ? entry.identifier : 'none');
+    record(`${path} identifier is a domain URN`, !!entry && /^urn:air:quorly\.dev:/.test(entry.identifier || ''), entry ? entry.identifier : 'none');
     record(`${path} entry is an agent skill`, !!entry && entry.type === 'application/agent-skills+md', entry ? entry.type : 'none');
     const queries = entry && Array.isArray(entry.representativeQueries) ? entry.representativeQueries.length : 0;
     record(`${path} has 2-5 representative queries`, queries >= 2 && queries <= 5, `count=${queries}`);
