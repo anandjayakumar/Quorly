@@ -1,253 +1,188 @@
-# Quorly — static web build
+<p align="center">
+  <img src="quorly.png" width="84" alt="Quorly">
+</p>
 
-A single-user, browser-based writer/editor. Everything runs client-side; documents are
-stored in the visitor's `localStorage`, and optional "Sync to Disk" uses the File System
-Access API.
+<h1 align="center">Quorly</h1>
 
-This folder is the split, CSP-hardened build, **ready to deploy to Cloudflare Pages**.
+<p align="center">
+  <strong>A private, offline writing space that lives in your browser.</strong><br>
+  No account. No upload. No ads. No cookies.
+</p>
+
+<p align="center">
+  <a href="https://quorly.dev/app/"><strong>Open the editor →</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://quorly.dev">quorly.dev</a>
+  &nbsp;·&nbsp;
+  <a href="https://quorly.dev/privacy/">Privacy</a>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="screenshots/editor-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="screenshots/editor-light.png">
+    <img src="screenshots/editor-light.png" width="100%" alt="The Quorly editor: a document open beside a panel of formatting controls and a list of recent documents.">
+  </picture>
+</p>
+
+Quorly is a distraction-free text editor with just enough structure — headings, lists,
+quotes, tables and images — plus five reading faces, a focus mode and a document library.
+It opens in a tab, keeps working when the network disappears, and installs as an app.
+There is no sign-up, no tour and nothing to set up first.
+
+## What it does
+
+| Writing | Keeping | Moving |
+|---|---|---|
+| Rich text, tables, images | Autosave as you type | Export to Markdown, PDF, plain text or `.quorly` |
+| Focus mode, light and dark | A library of your last 10 documents | Import `.md`, `.html` or `.quorly` |
+| Five reading faces, adjustable width | 20 versions per document | Write straight to disk via the file picker |
+| Distraction-free by default | Your last document reopens within 48 hours | Print with its own light/dark theme |
+
+## Your words stay on your device
+
+| Where | What lives there |
+|---|---|
+| This browser, `localStorage` | The document you have open, written as you type |
+| This browser, `IndexedDB` | The library: parked documents, their version history and images |
+| Your disk, if you ask | A file you choose through the browser's own file picker |
+| A server | Nothing — no title, no body, no image |
+
+The editor makes exactly one kind of request: a same-origin `POST /e` when something
+notable happens — a first keystroke, an export, a storage-quota error, a returning writer,
+a WebMCP tool call. The endpoint accepts an event name from a fixed list and at most one
+short property (an export format, a theme or a tool name). It carries no document content, no
+identifier and no cookie, it answers `204`, and it fails silently by design, so a dropped
+beacon can never interrupt writing.
+
+Fonts, scripts, styles and icons are all served from this origin. The one third-party request
+on the page is Cloudflare Web Analytics, which counts anonymous visits and sets no cookie;
+`script-src` and `connect-src` allow that host and nothing else. No document content is ever
+sent. The AI write-assist feature is absent from this build — there is no API call, no key
+prompt and no model ID anywhere in the shipped code.
+
+## Try it
+
+1. Open **[quorly.dev/app](https://quorly.dev/app/)**. Start typing; it saves itself.
+2. Install it if you want a window without a browser: Chrome and Edge offer an install icon
+   in the address bar, Safari uses Share → Add to Home Screen.
+3. On a fresh machine, open the same browser and your documents are already there. On a
+   different one, export a `.quorly` file and import it.
+
+## Run it locally
+
+There is no build step, no package manager and no bundler — the site is plain HTML, CSS and
+JavaScript. Serve the repository root over HTTP:
+
+```sh
+python -m http.server 8080      # or: npx serve .
+```
+
+Then open `http://localhost:8080/` for the landing page or `/app/` for the editor. Use HTTP
+rather than opening `index.html` directly: the service worker, the file picker and the
+install prompt all need a real origin.
 
 ## Layout
 
-```
-index.html             landing page (marketing, SEO head, JSON-LD)  ->  /
-landing.css            landing-page styles
-app/index.html         the editor                                     ->  /app/
-styles.css             editor styles + self-hosted @font-face rules
-app.js                 all editor behaviour (external, loaded with defer)
-privacy/index.html     privacy policy                                 ->  /privacy/
-404.html               served by Cloudflare for unmatched paths
-vendor/                marked 15.0.12 + DOMPurify 3.2.4 (vendored, no CDN)
-fonts/*.woff2          self-hosted variable webfonts
-quorly.png             brand mark
-favicon.png            site icon
-icon-192.png           PWA icons (generated)
-icon-512.png
-og.png                 social card, 1200x630 (generated)
-manifest.webmanifest   PWA manifest
-sw.js                  service worker: offline shell (must stay at the root for scope /)
-robots.txt / sitemap.xml
-_headers               Cloudflare security + caching headers
-smoke.mjs              post-deploy verification (not published)
-```
-
-The editor lives at `/app/` and references every asset with an **absolute** path
-(`/styles.css`, `/vendor/...`), so it does not depend on being served from the root.
-`@font-face` URLs in the CSS resolve relative to `/styles.css`, which stays at the root.
-
-## Network activity: exactly one third-party request
-
-The editor makes **no network requests at all**. Fonts, scripts, styles and images are
-same-origin, and the page never calls `fetch`, `XMLHttpRequest` or `sendBeacon`.
-
-The one exception is **Cloudflare Web Analytics**, loaded for anonymous visit counts. It
-fetches `beacon.min.js` from `static.cloudflareinsights.com` and beacons to
-`cloudflareinsights.com`. `connect-src` also keeps `'self'`, which is not used by the app
-but is required for the origin to read its own `/robots.txt` and `/sitemap.xml` (without it
-Lighthouse reports "robots.txt is not valid"). No document content is ever transmitted, and
-no cookies are set.
-
-The service worker does not change this. It only ever caches **same-origin** responses and skips
-every cross-origin request, so the beacon passes through untouched; it adds no requests beyond
-re-fetching the app's own files.
-
-The AI **Write-Assist** feature is absent from this build. There is no API call, no API key
-prompt, and no model IDs anywhere in the shipped code.
-
-## Deploy
-
-### Cloudflare Pages (current production)
-
-The app is a git repo, and deploys go through `tools/release/release.mjs`. Commits on `dev` run the
-smoke gate and, if it passes, deploy a preview automatically — detached, so committing is never
-blocked. Production is **only** ever promoted by hand: `promote --commit <sha>` refuses a commit
-that has no passing preview run on record, re-runs the whole suite against the canonical domain,
-and only then moves the `main` branch.
-
-```sh
-node tools/release/release.mjs run                     # snapshot HEAD -> gate -> preview -> verify alias -> prune
-node tools/release/release.mjs run --dry-run           # gate only, deploy nothing
-node tools/release/release.mjs status                  # the last run's result (.release/status.json)
-node tools/release/release.mjs promote --commit <sha>  # production; manual, and only for a commit that passed
-```
-
-The stage is built with `git archive <sha>`: `.gitattributes` marks `README.md`, `smoke.mjs`,
-`.assetsignore`, `.gitignore`, `.gitattributes`, `.githooks/` and `tools/` as `export-ignore`, so
-exactly the deployable tree is uploaded and nothing private can leak. (This replaces the old
-`robocopy /XF` recipe, which had to be remembered on every deploy and could capture a half-written
-file.)
-
-Enabling it in a fresh clone:
-
-```sh
-git config core.hooksPath .githooks
-```
-
-Two environment variables matter, and neither is stored in the repository:
-
-| Variable | Needed for | Notes |
-|---|---|---|
-| `CLOUDFLARE_API_TOKEN` | deploy and promote | Prefer a scoped Pages token. The cached wrangler OAuth token also works, but expires in about an hour; the runner reports which one it used in `authWarning`. |
-| `CLOUDFLARE_ACCOUNT_ID` | pruning old previews | Only the Pages REST prune needs the account id — `wrangler pages deploy` resolves the project by name. Unset, that step fails with a clear message instead of guessing. |
-
-Production URL: <https://quorly.dev> (the canonical domain; `quorly.us.ci`,
-`www.quorly.us.ci`, `www.quorly.dev` and `quorly.pages.dev` all 301 to it).
-
-### Verify after every deploy
-
-```sh
-node smoke.mjs https://quorly.dev
-```
-
-This asserts every asset's `Content-Type` (including `/sw.js`), that `nosniff` is present, that
-the CSP allows the analytics beacon, the manifest and the service worker and never
-`'unsafe-inline'`, that HTML stays revalidated, that `sw.js` still carries the agreed cache
-strategies, that the manifest keeps its installability fields, that the expected markup is in each
-document, and that `README.md`, `_headers`, `.assetsignore` and `smoke.mjs` are **not** publicly
-readable. It exists because a direct upload once stored assets as
-`application/octet-stream`; with `nosniff` the browser downloaded `index.html` instead of
-rendering it, and nothing in the pipeline noticed.
-
-## Security headers (`_headers`)
-
-```
-Content-Security-Policy: default-src 'none'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://cloudflareinsights.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'
-X-Content-Type-Options: nosniff
-Referrer-Policy: no-referrer
-Permissions-Policy: geolocation=(), microphone=(), camera=()
-X-Frame-Options: DENY
-Strict-Transport-Security: max-age=31536000
-```
-
-`script-src` has no `'unsafe-inline'`, which is only possible because the markup contains
-no inline `<script>`, no inline `<style>` and no inline event handlers. The JSON-LD block
-in the landing page is a data block, not executable script, so it does not require a CSP
-exception. If you ever add an inline handler you would have to weaken this to
-`'unsafe-inline'` — avoid that.
-
-`manifest-src` and `worker-src` are named explicitly because both fall back to `default-src`,
-which is `'none'`. Without them the web app manifest would be blocked and the service worker could
-not register. Chrome only fetches the manifest once a page is installable — which requires a
-service worker — so this stayed invisible until the worker landed.
-
-### Why MIME types are pinned
-
-On a Worker with static assets, the direct-upload API records the `Content-Type` sent for
-each file part and keys assets by content hash, so a stored type cannot be corrected later
-without changing the file bytes. The `_headers` `Content-Type` pins make the served type
-independent of that. Cloudflare Pages derives MIME from the file extension, so the pins are
-redundant there but harmless.
-
-### Hosts that can't read `_headers`
-
-Add a `<meta http-equiv="Content-Security-Policy">` fallback to each document. A meta
-policy cannot express `frame-ancestors`.
-
-## Fonts
-
-Self-hosted, open-source (OFL) only. The editor offers five reading faces: **Default**
-(Inter body + Montserrat titles), **Literature** (Literata), **Paperback** (Crimson Pro),
-**Screenwriter** (Courier Prime) and **OpenDyslexic**. Fira Code sets code blocks, and the
-landing page keeps Lora as its serif. Google serves the variable families as one file per
-style covering the full weight range; the OFL notices live in `fonts/LICENSE.md`. Twitter's
-proprietary **Chirp** was removed because it cannot be redistributed.
-
-## Offline + installable (service worker)
-
-`sw.js` is served from the **root** — that is what gives it scope `/`. `app.js` registers it on
-`window.load`, and only from the editor: the landing page deliberately does not, so a visitor who
-only reads the marketing page never downloads the app shell. Once installed it controls the whole
-origin, so `/` is covered from then on.
-
-Caching is deliberately conservative, because the worst failure for an app that promises "your
-words are safe" is a cache that outlives a deploy:
-
-| Request | Strategy | Why |
-|---|---|---|
-| HTML navigations | **network-first** | a deploy can never be masked by a stale cached page |
-| `/fonts/*` | **cache-first** | served `immutable` by `_headers`; they cannot change |
-| everything else (CSS, JS, vendor, manifest, icons) | **stale-while-revalidate** | instant from cache and self-healing, so a forgotten version bump cannot pin an old `/app.js` forever |
-| anything cross-origin | not intercepted | the analytics beacon must pass straight through |
-
-Two failure modes are handled explicitly:
-
-- **A 4xx passes through; a 5xx falls back to the cache.** An origin or proxy error must never
-  replace a working offline shell with an error page. (Found in testing: a 502 was being shown
-  instead of the cached editor.)
-- **Precaching never aborts the install.** Each URL is added independently, so one bad file cannot
-  leave the origin with no worker at all.
-
-Documents are unaffected — the worker caches **code** only (the shell and its assets); your words
-stay in `localStorage` as data. `VERSION` in `sw.js` only needs bumping when the *strategy* changes;
-`activate` deletes any `quorly-*` cache that does not match the current name.
-
-When the browser reports itself offline the editor's footer shows a small chip — *"Offline — saved
-in this browser"* — and a "Back online" toast when it returns. The cue follows `navigator.onLine`,
-which reflects the network interface rather than reachability, so a reachable-looking network with
-a dead origin will not show the chip.
-
-Installability was checked against the live manifest: `id` and `start_url` are `/app/`, `scope` is
-`/`, `display` is `standalone`, `theme_color`/`background_color` are `#0e0e0e`, and the icon set is
-192 + 512 plus a 512 `maskable`. The maskable entry reuses `icon-512.png`; the logo spans only the
-centre of the canvas (furthest corner 189.6 px from centre versus a 204.8 px safe radius), so a
-circular mask crops background and nothing else.
-
-## Storage keys
-
-The live document keeps its original keys, unchanged: `doc_title_v13`, `doc_body_v13`,
-`doc_title_image_v13` and `mode`. (`doc_versions_v13` was the pre-library version history; it is
-migrated into `quorly_versions_<id>` and then deleted — see below.)
-
-The Recents library adds four:
-
-| Key | Contents |
+| Path | Purpose |
 |---|---|
-| `quorly_current_id_v1` | id of the document that is open |
-| `quorly_files_v1` | index: `[{ id, title, updatedAt, wordCount }]`, newest first |
-| `quorly_file_<id>` | that document's snapshot: `{ title, body, titleImage, updatedAt }` |
-| `quorly_versions_<id>` | that document's version history (last 20 snapshots) |
+| `index.html`, `landing.css`, `landing.js` | Landing page at `/` |
+| `app/index.html` | The editor at `/app/` |
+| `app.js` | Editor behaviour |
+| `stories.js` | Storage adapter: `localStorage` for the open document, `IndexedDB` for the library |
+| `webmcp.js` | In-browser agent tools (WebMCP), registered only while the page is open |
+| `styles.css` | Editor styles, including the mobile breakpoints |
+| `sw.js` | Service worker — must stay at the root for scope `/` |
+| `functions/e.js` | `POST /e`, the cookieless counter |
+| `_headers` | CSP, MIME pins and caching |
+| `smoke.mjs` | Post-deploy verification (not published) |
+| `tools/release/` | Release runner (not published) |
 
-**The open document is stored once.** The live keys above *are* its storage; an autosave only
-upserts its (small) index entry. A body snapshot under `quorly_file_<id>` is written at the moment
-the document is **parked** — before switching away from it (`parkCurrentDocument()`), which happens
-in `newFile()`, `openRecent()` and when the 48 h restore window has lapsed. If a park fails because
-storage is full, the switch is **refused** rather than overwriting the only copy.
+Markdown is rendered by a vendored copy of `marked` and sanitised by `DOMPurify`; both are
+pinned and byte-identical to their npm releases. The interface has no framework.
 
-The index is capped at `MAX_RECENTS = 10`; the oldest entries are evicted together with their
-snapshot **and their version history**, and the open document is never evicted. On open, the last
-document is restored only if it was touched within `RESTORE_WINDOW_MS` (48 h); otherwise the live
-document is parked first and the editor opens a clean page, leaving the old document in the list.
+## How it ships
 
-Version history used to live in the shared `doc_versions_v13` list. It is now per document
-(`quorly_versions_<id>`). The old key is read once and migrated; as soon as the per-document copy
-exists the legacy key is **deleted**, because it is dead weight and can be image-sized. If the
-migration cannot be written (quota), the legacy key is left alone rather than discarded.
+Deploys go through `tools/release/release.mjs`, never through a hand-built upload:
 
-Clicking the `×` on a Recents row deletes that document from this browser: its snapshot, its
-version history, its session disk link and its index entry. Deleting the open document starts a
-clean page.
+```sh
+node tools/release/release.mjs run                     # snapshot -> gate -> preview -> prune
+node tools/release/release.mjs run --dry-run           # the gate only, deploys nothing
+node tools/release/release.mjs promote --commit <sha>  # production; manual, gated
+```
 
-Disk handles are **session-only**: a `FileSystemFileHandle` cannot be stored in `localStorage`, so
-handles live in an in-memory `Map` keyed by document id.
+A commit on `dev` builds a stage with `git archive` and runs the smoke suite against it
+locally, then against the preview URL. `.gitattributes` marks `README.md`, `smoke.mjs`,
+`.gitattributes`, `.assetsignore`, `.gitignore`, `.githooks/`, `tools/` and `screenshots/`
+as `export-ignore`, so the archive contains exactly the deployable tree and nothing else.
+Production is only ever moved by `promote`, which refuses a commit with no passing preview
+on record and re-runs the suite against `https://quorly.dev` first.
 
-## Theme
+Two environment variables matter, and neither is stored here: `CLOUDFLARE_API_TOKEN` for
+deploying, and `CLOUDFLARE_ACCOUNT_ID` only for pruning old previews — the prune fails with
+a clear message instead of guessing.
 
-Dark is the default on every page, and the visitor's OS preference is deliberately **not** consulted
-(`grep prefers-color-scheme` → 0 hits). The editor's sidebar has a sun/moon button that toggles
-`body.light-mode` and persists the choice in the `mode` key — the only route to the light theme. The
-button shows the *current* mode (moon = dark, sun = light) and swaps via a `body.light-mode` CSS rule,
-so it needs no JavaScript and no image request. The static pages (landing, privacy, 404) share
-`landing.css` and have no toggle; they are dark-first to match the editor.
+## Engineering notes
 
-## Notes
+<details>
+<summary><strong>A strict CSP with no inline anything</strong></summary>
 
-- `document.execCommand` is still used for rich-text editing (deprecated but functional).
-- The `vendor/` files are byte-identical to the pinned npm releases.
-- Images are stored as data URLs in `localStorage` (≈5 MB origin quota; the real quota varies by
-  browser). The open document is stored **once** — see "Storage keys" above. IndexedDB was
-  considered and **rejected**: persistence stays `localStorage`-only, so the remaining work is to
-  reduce bytes (image downscaling, text-only version snapshots) rather than move them.
-- The contact address `hello@quorly.dev` is published on `/privacy/` and in the landing page
-  footer. It is wrapped in Cloudflare's `<!--email_off-->` markers and the HTML is served with
-  `no-transform`, because Cloudflare's email obfuscation would otherwise rewrite the address into
-  a hidden `__cfemail__` link. The smoke gate asserts the `mailto:` survives, so a silent
-  regression fails the deploy instead of hiding the address.
+`_headers` sets `script-src 'self'` with no `'unsafe-inline'`, which is only possible because
+no document contains an inline `<script>`, an inline `<style>` or an inline event handler.
+The JSON-LD block on the landing page is a data block, not executable script, so it needs no
+exception. `manifest-src` and `worker-src` are named explicitly because both would otherwise
+fall back to `default-src 'none'`, and the manifest is only fetched when a page becomes
+installable — a failure that stays invisible until the service worker lands.
+
+</details>
+
+<details>
+<summary><strong>Offline, without a cache that outlives a deploy</strong></summary>
+
+`sw.js` uses network-first for HTML navigations so a deploy can never be masked by a stale
+page, cache-first for `/fonts/*` (served `immutable`), and stale-while-revalidate for
+everything else. A 4xx passes straight through, a 5xx falls back to the cache, and precaching
+adds each URL independently so one bad file cannot leave the origin with no worker at all.
+Only same-origin GETs are intercepted; the counter is never cached and never delayed.
+
+</details>
+
+<details>
+<summary><strong>Two stores, on purpose</strong></summary>
+
+The document you are looking at keeps its original synchronous `localStorage` keys, so the
+first paint never waits on a database. The library — parked documents, their versions and
+their images — lives in `IndexedDB`, because it holds far more than the 5 MB a string store
+will take. Images are decoded, downscaled and re-encoded on the way in; nothing is deleted
+before its replacement is durable, so an interrupted migration loses nothing.
+
+</details>
+
+<details>
+<summary><strong>Agent tools in the browser</strong></summary>
+
+`webmcp.js` registers ten tools against `document.modelContext` when the browser supports
+WebMCP: read the document, list and open saved documents, create one, set its title, append
+or replace content, insert a table, change reading preferences and delete a document. They
+call the same functions the interface calls, destructive ones still ask for confirmation in
+the page, and everything is torn down on `pagehide`. There is no server-side API.
+
+</details>
+
+<details>
+<summary><strong>Machine-readable surfaces</strong></summary>
+
+`/llms.txt`, `/index.md` and `/agent-skill.md` describe the site and the WebMCP tools for
+agents; `/.well-known/ai-catalog.json` and `/.well-known/ard.json` point at that skill.
+`robots.txt` names AI crawlers explicitly and carries `Content-Signal: ai-train=no`.
+
+</details>
+
+## Contact
+
+`hello@quorly.dev`, or open an issue here.
+
+---
+
+The source is public for reference and search. No license is granted, and it is not open for
+reuse or redistribution.

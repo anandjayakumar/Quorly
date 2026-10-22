@@ -10,6 +10,7 @@
 * text=auto eol=lf
 
 README.md        export-ignore
+screenshots/     export-ignore
 smoke.mjs        export-ignore
 .assetsignore    export-ignore
 .gitignore       export-ignore
