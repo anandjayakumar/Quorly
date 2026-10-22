@@ -16,5 +16,14 @@ branch=$(git rev-parse --abbrev-ref HEAD)
 command -v node >/dev/null 2>&1 || PATH="$PATH:/c/nvm4w/nodejs"
 
 repo=$(git rev-parse --show-toplevel)
+
+# The account id is needed only by the preview prune, and it must never be committed.
+# Prefer the environment; otherwise read the local, ignored file, so the hook also works
+# from a shell that started before the variable was set.
+if [ -z "$CLOUDFLARE_ACCOUNT_ID" ] && [ -f "$repo/.release/account-id" ]; then
+  CLOUDFLARE_ACCOUNT_ID=$(cat "$repo/.release/account-id")
+  export CLOUDFLARE_ACCOUNT_ID
+fi
+
 node "$repo/tools/release/release.mjs" launch >/dev/null 2>&1
 exit 0
