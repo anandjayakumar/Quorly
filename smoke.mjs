@@ -211,6 +211,21 @@ try {
   record('/app.js library markers', false, String(e.message || e));
 }
 
+// --- print flow markers (N-4): natural pagination, clone padding --------------
+try {
+  const { body } = await get('/styles.css');
+  const markers = [
+    'box-decoration-break: clone',
+    '-webkit-box-decoration-break: clone',
+    '@page { size: A4; margin: 0; }',
+  ];
+  for (const marker of markers) {
+    record(`/styles.css has ${marker}`, body.includes(marker), 'missing');
+  }
+} catch (e) {
+  record('/styles.css print markers', false, String(e.message || e));
+}
+
 // --- WebMCP tool layer (W3C CG draft) -------------------------------------------
 
 try {

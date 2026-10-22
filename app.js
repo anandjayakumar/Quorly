@@ -2134,93 +2134,6 @@ function applyHeading(value) {
     saveToLocalStorage();
 }
 
-/*
- * Print pagination. `@page { margin: 0 }` is what keeps Chrome's own header/footer (date,
- * page title, URL, page numbers) off the sheet and lets a dark export reach the paper edge,
- * but it also means nothing repeats a margin between pages: box padding belongs to the first
- * and last fragment only. So the document is split into page-sized blocks here, each carrying
- * the 16/15mm padding from `.print-page`, and every block is forced onto a new sheet.
- *
- * Layout is measured on an off-canvas clone at the exact printed width (A4 minus side padding)
- * because the on-screen column is a different width; A4 is pinned in print CSS so the two agree.
- */
-const PRINT_MM = 3.7795275591;          // CSS px per mm at 96dpi
-const PRINT_PAGE_W = 210;               // A4, mm
-const PRINT_PAGE_H = 297;
-const PRINT_PAD_X = 15;
-const PRINT_PAD_Y = 16;
-
-function clearPrintPages() {
-    document.querySelectorAll('.print-pages, .print-measure').forEach(function (n) { n.remove(); });
-    document.body.classList.remove('print-paginated');
-}
-
-function outerHeight(el) {
-    const cs = getComputedStyle(el);
-    return el.getBoundingClientRect().height +
-        (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
-}
-
-function buildPrintPages() {
-    clearPrintPages();
-    const doc = document.querySelector('.reader .doc') || document.querySelector('.doc');
-    if (!doc) return;
-
-    // Measure a clone at the printed page width.
-    const measure = document.createElement('div');
-    measure.className = 'print-measure';
-    const probe = doc.cloneNode(true);
-    measure.appendChild(probe);
-    document.body.appendChild(measure);
-
-    const probeBody = probe.querySelector('#editBody');
-    const probeTitle = probe.querySelector('#editTitle');
-    const probeImage = probe.querySelector('.title-image-container');
-    const showImage = !!probeImage && getComputedStyle(probeImage).display !== 'none';
-    const blocks = probeBody ? Array.from(probeBody.children) : [];
-    const heights = blocks.map(outerHeight);
-
-    const budget = (PRINT_PAGE_H - 2 * PRINT_PAD_Y) * PRINT_MM - 12; // 12px slack for rounding
-    const page1Offset = (showImage ? outerHeight(probeImage) : 0) + (probeTitle ? outerHeight(probeTitle) : 0);
-
-    // Greedy fill: page 1 also carries the title block, and blocks are never split mid-element.
-    const groups = [];
-    let current = [];
-    let used = page1Offset;
-    heights.forEach(function (h, i) {
-        if (current.length && used + h > budget) {
-            groups.push(current);
-            current = [];
-            used = 0;
-        }
-        current.push(i);
-        used += h;
-    });
-    if (current.length || !groups.length) groups.push(current);
-
-    const pages = document.createElement('div');
-    pages.className = 'print-pages';
-    groups.forEach(function (indices, pageIndex) {
-        const section = document.createElement('section');
-        section.className = 'print-page';
-        if (pageIndex === 0) {
-            if (showImage) section.appendChild(probeImage.cloneNode(true));
-            if (probeTitle) section.appendChild(probeTitle.cloneNode(true));
-        }
-        // #editBody is kept as the wrapper so every `#editBody ...` rule (headings, code,
-        // tables, quotes, alignment) still matches the cloned blocks.
-        const body = document.createElement('div');
-        body.id = 'editBody';
-        indices.forEach(function (i) { body.appendChild(blocks[i].cloneNode(true)); });
-        if (indices.length || pageIndex === 0) section.appendChild(body);
-        pages.appendChild(section);
-    });
-
-    measure.remove();
-    document.body.appendChild(pages);
-    document.body.classList.add('print-paginated');
-}
-
 function handleExport(value, theme) {
     if (value === 'quorly') { track('export', { format: 'quorly' }); exportQuorly(); }
     else if (value === 'pdf') {
@@ -2230,8 +2143,8 @@ function handleExport(value, theme) {
         const hasContent = !!((editTitle.textContent || '').trim() || (editBody.innerText || '').trim());
         if (hasContent) document.body.classList.add('print-has-content');
         else document.body.classList.remove('print-has-content');
-        // Pagination and cleanup run from the beforeprint/afterprint listeners below, so Ctrl+P
-        // gets exactly the same sheets as the Export menu.
+        // Print layout is pure CSS (natural flow + box-decoration-break: clone);
+        // no pagination script needed.
         window.print();
     }
     else if (value === 'md') { track('export', { format: 'md' }); exportMarkdown(); }
@@ -2868,18 +2781,16 @@ function wireUI() {
         else handleExport(value);
     }, true);
 
-    // Both the Export menu and Ctrl+P go through these: the document is paginated into sheets
-    // right before Chrome lays out the pages, and torn down as soon as the dialog closes.
+    // Ctrl+P and the Export menu share one path: the theme is resolved and the has-content guard
+    // is applied just before Chrome lays out the pages. Print layout itself is pure CSS now.
     window.addEventListener('beforeprint', () => {
         if (!document.body.classList.contains('print-theme-light') &&
             !document.body.classList.contains('print-theme-dark')) {
             applyPrintTheme();
         }
-        buildPrintPages();
     });
     window.addEventListener('afterprint', () => {
         document.body.classList.remove('print-has-content');
-        clearPrintPages();
     });
 
     const fmtInsertDrop = document.getElementById('fmtInsertDropdown');
