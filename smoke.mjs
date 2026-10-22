@@ -71,7 +71,7 @@ await checkDocument('/privacy/', {
 // old wording ("the only thing we measure is anonymous page visits") must not come back.
 await checkDocument('/privacy/', {
   type: 'text/html',
-  contains: ["Quorly's own counter", 'sendBeacon', 'no cookie, no identifier and no document content'],
+  contains: ['Quorly also counts basic usage events', 'Cloudflare Web Analytics', 'do not include your writing'],
   notContains: ['The only thing we measure is anonymous page visits'],
 });
 
