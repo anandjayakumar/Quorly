@@ -26,78 +26,47 @@
 <main>
   <section class="section prose">
     <h1>Privacy</h1>
-    <p class="micro">Effective 16 October 2026</p>
 
-    <h2>The short version</h2>
+    <h2>Your writing stays yours</h2>
     <p>
-      Quorly is a writing app that runs entirely in your browser. We do not receive your
-      documents, your titles, your images, your keystrokes or your file names. There is no
-      server that stores your writing. What we count is anonymous and coarse: page visits,
-      and a cookie-free counter that notes that the editor was opened, that you started
-      typing and which export format you chose — never a word of what you wrote.
-    </p>
-
-    <h2>What never leaves your device</h2>
-    <ul class="checklist">
-      <li><strong>Your writing.</strong> Document titles and bodies, including embedded images, are stored in this browser on your own machine — the open document in local storage, the documents you have parked in the browser's own database.</li>
-      <li><strong>Your versions.</strong> Local snapshots of earlier drafts are kept in the browser's own database, never sent anywhere.</li>
-      <li><strong>Your files.</strong> When you export, the file is written directly to your disk through the browser's file picker. It is never uploaded.</li>
-    </ul>
-
-    <h2>What we do measure</h2>
-    <p>
-      We use <strong>Cloudflare Web Analytics</strong> for anonymous visit counts. It is
-      cookieless and does not use fingerprinting or cross-site identifiers. It reports
-      aggregate information such as:
-    </p>
-    <ul class="checklist">
-      <li>Page URL and referring site</li>
-      <li>Coarse location (country) and browser, operating system and device type</li>
-      <li>Page-load performance metrics (Core Web Vitals)</li>
-    </ul>
-    <p>
-      It does not record what you type, and we never send document content to it. This
-      aggregate data is handled by Cloudflare under their
-      <a href="https://www.cloudflare.com/privacypolicy/">privacy policy</a>.
+      Quorly is a private writing app that runs entirely in your browser. Your documents,
+      titles, images, and drafts stay on your device. We never receive or store your writing
+      on our servers.
     </p>
     <p>
-      <strong>Quorly's own counter.</strong> The editor counts a few things itself, so we can
-      tell whether the app is being used. The browser sends one small request to
-      <code>/e</code> on this same site, and the whole payload is a single event name:
-    </p>
-    <ul class="checklist">
-      <li>you opened the editor from the home page</li>
-      <li>you started typing in a document</li>
-      <li>you exported a file, and in which format</li>
-      <li>the browser's storage was full</li>
-      <li>you returned to a document you had written before</li>
-      <li>an AI agent called one of the editor's tools</li>
-    </ul>
-    <p>
-      It carries no cookie, no identifier and no document content, and it never carries what
-      you typed — the event name is the whole payload, sent with <code>sendBeacon</code> so it
-      cannot delay what you are doing. The counts are kept as aggregate rows in Cloudflare's
-      analytics service. We can see that the editor was used; we cannot see what was written
-      in it, because that was never sent.
+      Your documents and settings are saved in your browser, so clearing your browser's site
+      data may permanently delete them. Export important documents to keep a backup.
     </p>
 
-    <h2>What we store on your device</h2>
+    <h2>Anonymous analytics</h2>
     <p>
-      Quorly keeps the open document and your settings in this browser's local storage (keys such as
-      <code>doc_title_v13</code>, <code>doc_body_v13</code> and <code>doc_title_image_v13</code>), and
-      keeps the documents you have parked (with their earlier snapshots) in the browser's own
-      database. They never leave your device, and clearing your browser's
-      site data deletes them permanently — so export anything important.
+      We use Cloudflare Web Analytics to understand general website traffic and performance.
+      It collects anonymous, aggregate information such as page visits, approximate country,
+      browser type, and page-load performance.
+    </p>
+    <p>
+      Quorly also counts basic usage events, such as opening the editor, starting to write,
+      and exporting a document. These counts do not include your writing, document titles, or
+      other document content.
+    </p>
+    <p>
+      Learn more in
+      <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare's Privacy Policy</a>.
     </p>
 
-    <h2>No accounts, but you can reach us</h2>
+    <h2>No accounts or tracking</h2>
     <p>
-      Quorly has no sign-up, no login and no newsletter. We never ask for your email address,
-      and your draft never leaves your device. If you want to reach us — to report a problem,
-      report a security issue, or ask a question — write to
-      <!--email_off--><a href="mailto:hello@quorly.us.ci">hello@quorly.us.ci</a><!--/email_off-->. That is a best-effort
-      contact with no SLA: nobody is obligated to reply, and there is no support desk.
+      Quorly requires no account, sign-up, or email address. We don't use cookies for tracking,
+      and we never upload your documents.
     </p>
+
+    <h2>Contact</h2>
+    <p>
+      For questions, feedback, or security concerns, contact
+      <!--email_off--><a href="mailto:hello@quorly.us.ci">hello@quorly.us.ci</a><!--/email_off-->.
+      Contact is provided on a best-effort basis, and a response is not guaranteed.
+    </p>
+
     <p class="micro"><a href="/">← Back to Quorly</a></p>
   </section>
 </main>
