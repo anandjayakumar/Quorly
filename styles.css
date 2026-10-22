@@ -1444,18 +1444,16 @@ body.light-mode .brand-name {
   margin-bottom: 0;
 }
 
-/* Recents is the panel's give — but only down to its own content, never past it.
-   `min-height: 0` used to let flex shrink this section below the height of the things inside it
-   that cannot shrink (the search row and the library footer), and the children then spilled out of
-   the section's box and were drawn over the Focus Mode row. The list is still the part that gives
-   way — it has `min-height: 0` and `overflow-y: auto` of its own, so it scrolls internally once it
-   hits its max-height — but the section as a whole is now content-sized, so when the panel really
-   is too short for everything, the panel scrolls and every control stays reachable. A scrollbar on
-   the drawer beats a Recents list that has collapsed to nothing with the footer painted over it. */
+/* Recents takes whatever height the document and formatting sections leave behind: the library
+   has no fixed size any more, so it grows with the panel and scrolls inside itself instead of
+   showing a four-row window. `min-height: 0` is what lets this section shrink when the panel is
+   short; the list keeps a 140px floor, and anything below that scrolls the panel itself, so the
+   search row and the footer never end up painted over the Focus Mode row. */
 .sidebar-recents {
   display: flex;
   flex-direction: column;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* Recents (document library) */
@@ -1497,9 +1495,9 @@ body.light-mode .brand-name {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 190px;
-  min-height: 0;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
+  max-height: none;
+  min-height: 140px;
   overflow-y: auto;
   padding-right: 2px;
 }
