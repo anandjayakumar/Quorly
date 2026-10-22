@@ -812,7 +812,7 @@ body.q-app .sidebar {
   outline: none;
   width: 100%;
   background: transparent;
-  color: var(--text);
+  color: rgba(231, 233, 234, 1);
   line-height: 1.2;
 }
 
@@ -835,6 +835,7 @@ body.q-app .sidebar {
   font-family: var(--body-font);
   font-size: var(--body-font-size);
   line-height: 1.67;
+  color: rgba(231, 233, 234, 1);
   outline: none;
   min-height: 500px;
 }
