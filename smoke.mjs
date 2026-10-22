@@ -40,7 +40,7 @@ await checkDocument('/', {
     // The published contact address must survive to the reader. On the custom domain
     // Cloudflare rewrites an unprotected address into an obfuscated `__cfemail__` link,
     // which hides it and breaks the mailto: — so this is the tripwire for that.
-    'mailto:hello@quorly.us.ci'],
+    'mailto:hello@quorly.dev'],
   notContains: ['Version history', 'no tracking', '__cfemail__', 'email-protection#'],
 });
 
@@ -63,7 +63,7 @@ await checkDocument('/app/', {
 
 await checkDocument('/privacy/', {
   type: 'text/html',
-  contains: ['Privacy', 'No accounts', 'hello@quorly.us.ci', 'mailto:hello@quorly.us.ci'],
+  contains: ['Privacy', 'No accounts', 'hello@quorly.dev', 'mailto:hello@quorly.dev'],
   notContains: ['legal@', 'support@', 'Version History', 'doc_versions_v13', '__cfemail__', 'email-protection#'],
 });
 
