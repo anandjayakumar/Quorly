@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Quorly release runner — see docs/QUORLY_RELEASE_PIPELINE.md
+ * Quorly release runner — a commit on `dev` is gated, then previewed; production is promoted by hand.
  *
  *   node tools/release/release.mjs run [--commit <commit>] [--dry-run]
  *   node tools/release/release.mjs launch
@@ -41,8 +41,24 @@ const PRODUCTION = path.join(REL, 'production.json');
 const PROJECT = 'quorly';
 const PREVIEW_ALIAS = 'https://preview.quorly.pages.dev';
 const PROD_ALIAS = 'https://quorly.dev';
-const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID || '07e6e9a6b18b4cae4d21fccba4dae17a';
-const API = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/pages/projects/${PROJECT}/deployments`;
+
+/**
+ * The account id is not a secret, but it identifies the owner's Cloudflare account and this
+ * repository is public, so it is never stored here. Only the preview prune needs it: `wrangler
+ * pages deploy` resolves the project by name, and the gate and promote paths never touch the
+ * account endpoint. Resolved lazily, so `run --dry-run`, `status` and CI keep working with no
+ * Cloudflare configuration at all.
+ */
+function pagesApi() {
+  const account = (process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
+  if (!account) {
+    throw new Error(
+      'CLOUDFLARE_ACCOUNT_ID is not set. The preview prune calls the Pages REST API and needs the ' +
+        'account id; deploying itself does not. Set it in the environment, or run with --dry-run.',
+    );
+  }
+  return `https://api.cloudflare.com/client/v4/accounts/${account}/pages/projects/${PROJECT}/deployments`;
+}
 
 // Never resolve node/npx through PATH: the hook runs under Git-for-Windows' sh, whose PATH
 // differs from a normal shell's. Pin both to the interpreter running this file.
@@ -278,6 +294,7 @@ function deploy(stage, branch, runDir) {
 async function prunePreviews(keep = KEEP_PREVIEWS) {
   const auth = cfAuth();
   if (!auth) throw new Error('no Cloudflare credentials for the REST prune');
+  const API = pagesApi();
   const res = await fetch(API, { headers: { Authorization: `Bearer ${auth.token}` } });
   const j = await res.json();
   if (!j.success) throw new Error('listing deployments failed: ' + JSON.stringify(j.errors).slice(0, 300));
@@ -615,7 +632,7 @@ try {
   } else if (cmd === 'status') {
     console.log(fs.existsSync(STATUS) ? fs.readFileSync(STATUS, 'utf8') : 'no status yet');
   } else {
-    console.log('usage: release.mjs run|launch|promote|prune|status  (see docs/QUORLY_RELEASE_PIPELINE.md)');
+    console.log('usage: release.mjs run|launch|promote|prune|status');
   }
   process.exit(code);
 } catch (e) {

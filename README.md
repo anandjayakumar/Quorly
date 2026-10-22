@@ -59,8 +59,9 @@ prompt, and no model IDs anywhere in the shipped code.
 
 The app is a git repo, and deploys go through `tools/release/release.mjs`. Commits on `dev` run the
 smoke gate and, if it passes, deploy a preview automatically — detached, so committing is never
-blocked. Production is **only** ever promoted by hand. Design and rationale:
-`docs/QUORLY_RELEASE_PIPELINE.md` in the project docs.
+blocked. Production is **only** ever promoted by hand: `promote --commit <sha>` refuses a commit
+that has no passing preview run on record, re-runs the whole suite against the canonical domain,
+and only then moves the `main` branch.
 
 ```sh
 node tools/release/release.mjs run                     # snapshot HEAD -> gate -> preview -> verify alias -> prune
@@ -81,8 +82,12 @@ Enabling it in a fresh clone:
 git config core.hooksPath .githooks
 ```
 
-Prefer a scoped `CLOUDFLARE_API_TOKEN` for unattended runs; the cached wrangler OAuth token expires
-in about an hour, and the runner reports which one it used in `authWarning`.
+Two environment variables matter, and neither is stored in the repository:
+
+| Variable | Needed for | Notes |
+|---|---|---|
+| `CLOUDFLARE_API_TOKEN` | deploy and promote | Prefer a scoped Pages token. The cached wrangler OAuth token also works, but expires in about an hour; the runner reports which one it used in `authWarning`. |
+| `CLOUDFLARE_ACCOUNT_ID` | pruning old previews | Only the Pages REST prune needs the account id — `wrangler pages deploy` resolves the project by name. Unset, that step fails with a clear message instead of guessing. |
 
 Production URL: <https://quorly.dev> (the canonical domain; `quorly.us.ci`,
 `www.quorly.us.ci`, `www.quorly.dev` and `quorly.pages.dev` all 301 to it).
@@ -222,7 +227,7 @@ version history, its session disk link and its index entry. Deleting the open do
 clean page.
 
 Disk handles are **session-only**: a `FileSystemFileHandle` cannot be stored in `localStorage`, so
-handles live in an in-memory `Map` keyed by document id. Rationale in `docs/QUORLY_UI_SPRINT.md`.
+handles live in an in-memory `Map` keyed by document id.
 
 ## Theme
 
@@ -240,8 +245,9 @@ so it needs no JavaScript and no image request. The static pages (landing, priva
 - Images are stored as data URLs in `localStorage` (≈5 MB origin quota; the real quota varies by
   browser). The open document is stored **once** — see "Storage keys" above. IndexedDB was
   considered and **rejected**: persistence stays `localStorage`-only, so the remaining work is to
-  reduce bytes (image downscaling, text-only version snapshots) rather than move them —
-  `docs/QUORLY_DD01_LOCALSTORAGE.md`.
-- The privacy page deliberately publishes **no contact address**. Cloudflare has no free mailbox,
-  and Email Routing needs `quorly.dev` registered first — see `docs/QUORLY_NEXT_PHASE.md` §5b.
-  Revisit when the domain is bought.
+  reduce bytes (image downscaling, text-only version snapshots) rather than move them.
+- The contact address `hello@quorly.dev` is published on `/privacy/` and in the landing page
+  footer. It is wrapped in Cloudflare's `<!--email_off-->` markers and the HTML is served with
+  `no-transform`, because Cloudflare's email obfuscation would otherwise rewrite the address into
+  a hidden `__cfemail__` link. The smoke gate asserts the `mailto:` survives, so a silent
+  regression fails the deploy instead of hiding the address.
