@@ -2377,13 +2377,25 @@ body.light-mode .modal-close { background: rgba(0,0,0,0.06); border-color: rgba(
   background: rgba(255,255,255,0.06);
   border-color: rgba(255,255,255,0.2);
 }
+#exportDropdown .tile-label-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
 #exportDropdown .dropdown-caret {
   position: static;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   vertical-align: middle;
-  font-size: 12px;
   opacity: 0.75;
-  margin-left: 4px;
+  margin: 0;
+}
+#exportDropdown .dropdown-caret svg {
+  display: block;
+}
+#exportDropdown .dropdown-caret {
+  transition: transform 0.2s ease;
 }
 #exportDropdown.open .dropdown-caret {
   transform: rotate(180deg);
