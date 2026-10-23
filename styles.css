@@ -2581,6 +2581,15 @@ body.light-mode .q-dialog-btn.is-danger:focus-visible {
      so dark exports stop printing white borders. Content now flows naturally; padding
      repeats on every fragment via `box-decoration-break: clone`. */
   @page { size: A4; margin: 0; }
+  /* Android Chrome's print dialog has no "Background graphics" switch. Without this
+     Blink drops every background from the PDF and the dark print theme arrives white.
+     Force colour reproduction for the page and every pseudo-element. */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
   html.q-app { background: #ffffff !important; }
   html.q-app:has(body.print-theme-dark) { background: #0e0e0e !important; }
   html.q-app, body.q-app { height: auto; overflow: visible; }
