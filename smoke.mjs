@@ -267,9 +267,11 @@ try {
     'box-decoration-break: clone',
     '-webkit-box-decoration-break: clone',
     '@page { size: A4; margin: 0; }',
+    'body.q-app .reader {\n    padding: 16mm 15mm;',
   ];
   for (const marker of markers) {
-    record(`/styles.css has ${marker}`, body.includes(marker), 'missing');
+    // Multi-line markers are pinned exactly but labelled on one line.
+    record(`/styles.css has ${marker.replace(/\s*\n\s*/g, ' ')}`, body.includes(marker), 'missing');
   }
 } catch (e) {
   record('/styles.css print markers', false, String(e.message || e));
