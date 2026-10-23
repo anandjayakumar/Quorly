@@ -81,6 +81,7 @@ await checkDocument('/compare/', {
     'Quorly vs',
     'Dillinger',
     'StackEdit',
+    'CalmlyWriter',
     'https://quorly.dev/compare/',
     'Works offline',
     'requires no account',

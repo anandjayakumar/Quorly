@@ -291,7 +291,7 @@ kbd {
 .compare-table th,
 .compare-table td {
   border: 1px solid var(--border);
-  padding: 10px 12px;
+  padding: 8px 8px;
   text-align: left;
   vertical-align: top;
 }

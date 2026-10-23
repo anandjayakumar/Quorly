@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Compare — Quorly vs Dillinger, StackEdit, Typora</title>
-<meta name="description" content="Quorly vs Dillinger and StackEdit: works offline, no account, no cloud. Honest comparison with desktop app Typora." />
+<title>Compare — Quorly vs rivals: where your document lives</title>
+<meta name="description" content="Quorly vs Dillinger, StackEdit, Typora and CalmlyWriter: an honest comparison of browser, desktop and hosted editors." />
 <link rel="canonical" href="https://quorly.dev/compare/" />
 <meta name="theme-color" content="#0e0e0e" />
 <link rel="icon" href="/favicon.png" type="image/png" />
@@ -27,14 +27,14 @@
 
 <main>
   <section class="section prose">
-    <h1>Quorly compared to the browser-based rivals</h1>
-    <p class="micro">As of October 2026 — competitor facts verified against their public sites.</p>
+    <h1>Quorly compared to rivals — where your document lives</h1>
+    <p class="micro">As of October 2026 — competitor facts verified against their public sites. The contrast below is honest: the main axis is whether your words stay on your device or move to someone else's server.</p>
 
     <h2>What Quorly is</h2>
     <p>
       Quorly is a private, local-first browser writing app: it runs entirely in your browser,
       requires no account and sends no cookies, no identifiers and no document content — the only
-      first-party network request is a cookie-free POST of a single event name (e.g. "started typing",
+      first-party network request is a cookie-free POST of a named event (e.g. "started typing",
       "exported", "storage limit reached") to our own `/e` endpoint, plus Cloudflare's anonymous visit count.
       Everything else stays on your device. It works offline once loaded. Documents stay in this
       browser (localStorage for the open draft, IndexedDB for parked snapshots, versions and images).
@@ -53,6 +53,7 @@
           <th>Dillinger</th>
           <th>StackEdit</th>
           <th>Typora</th>
+          <th>CalmlyWriter</th>
         </tr>
       </thead>
       <tbody>
@@ -62,6 +63,7 @@
           <td>Yes</td>
           <td>Yes</td>
           <td>No — desktop app</td>
+          <td>Yes (online) — also desktop app</td>
         </tr>
         <tr>
           <th scope="row">Account required</th>
@@ -69,6 +71,7 @@
           <td>No (optional for cloud sync)</td>
           <td>No (optional for cloud sync)</td>
           <td>No — but $14.99 license</td>
+          <td>No — online and desktop both work without account</td>
         </tr>
         <tr>
           <th scope="row">Works offline</th>
@@ -76,6 +79,7 @@
           <td>Yes — once loaded (localStorage drafts)</td>
           <td>Yes — service-worker PWA</td>
           <td>Yes — local files</td>
+          <td>Desktop/app: yes; online: no</td>
         </tr>
         <tr>
           <th scope="row">Documents stored</th>
@@ -83,6 +87,7 @@
           <td>Browser localStorage (+ optional cloud)</td>
           <td>Browser (+ optional cloud)</td>
           <td>Local file system</td>
+          <td>Online: browser storage (temporary); app: local files (any folder)</td>
         </tr>
         <tr>
           <th scope="row">Cloud sync</th>
@@ -90,6 +95,7 @@
           <td>GitHub, Dropbox, Drive, OneDrive, Bitbucket</td>
           <td>Google Drive, Dropbox, GitHub</td>
           <td>None built-in</td>
+          <td>None mandatory; can save to Dropbox / Drive folders</td>
         </tr>
         <tr>
           <th scope="row">Cookies / identifiers / document content</th>
@@ -97,6 +103,7 @@
           <td>No privacy claim of no-tracking (third-party analytics likely)</td>
           <td>No privacy claim of no-tracking (analytics present)</td>
           <td>None needed (local app)</td>
+          <td>No account; site says nothing you write reaches servers</td>
         </tr>
         <tr>
           <th scope="row">Installable PWA</th>
@@ -104,6 +111,7 @@
           <td>No — not installable</td>
           <td>Partial (service worker, not full install)</td>
           <td>N/A (desktop install)</td>
+          <td>Not stated on its site (online is a web page; app installs separately)</td>
         </tr>
         <tr>
           <th scope="row">Export formats</th>
@@ -111,6 +119,7 @@
           <td>Markdown, HTML, PDF</td>
           <td>Markdown, HTML (PDF sponsor-only)</td>
           <td>Markdown, PDF, Word, HTML, LaTeX, EPUB</td>
+          <td>Markdown, HTML, plain text, Word; PDF (app only)</td>
         </tr>
         <tr>
           <th scope="row">Rich text editor</th>
@@ -118,6 +127,7 @@
           <td>Markdown source + live preview</td>
           <td>Markdown source + live preview</td>
           <td>WYSIWYG inline Markdown</td>
+          <td>WYSIWYG Markdown (online); tables/images only in app</td>
         </tr>
         <tr>
           <th scope="row">Focus Mode</th>
@@ -125,6 +135,7 @@
           <td>Yes (Zen Mode)</td>
           <td>Not present</td>
           <td>Typewriter / focus mode</td>
+          <td>Yes (focus mode + typewriter sounds)</td>
         </tr>
         <tr>
           <th scope="row">Themes + typefaces</th>
@@ -132,6 +143,7 @@
           <td>Light + dark toggle (default light)</td>
           <td>Multiple themes</td>
           <td>Custom CSS themes</td>
+          <td>6 themes (Light, Dark, Black, Sea, Dune, Old School); full customization (app)</td>
         </tr>
         <tr>
           <th scope="row">WebMCP / AI agent tools</th>
@@ -139,6 +151,7 @@
           <td>No</td>
           <td>No</td>
           <td>No</td>
+          <td>No — site explicitly says "No AI"</td>
         </tr>
         <tr>
           <th scope="row">Pricing</th>
@@ -146,11 +159,12 @@
           <td>Free — no tier</td>
           <td>Free — $5 sponsorship unlocks PDF + more</td>
           <td>$14.99 one-time (3 devices)</td>
+          <td>Free (online); desktop $23.90 (3 devices); Android $16.99</td>
         </tr>
       </tbody>
     </table>
     </div>
-    <p class="micro">Sources: dillinger.io (features + compare pages), stackedit.io (features + docs), typora.io/store.typora.io; StackEdit reviews verified via third-party comparison sites (e.g. Phoenix Code comparison, July 2026). All as of October 2026.</p>
+    <p class="micro">Sources: dillinger.io, stackedit.io, typora.io/store.typora.io, calmlywriter.com (features, online-vs-app page, buylicense, download, text-editor, release notes); StackEdit reviews verified via third-party comparison sites (e.g. Phoenix Code comparison, July 2026). All as of October 2026.</p>
 
     <h2>Dillinger</h2>
     <p>
@@ -201,6 +215,36 @@
       for cloud features.
     </p>
 
+    <h2>CalmlyWriter</h2>
+    <p>
+      <strong>What it is.</strong> A WYSIWYG Markdown editor developed by Calmly Studio,
+      offered both as a free online editor (<a href="https://www.calmlywriter.com/text-editor.htm">calmlywriter.com/text-editor.htm</a>)
+      and as a pay-once desktop app for Windows, Mac and Linux ($23.90, 3 devices, 14-day trial; Android $16.99).
+      The online version saves temporarily to the browser; the desktop app writes ordinary local files
+      (any folder, including Dropbox or Google Drive folders). It offers focus mode, six themes,
+      typewriter sounds, word targets and version history (app only). The site explicitly states
+      "No AI" — no assistant rewrites or reads your text. (Verified at calmlywriter.com and its
+      public feature pages, October 2026; release notes show active updates through October 2026.)
+    </p>
+    <p>
+      <strong>Where Quorly differs — honestly.</strong> CalmlyWriter keeps your words in its own
+      online storage (temporary browser storage) or on your local disk (desktop app) — a hosted or
+      file-based model, not a pure browser-local model like Quorly. Quorly keeps everything inside
+      the current browser (localStorage and IndexedDB), sends nothing except named event names to
+      `/e`, and requires no account and no cloud sync. CalmlyWriter's desktop app needs a license
+      purchase; Quorly is free with no tier. CalmlyWriter's online editor does not work offline
+      (its site says "Works offline: No" for the online version); Quorly works fully offline as a PWA.
+      CalmlyWriter does not register in-browser agent tools; Quorly includes WebMCP. The core contrast
+      is where the document lives: CalmlyWriter's server (temporary online storage) or your file system
+      (desktop app) versus Quorly's device-only browser storage.
+    </p>
+    <p>
+      <strong>Who CalmlyWriter is for.</strong> Writers who want a polished, distraction-free WYSIWYG
+      Markdown editor, don't mind a desktop install or a temporary browser draft, and prefer a
+      pay-once license over a subscription — or who want a free, no-signup web editor that saves
+      locally in the browser.
+    </p>
+
     <h2>Typora — an honest one-line contrast</h2>
     <ul class="checklist">
       <li><strong>Typora is the polished desktop app.</strong> It is a native macOS / Windows / Linux
@@ -218,9 +262,10 @@
     <p>
       If you want a source Markdown editor that syncs to your cloud accounts, Dillinger or
       StackEdit are the free browser options. If you want a polished desktop WYSIWYG editor,
-      Typora is the paid standard. If you want a private, local-first browser writing app with
-      no account, no cloud, no tracking, installable offline support, a saved-document library,
-      rich-text editing, and in-browser agent tools — Quorly is built for that.
+      Typora or CalmlyWriter (desktop) are the paid options — CalmlyWriter also offers a free
+      online version with temporary browser storage. If you want a private, local-first browser
+      writing app with no account, no cloud, no tracking, installable offline support, a
+      saved-document library, rich-text editing, and in-browser agent tools — Quorly is built for that.
     </p>
   </section>
 </main>
