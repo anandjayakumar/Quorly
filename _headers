@@ -73,7 +73,16 @@
 /compare/index.html
   Content-Type: text/html; charset=utf-8
   Cache-Control: public, max-age=0, must-revalidate, no-transform
-/compare/*
+/compare/typora/
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+/compare/typora/index.html
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+/compare/calmlywriter/
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+/compare/calmlywriter/index.html
   Content-Type: text/html; charset=utf-8
   Cache-Control: public, max-age=0, must-revalidate, no-transform
 /styles.css
