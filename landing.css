@@ -321,6 +321,17 @@ kbd {
   max-width: 100%;
 }
 
+/* The comparison table needs more room than the 760px prose column once there are
+   six columns, so on desktop it centres itself across the page. Below 880px it
+   stays inside the prose width and scrolls horizontally. */
+@media (min-width: 880px) {
+  .compare-scroll {
+    width: min(1120px, 100vw - 64px);
+    max-width: none;
+    margin-inline: calc((100% - min(1120px, 100vw - 64px)) / 2);
+  }
+}
+
 /* ---------- landing refresh ---------- */
 
 body {
