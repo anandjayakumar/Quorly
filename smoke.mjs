@@ -244,6 +244,12 @@ try {
     // N-4: the export menu uses role="menuitem" while the other menus use role="option"; a role
     // selector in the shared click handler silently made every export option a no-op.
     'options().includes(li)',
+    // N-29: every export shares one slug, and print reuses it as the suggested PDF filename.
+    'function documentSlug()',
+    'document.title = documentSlug();',
+    'suggestedName: `${slug}.quorly`',
+    'preparePrintTitle();',
+    'restorePrintTitle();',
   ];
   for (const marker of markers) {
     record(`/app.js has ${marker}`, body.includes(marker), 'missing');
