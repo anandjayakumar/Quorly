@@ -230,6 +230,8 @@ kbd {
 .faq summary::after { content: " +"; color: var(--muted); }
 .faq details[open] summary::after { content: " –"; }
 .faq details p { color: var(--muted); margin: 0 0 20px; font-size: .95rem; max-width: 62ch; }
+.faq-compare-link { margin: 20px 0 0; }
+.faq-compare-link a { color: var(--accent); }
 
 /* ---------- final + footer ---------- */
 
