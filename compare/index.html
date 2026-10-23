@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Compare — Quorly vs Dillinger, StackEdit, Typora</title>
-<meta name="description" content="Quorly vs Dillinger and StackEdit: works offline, no account, no cloud. Honest comparison with desktop app Typora." />
+<title>Quorly vs. The Alternatives: Truly Private, Local-First Writing</title>
+<meta name="description" content="Quorly vs Dillinger, StackEdit, CalmlyWriter and Typora: a free, private, local-first WYSIWYG editor with offline PWA support, no account and no paywalled PDF export." />
 <link rel="canonical" href="https://quorly.dev/compare/" />
 <meta name="theme-color" content="#0e0e0e" />
 <link rel="icon" href="/favicon.png" type="image/png" />
@@ -27,24 +27,27 @@
 
 <main>
   <section class="section prose">
-    <h1>Quorly compared to the browser-based rivals</h1>
-    <p class="micro">As of October 2026 — competitor facts verified against their public sites.</p>
+    <h1>Quorly vs. The Alternatives: Truly Private, Local-First Writing</h1>
+    <p class="micro">Last verified: October 2026. Every competitor claim is checked against its own site; competitor links open in a new tab.</p>
 
-    <h2>What Quorly is</h2>
-    <p>
-      Quorly is a private, local-first browser writing app: it runs entirely in your browser,
-      requires no account and sends no cookies, no identifiers and no document content — the only
-      first-party network request is a cookie-free POST of a single event name (e.g. "started typing",
-      "exported", "storage limit reached") to our own `/e` endpoint, plus Cloudflare's anonymous visit count.
-      Everything else stays on your device. It works offline once loaded. Documents stay in this
-      browser (localStorage for the open draft, IndexedDB for parked snapshots, versions and images).
-      It exports Markdown, PDF,
-      plain text and <code>.quorly</code>, has Focus Mode, themes and five typefaces,
-      a Recents library, and in-browser WebMCP tools for AI agents.
-    </p>
+    <p>Most writing apps force you to make a compromise. Browser-based editors usually split your screen into code and preview, or push you toward cloud accounts and analytics. Privacy-first editors usually ask you to buy and install desktop software.</p>
 
-    <h2>Feature comparison</h2>
-    <div class="table-scroll">
+    <p><strong>Quorly is built differently.</strong> It gives you the distraction-free, rich-text feel of a premium desktop app — directly in your browser, free, and with your work staying on your device.</p>
+
+    <p class="cta-row"><a class="btn-primary" href="/app/">Start writing — free</a> <a class="btn-ghost" href="/privacy/">How privacy works</a></p>
+
+    <h2>Why writers switch to Quorly</h2>
+    <ul class="checklist">
+      <li><strong>True local-first privacy.</strong> Your words never touch a server. No account, no cookies, no user identifiers; the only network requests are a cookie-free event ping to our own <code>/e</code> endpoint and Cloudflare's anonymous visit count (see the transparency note).</li>
+      <li><strong>WYSIWYG rich text, not code.</strong> Format headings, tables, images, code blocks and quotes directly on the page — no raw Markdown required, though Markdown import and export are there when you want them.</li>
+      <li><strong>A persistent library, not temporary storage.</strong> CalmlyWriter Online keeps its documents only in the browser's temporary storage, with no version history or trash — clearing browser data erases them. Quorly keeps a local library in IndexedDB with version snapshots, image storage and a Recents manager.</li>
+      <li><strong>Installable and genuinely offline.</strong> Quorly is a full PWA: install it, disconnect, restart the browser, and your workspace is still there.</li>
+      <li><strong>Ready for local AI agents.</strong> WebMCP tools are registered in browsers that support the spec, so a local agent can read or edit only when you ask — no third-party AI service sees your work.</li>
+      <li><strong>Free, with no paywalled exports.</strong> PDF export works in any browser; Markdown, plain text and <code>.quorly</code> backups are one click away in Chromium-based browsers (the File System Access API). No subscription, no "sponsor-only" formats.</li>
+    </ul>
+
+    <h2>At a glance: how Quorly compares</h2>
+    <div class="table-scroll compare-scroll">
     <table class="compare-table">
       <thead>
         <tr>
@@ -52,176 +55,164 @@
           <th>Quorly</th>
           <th>Dillinger</th>
           <th>StackEdit</th>
+          <th>CalmlyWriter</th>
           <th>Typora</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <th scope="row">Runs in browser</th>
-          <td>Yes</td>
-          <td>Yes</td>
-          <td>Yes</td>
-          <td>No — desktop app</td>
+          <th scope="row">Platform</th>
+          <td>Browser + installable PWA</td>
+          <td>Browser only</td>
+          <td>Browser (partial PWA)</td>
+          <td>Browser + paid desktop/Android app</td>
+          <td>Desktop app only</td>
         </tr>
         <tr>
-          <th scope="row">Account required</th>
-          <td>No</td>
-          <td>No (optional for cloud sync)</td>
-          <td>No (optional for cloud sync)</td>
-          <td>No — but $14.99 license</td>
-        </tr>
-        <tr>
-          <th scope="row">Works offline</th>
-          <td>Yes — full PWA</td>
-          <td>Yes — once loaded (localStorage drafts)</td>
-          <td>Yes — service-worker PWA</td>
-          <td>Yes — local files</td>
-        </tr>
-        <tr>
-          <th scope="row">Documents stored</th>
-          <td>Local browser only</td>
-          <td>Browser localStorage (+ optional cloud)</td>
-          <td>Browser (+ optional cloud)</td>
-          <td>Local file system</td>
-        </tr>
-        <tr>
-          <th scope="row">Cloud sync</th>
-          <td>None — never leaves device</td>
-          <td>GitHub, Dropbox, Drive, OneDrive, Bitbucket</td>
-          <td>Google Drive, Dropbox, GitHub</td>
-          <td>None built-in</td>
-        </tr>
-        <tr>
-          <th scope="row">Cookies / identifiers / document content</th>
-          <td>None sent (named event name only to `/e`)</td>
-          <td>No privacy claim of no-tracking (third-party analytics likely)</td>
-          <td>No privacy claim of no-tracking (analytics present)</td>
-          <td>None needed (local app)</td>
-        </tr>
-        <tr>
-          <th scope="row">Installable PWA</th>
-          <td>Yes</td>
-          <td>No — not installable</td>
-          <td>Partial (service worker, not full install)</td>
-          <td>N/A (desktop install)</td>
-        </tr>
-        <tr>
-          <th scope="row">Export formats</th>
-          <td>Markdown, PDF, plain text, <code>.quorly</code></td>
-          <td>Markdown, HTML, PDF</td>
-          <td>Markdown, HTML (PDF sponsor-only)</td>
-          <td>Markdown, PDF, Word, HTML, LaTeX, EPUB</td>
-        </tr>
-        <tr>
-          <th scope="row">Rich text editor</th>
-          <td>Yes — headings, bold/italic, lists, quotes, links, inline code, aligned text, tables, images, code blocks</td>
-          <td>Markdown source + live preview</td>
-          <td>Markdown source + live preview</td>
-          <td>WYSIWYG inline Markdown</td>
-        </tr>
-        <tr>
-          <th scope="row">Focus Mode</th>
-          <td>Yes</td>
-          <td>Yes (Zen Mode)</td>
-          <td>Not present</td>
-          <td>Typewriter / focus mode</td>
-        </tr>
-        <tr>
-          <th scope="row">Themes + typefaces</th>
-          <td>Light/dark + 5 fonts, adjustable size/width</td>
-          <td>Light + dark toggle (default light)</td>
-          <td>Multiple themes</td>
-          <td>Custom CSS themes</td>
-        </tr>
-        <tr>
-          <th scope="row">WebMCP / AI agent tools</th>
-          <td>In-browser (W3C CG draft)</td>
-          <td>No</td>
-          <td>No</td>
-          <td>No</td>
-        </tr>
-        <tr>
-          <th scope="row">Pricing</th>
-          <td>Free — no tier</td>
-          <td>Free — no tier</td>
-          <td>Free — $5 sponsorship unlocks PDF + more</td>
+          <th scope="row">Price</th>
+          <td>Free, no tiers</td>
+          <td>Free</td>
+          <td>Free ($5/3 months unlocks PDF export)</td>
+          <td>Free online; $23.90 desktop, $16.99 Android</td>
           <td>$14.99 one-time (3 devices)</td>
+        </tr>
+        <tr>
+          <th scope="row">Editing style</th>
+          <td>Direct rich text (WYSIWYG)</td>
+          <td>Split-screen Markdown</td>
+          <td>Split-screen Markdown</td>
+          <td>WYSIWYG Markdown</td>
+          <td>WYSIWYG Markdown</td>
+        </tr>
+        <tr>
+          <th scope="row">Offline support</th>
+          <td>Full PWA — survives browser restarts</td>
+          <td>Only while the loaded tab stays open</td>
+          <td>Service-worker offline mode</td>
+          <td>Online: no; app: yes</td>
+          <td>Yes (desktop app)</td>
+        </tr>
+        <tr>
+          <th scope="row">Document storage</th>
+          <td>IndexedDB library + version snapshots + images</td>
+          <td>Local documents in browser storage (+ optional cloud)</td>
+          <td>Browser storage, multiple documents (+ cloud)</td>
+          <td>Browser storage, no versions/trash (online); local files + versions (app)</td>
+          <td>Local files (sync via your own folder)</td>
+        </tr>
+        <tr>
+          <th scope="row">Privacy &amp; tracking</th>
+          <td>No cookies/IDs; no document uploads</td>
+          <td>Local documents; HTML/PDF exports sent to its server; says it uses privacy-respecting analytics</td>
+          <td>Google login for most cloud features</td>
+          <td>Documents stay in browser or on your device; no account</td>
+          <td>Local app; license check only</td>
+        </tr>
+        <tr>
+          <th scope="row">Tables &amp; images</th>
+          <td>Included free</td>
+          <td>Markdown syntax</td>
+          <td>Markdown syntax</td>
+          <td>Paid app only</td>
+          <td>Included</td>
+        </tr>
+        <tr>
+          <th scope="row">PDF export</th>
+          <td>Included free</td>
+          <td>Included (server-generated)</td>
+          <td>Sponsor only</td>
+          <td>Paid app only</td>
+          <td>Included</td>
+        </tr>
+        <tr>
+          <th scope="row">Focus mode &amp; themes</th>
+          <td>Focus mode; light/dark; 5 typefaces; adjustable size/width</td>
+          <td>Zen mode; dark mode</td>
+          <td>No dedicated focus mode</td>
+          <td>Focus mode; 6 themes; typewriter sounds</td>
+          <td>Focus mode; custom CSS themes</td>
+        </tr>
+        <tr>
+          <th scope="row">WebMCP / agent tools</th>
+          <td>Yes (browsers that support WebMCP)</td>
+          <td>No</td>
+          <td>No</td>
+          <td>No</td>
+          <td>No</td>
         </tr>
       </tbody>
     </table>
     </div>
-    <p class="micro">Sources: dillinger.io (features + compare pages), stackedit.io (features + docs), typora.io/store.typora.io; StackEdit reviews verified via third-party comparison sites (e.g. Phoenix Code comparison, July 2026). All as of October 2026.</p>
 
-    <h2>Dillinger</h2>
-    <p>
-      <strong>What it is.</strong> A free, no-signup browser Markdown editor built on the same
-      Monaco engine that powers VS Code. It offers side-by-side live preview, optional cloud sync
-      to GitHub, Dropbox, Google Drive, OneDrive and Bitbucket, and exports to Markdown, styled
-      HTML or PDF. Drafts persist in <code>localStorage</code>, and it claims to work offline once
-      loaded. (Verified at <a href="https://dillinger.io/">dillinger.io</a> and its public
-      comparison pages, October 2026.)
-    </p>
-    <p>
-      <strong>Where Quorly differs — honestly.</strong> Dillinger is a Markdown source editor,
-      not a rich-text editor: you write Markdown syntax (hashes for headings, asterisks for bold),
-      and see a rendered preview beside it. Quorly edits the rendered page directly — headings,
-      bold, italic, lists, quotes, links, inline code, aligned text, tables, images and code blocks
-      — without switching to source view. Dillinger's cloud sync requires connecting a third-party
-      account; Quorly has none. Dillinger does not offer an installable PWA, a local document
-      library with version snapshots, or in-browser agent tools. Its own offline promise is that
-      "once loaded, the editor keeps working" with drafts in <code>localStorage</code>; Quorly ships
-      a service worker and IndexedDB snapshots, and keeps working after the browser restarts.
-    </p>
-    <p>
-      <strong>Who Dillinger is for.</strong> Writers who prefer source Markdown, want instant
-      cloud sync to GitHub or Dropbox, and don't need a library of saved drafts or agent tools.
-    </p>
+    <h2>Detailed comparisons</h2>
 
-    <h2>StackEdit</h2>
-    <p>
-      <strong>What it is.</strong> A free in-browser Markdown editor with split-pane live preview,
-      scroll sync, and optional sync to Google Drive, Dropbox and GitHub. Most cloud features
-      require signing in with a Google account; the free tier saves locally. PDF export requires
-      a sponsorship (around $5 for 3 months). It supports Mermaid diagrams and KaTeX math, and
-      offers a service-worker-based offline mode. (Verified at <a href="https://stackedit.io/">stackedit.io</a>
-      and third-party reviews checked in October 2026; the project's last commit was May 2023.)
-    </p>
-    <p>
-      <strong>Where Quorly differs — honestly.</strong> StackEdit is a Markdown source editor;
-      Quorly is a rich-text editor that edits the rendered page. StackEdit's cloud sync requires
-      a Google sign-in; Quorly has zero accounts. StackEdit's offline mode depends on a service
-      worker (partial PWA, not a full install) and lacks an IndexedDB-based document library
-      with snapshots and images. StackEdit does not claim to block tracking, while Quorly sends
-      only named event names (no cookies, no identifiers, no document content) to its own
-      endpoint. StackEdit does not register WebMCP tools.
-    </p>
-    <p>
-      <strong>Who StackEdit is for.</strong> Writers who want live Markdown rendering with
-      scroll sync, need Mermaid or math diagrams, and are comfortable with a Google-linked account
-      for cloud features.
-    </p>
+    <h3>Quorly vs Dillinger</h3>
+    <p><strong>What it is.</strong> A classic, no-signup browser Markdown editor built on the Monaco engine that powers VS Code. It uses a two-pane layout — raw Markdown on the left, live preview on the right — with optional cloud sync to GitHub, Dropbox, Google Drive, OneDrive and Bitbucket, and exports to Markdown, HTML and PDF. (Verified at <a href="https://dillinger.io/" target="_blank" rel="noopener">dillinger.io</a>, October 2026.)</p>
 
-    <h2>Typora — an honest one-line contrast</h2>
     <ul class="checklist">
-      <li><strong>Typora is the polished desktop app.</strong> It is a native macOS / Windows / Linux
-      application ($14.99 one-time, 3 devices, 15-day trial) with seamless WYSIWYG Markdown editing,
-      custom CSS themes, and extensive exports (PDF, Word, HTML, LaTeX, EPUB). It works on local
-      files, needs no account to write, and works primarily offline. Optional updates and
-      cross-device theme sync may contact the server, but no document content is sent. It does not offer
-      web-based collaboration, an installable PWA, or in-browser agent tools.</li>
-      <li><strong>Quorly is the browser-first alternative.</strong> It needs no install, runs on any device
-      with a browser, keeps everything in the browser (no desktop files), works offline as a PWA,
-      and includes WebMCP agent tools — at the cost of not being a native desktop experience.</li>
+      <li><strong>Write on the page, not in code.</strong> Dillinger is built around raw hashes and asterisks in a split screen. Quorly edits the rendered page — tables, images and typography look finished while you type.</li>
+      <li><strong>Exports never leave your device.</strong> Dillinger generates HTML and PDF on its server, so the document is uploaded for the export. Quorly prints PDF locally and, in Chromium-based browsers, writes Markdown, plain text and <code>.quorly</code> files straight to disk.</li>
+      <li><strong>A library with history and images.</strong> Dillinger keeps documents in browser storage; Quorly adds version snapshots, image storage and a Recents manager.</li>
+      <li><strong>Offline that survives a restart.</strong> Dillinger's offline promise covers the already-loaded tab. Quorly is an installable PWA with a service worker and IndexedDB, and keeps working after a browser restart.</li>
     </ul>
 
+    <p><strong>Best for.</strong> Dillinger if you want raw Markdown and to push files to GitHub/Dropbox; Quorly for distraction-free WYSIWYG, a durable local library and offline that survives restarts.</p>
+
+    <h3>Quorly vs StackEdit</h3>
+    <p><strong>What it is.</strong> An in-browser Markdown editor with split-pane live preview and scroll sync, plus Mermaid, KaTeX and ABC support. It syncs with Google Drive, Dropbox and GitHub, though most cloud features require a Google login; PDF export needs a ~$5/3-month sponsorship, and its last commit was May 2023. (Verified at <a href="https://stackedit.io/" target="_blank" rel="noopener">stackedit.io</a>, October 2026.)</p>
+
+    <ul class="checklist">
+      <li><strong>No paywall on your own work.</strong> StackEdit locks PDF export behind a recurring sponsorship. Every Quorly export is free, with no account gate.</li>
+      <li><strong>Single-pane focus.</strong> StackEdit has no dedicated focus mode and splits the screen in two. Quorly gives you one canvas with Focus Mode, adjustable width and five typefaces.</li>
+      <li><strong>Local-first by default.</strong> StackEdit's cloud needs a Google login; Quorly has no accounts and sends only named events.</li>
+      <li><strong>Actively built.</strong> StackEdit's last commit was May 2023; Quorly is in active development, with WebMCP support today.</li>
+    </ul>
+
+    <p><strong>Best for.</strong> StackEdit if you need Mermaid or KaTeX in raw Markdown and already live in Google Drive; Quorly for a modern, private WYSIWYG workspace with free PDF export.</p>
+
+    <h3>Quorly vs CalmlyWriter</h3>
+    <p><strong>What it is.</strong> A minimalist WYSIWYG Markdown editor from Calmly Studio: a free online version, and pay-once apps ($23.90 desktop, 3 computers, 14-day trial; $16.99 Android). The online editor stores documents in browser storage, one open at a time, with no version history or trash; tables, images, PDF export, versions and offline work are app-only. (Verified at <a href="https://calmlywriter.com/" target="_blank" rel="noopener">calmlywriter.com</a> online-help and online-vs-app pages, October 2026.)</p>
+
+    <ul class="checklist">
+      <li><strong>The full toolkit, in the browser.</strong> Tables, images, PDF export, version history and offline work are all app-only for CalmlyWriter. Quorly includes them in the browser for free.</li>
+      <li><strong>Storage you can rely on.</strong> CalmlyWriter Online calls its documents temporary and warns that clearing browser data erases them; there is no trash and no version history. Quorly keeps a persistent local library with snapshots and one-click <code>.quorly</code> backups.</li>
+      <li><strong>Actually offline.</strong> CalmlyWriter Online does not work offline. Quorly is an installable PWA that works on a plane, in a cafe, or after a browser restart.</li>
+      <li><strong>No upsell in the middle of your draft.</strong> Quorly has no paid tier, no license key and no desktop download.</li>
+    </ul>
+
+    <p><strong>Best for.</strong> CalmlyWriter if you want typewriter sounds and a traditional pay-once desktop app with comments and a TOC; Quorly for the same distraction-free WYSIWYG, plus tables, images, PDF, versions and offline, in the browser for $0.</p>
+
+    <h3>Quorly vs Typora</h3>
+    <p><strong>What it is.</strong> The polished native desktop Markdown app ($14.99 one-time, 3 devices, 15-day trial), working directly on local files — keep them in your own Dropbox or iCloud folder, since there is no built-in cloud sync. It has focus mode and custom CSS themes, exports to PDF, Word, HTML, LaTeX and EPUB, and is closed source. (Verified at <a href="https://typora.io/" target="_blank" rel="noopener">typora.io</a> and <a href="https://store.typora.io/" target="_blank" rel="noopener">store.typora.io</a>, October 2026.)</p>
+
+    <ul class="checklist">
+      <li><strong>Zero-install portability.</strong> Typora needs a download and a license key for up to three devices. Quorly runs on any device with a browser — Mac, Windows, Linux or Chromebook — with no setup.</li>
+      <li><strong>Private by architecture.</strong> Quorly keeps everything in this browser's storage and writes files only when you export. No folder tree to manage and no license server involved in writing.</li>
+      <li><strong>Built for the WebMCP era.</strong> Typora is a closed native app. Quorly registers in-browser agent tools in browsers that support the spec, so local AI workflows can reach your text without a cloud round-trip.</li>
+      <li><strong>Free.</strong> $0 against Typora's $14.99 — no license, no trial, no upgrade tier.</li>
+    </ul>
+
+    <p><strong>Best for.</strong> Typora if you need LaTeX/EPUB exports and manage <code>.md</code> files in your OS file manager; Quorly for a Typora-caliber writing experience in the browser, for free.</p>
+
     <h2>The bottom line</h2>
-    <p>
-      If you want a source Markdown editor that syncs to your cloud accounts, Dillinger or
-      StackEdit are the free browser options. If you want a polished desktop WYSIWYG editor,
-      Typora is the paid standard. If you want a private, local-first browser writing app with
-      no account, no cloud, no tracking, installable offline support, a saved-document library,
-      rich-text editing, and in-browser agent tools — Quorly is built for that.
-    </p>
+    <table class="compare-table decision-table">
+      <thead>
+        <tr><th>What you need</th><th>Best choice</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Writing raw Markdown and syncing to GitHub or Google Drive</th><td><strong>Dillinger</strong> or <strong>StackEdit</strong></td></tr>
+        <tr><th scope="row">A paid desktop app that works on local OS folders</th><td><strong>Typora</strong> ($14.99) or <strong>CalmlyWriter</strong> ($23.90)</td></tr>
+        <tr><th scope="row">A free, private, rich-text workspace that works offline in the browser, with no account and full PDF/Markdown exports</th><td><strong>Quorly</strong></td></tr>
+      </tbody>
+    </table>
+
+    <aside class="compare-note">
+      <h2>Radical transparency</h2>
+      <p>When we say private, we mean it. Quorly sends no cookies, no user identifiers and no document content. Two requests still leave the page: Cloudflare Web Analytics, which counts visits without cookies or cross-site identifiers, and a cookie-free <code>navigator.sendBeacon('/e')</code> POST carrying one event name (for example <code>first_keystroke</code> or <code>export</code>) plus at most one short label such as the export format or the WebMCP tool name (<code>format</code>, <code>tool</code> or <code>theme</code>, each capped at 32 chars). Your open draft lives in <code>localStorage</code>; the library, version snapshots and images live in <code>IndexedDB</code> on this device. Open DevTools → Network and watch it yourself.</p>
+    </aside>
+
+    <h2>Sources</h2>
+    <p class="micro">Verified October 2026 at <a href="https://dillinger.io/" target="_blank" rel="noopener">dillinger.io</a> (features, privacy), <a href="https://stackedit.io/" target="_blank" rel="noopener">stackedit.io</a>, <a href="https://typora.io/" target="_blank" rel="noopener">typora.io</a> / <a href="https://store.typora.io/" target="_blank" rel="noopener">store.typora.io</a>, and <a href="https://calmlywriter.com/" target="_blank" rel="noopener">calmlywriter.com</a> (text-editor, online-help, online-vs-app, help).</p>
   </section>
 </main>
 

@@ -261,6 +261,7 @@ kbd {
 
 .prose { max-width: 760px; }
 .prose h2 { margin-top: 1.6em; font-size: 1.25rem; }
+.prose h3 { margin-top: 1.5em; font-size: 1.05rem; color: var(--text); }
 .prose p, .prose li { color: var(--muted); }
 .prose a { color: var(--accent); }
 .prose code {
@@ -280,6 +281,20 @@ kbd {
   .section { padding: 52px 24px; }
 }
 
+.compare-note {
+  margin: 32px 0 0;
+  padding: 18px 20px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 12px 12px 0;
+  background: var(--panel);
+}
+.compare-note h2 { margin: 0 0 .5em; font-size: 1rem; }
+.compare-note p { margin: 0; font-size: .9rem; }
+
+/* .prose a would otherwise paint CTA labels in the accent colour on the accent pill. */
+.prose .cta-row .btn-primary { color: var(--accent-ink); }
+.prose .cta-row .btn-ghost { color: var(--text); }
+
 /* ---------- comparison table ---------- */
 
 .compare-table {
@@ -291,7 +306,7 @@ kbd {
 .compare-table th,
 .compare-table td {
   border: 1px solid var(--border);
-  padding: 10px 12px;
+  padding: 8px 8px;
   text-align: left;
   vertical-align: top;
 }
@@ -313,12 +328,24 @@ kbd {
 .compare-table tbody td {
   color: var(--muted);
 }
+.compare-table.decision-table tbody th[scope="row"] { width: 58%; }
 
 /* ---------- table scroll wrapper ---------- */
 .table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   max-width: 100%;
+}
+
+/* The comparison table needs more room than the 760px prose column once there are
+   six columns, so on desktop it centres itself across the page. Below 880px it
+   stays inside the prose width and scrolls horizontally. */
+@media (min-width: 880px) {
+  .compare-scroll {
+    width: min(1120px, 100vw - 64px);
+    max-width: none;
+    margin-inline: calc((100% - min(1120px, 100vw - 64px)) / 2);
+  }
 }
 
 /* ---------- landing refresh ---------- */
