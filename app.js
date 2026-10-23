@@ -1103,19 +1103,26 @@ async function syncNow() {
     }
 }
 
+// One slug for every export, so the PDF filename and the .quorly filename never diverge.
+// Chrome's Save-as-PDF dialog suggests document.title + ".pdf"; the export pickers use
+// this same base + their own extension.
+function documentSlug() {
+    return editTitle.textContent.toLowerCase().trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .substring(0, 50) || 'document';
+}
+
 async function exportMarkdown() {
     if (!FSA_SUPPORTED) {
         toast('Exporting files requires a Chromium-based browser (Chrome, Edge, Brave, Opera).');
         return;
     }
-    const slug = editTitle.textContent.toLowerCase().trim()
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9-]/g, '')
-        .substring(0, 50);
+    const slug = documentSlug();
     
     try {
         const handle = await window.showSaveFilePicker({
-            suggestedName: `${slug || 'document'}.md`,
+            suggestedName: `${slug}.md`,
             types: [{ description: 'Markdown', accept: {'text/markdown': ['.md']} }]
         });
         
@@ -1141,13 +1148,10 @@ async function exportQuorly() {
         toast('Exporting files requires a Chromium-based browser (Chrome, Edge, Brave, Opera).');
         return;
     }
-    const slug = editTitle.textContent.toLowerCase().trim()
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9-]/g, '')
-        .substring(0, 50);
+    const slug = documentSlug();
     try {
         const handle = await window.showSaveFilePicker({
-            suggestedName: `${slug || 'document'}.quorly`,
+            suggestedName: `${slug}.quorly`,
             types: [{ description: 'Quorly document', accept: { 'application/json': ['.quorly'] } }]
         });
         const writable = await handle.createWritable();
@@ -1177,14 +1181,11 @@ async function exportText() {
         toast('Exporting files requires a Chromium-based browser (Chrome, Edge, Brave, Opera).');
         return;
     }
-    const slug = editTitle.textContent.toLowerCase().trim()
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9-]/g, '')
-        .substring(0, 50);
+    const slug = documentSlug();
 
     try {
         const handle = await window.showSaveFilePicker({
-            suggestedName: `${slug || 'document'}.txt`,
+            suggestedName: `${slug}.txt`,
             types: [{ description: 'Plain text', accept: { 'text/plain': ['.txt'] } }]
         });
         const writable = await handle.createWritable();
@@ -2636,7 +2637,8 @@ function handleExport(value, theme) {
         if (hasContent) document.body.classList.add('print-has-content');
         else document.body.classList.remove('print-has-content');
         // Print layout is pure CSS (natural flow + box-decoration-break: clone);
-        // no pagination script needed.
+        // no pagination script needed. The title becomes the suggested PDF filename.
+        preparePrintTitle();
         window.print();
     }
     else if (value === 'md') { track('export', { format: 'md' }); exportMarkdown(); }
@@ -2795,6 +2797,24 @@ function setPrintTheme(value) {
     localStorage.setItem(PRINT_THEME_KEY, value);
     applyPrintTheme();
 }
+
+// Chrome's Save-as-PDF dialog suggests document.title + ".pdf". Set it to the same slug
+// the .quorly export suggests, then restore the tab title when printing is over.
+let printTitleBefore = null;
+
+function preparePrintTitle() {
+    if (printTitleBefore !== null) return;
+    printTitleBefore = document.title;
+    document.title = documentSlug();
+    // Safety net for browsers that do not fire afterprint.
+    setTimeout(restorePrintTitle, 120000);
+}
+
+function restorePrintTitle() {
+    if (printTitleBefore === null) return;
+    document.title = printTitleBefore;
+    printTitleBefore = null;
+}
 // UI-15: the A−/A+ and ←/→ button pairs became numeric dropdowns, so these take an absolute
 // value. `resetFontSize` stays because Ctrl/Cmd+0 still uses it.
 function setFontSize(px) {
@@ -2848,6 +2868,7 @@ document.addEventListener('keydown', (e) => {
     // Print/PDF (Cmd/Ctrl + P)
     if (e.key === 'p') {
         e.preventDefault();
+        preparePrintTitle();
         window.print();
     }
     
@@ -3319,9 +3340,11 @@ function wireUI() {
             !document.body.classList.contains('print-theme-dark')) {
             applyPrintTheme();
         }
+        preparePrintTitle();
     });
     window.addEventListener('afterprint', () => {
         document.body.classList.remove('print-has-content');
+        restorePrintTitle();
     });
 
     const fmtInsertDrop = document.getElementById('fmtInsertDropdown');
