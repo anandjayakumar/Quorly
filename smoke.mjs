@@ -235,6 +235,9 @@ try {
   for (const marker of markers) {
     record(`/app.js has ${marker}`, body.includes(marker), 'missing');
   }
+  // N-12: Formatting section must sit before Recents after a layout switch.
+  record('/app.js uses sidebar-recents anchor', body.includes("panel.querySelector('.sidebar-recents')"), 'missing anchor');
+  record('/app.js has no dead insertSection lookup', !body.includes("getElementById('insertSection')"), 'dead reference still present');
 } catch (e) {
   record('/app.js library markers', false, String(e.message || e));
 }
