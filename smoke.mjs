@@ -83,6 +83,8 @@ await checkDocument('/compare/', {
     'StackEdit',
     'CalmlyWriter',
     'https://quorly.dev/compare/',
+    'https://typora.io/',
+    'target="_blank" rel="noopener"',
     'Works offline',
     'requires no account',
     '/landing.js',
