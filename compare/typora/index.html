@@ -91,7 +91,7 @@
           "name": "Does Quorly export to PDF and Markdown?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Quorly exports to PDF in any browser, and to Markdown, plain text and .quorly in Chromium-based browsers. Typora exports to PDF, Markdown, HTML, LaTeX and EPUB."
+            "text": "Quorly exports to PDF in any browser, and to Markdown, plain text and .quorly in Chromium-based browsers. Typora exports to PDF, Word, HTML, LaTeX and EPUB."
           }
         },
         {
@@ -128,7 +128,7 @@
     <h1>Quorly vs Typora</h1>
     <p class="micro">Verified October 2026. Every claim is checked against the competitor's own site; competitor links open in a new tab.</p>
 
-    <p><strong>Typora is the gold standard for local Markdown.</strong> A clean, focused desktop app ($14.99, one-time, up to 3 devices), working directly on your files — no cloud sync required. It exports to PDF, Markdown, HTML, LaTeX and EPUB, and keeps everything on your disk. (Verified at <a href="https://typora.io/" target="_blank" rel="noopener">typora.io</a> and <a href="https://store.typora.io/" target="_blank" rel="noopener">store.typora.io</a>, October 2026.)</p>
+    <p><strong>Typora is the gold standard for local Markdown.</strong> A clean, focused desktop app ($14.99, one-time, up to 3 devices), working directly on your files — no cloud sync required. It exports to PDF, Word, HTML, LaTeX and EPUB, and keeps everything on your disk. (Verified at <a href="https://typora.io/" target="_blank" rel="noopener">typora.io</a> and <a href="https://store.typora.io/" target="_blank" rel="noopener">store.typora.io</a>, October 2026.)</p>
 
     <p><strong>Quorly brings the same calm writing experience to the browser.</strong> No download, no license key, no device limit. Your draft lives in this browser: a persistent IndexedDB library with versions, images and one-click exports — all without an account or upload.</p>
 
@@ -139,7 +139,7 @@
       <li><strong>Zero install, zero cost.</strong> Typora is $14.99 per license (3 devices, 15-day trial). Quorly runs instantly in any browser — Mac, Windows, Linux, Chromebook — for free.</li>
       <li><strong>No file management overhead.</strong> Typora works on the file system; you manage folders and sync yourself. Quorly keeps a persistent library in IndexedDB, with snapshots and image storage — no folder tree required.</li>
       <li><strong>Built for the browser.</strong> Quorly is an installable PWA with offline support that survives browser restarts. It also registers in-browser WebMCP agent tools in supported browsers, so local AI workflows can reach your text without a cloud round-trip.</li>
-      <li><strong>Same exports, no license gate.</strong> PDF works in any browser; Markdown, plain text and <code>.quorly</code> backups are one click away in Chromium-based browsers. No subscription, no trial expiration.</li>
+      <li><strong>Core exports, no license gate.</strong> PDF works in any browser; Markdown, plain text and <code>.quorly</code> backups are one click away in Chromium-based browsers. No subscription, no trial expiration.</li>
     </ul>
 
     <h2>At a glance</h2>
@@ -181,7 +181,7 @@
         <tr>
           <th scope="row">Privacy &amp; tracking</th>
           <td>No cookies/IDs; no uploads</td>
-          <td>Local app; license check only</td>
+          <td>Local files; no account; opt-out usage data</td>
         </tr>
         <tr>
           <th scope="row">Tables &amp; images</th>
@@ -224,12 +224,12 @@
     <p>If you already manage Markdown files in your OS file manager and value LaTeX/EPUB output, Typora remains the better tool. Quorly does not compete on those axes; it competes on portability, cost and privacy architecture.</p>
 
     <h3>How to move from Typora to Quorly</h3>
-    <p>Quorly does not read native <code>.md</code> files from disk (it uses an IndexedDB library), but importing is simple:</p>
+    <p>In Chromium-based browsers, Quorly imports <code>.md</code> files through its Import button and keeps the result in its IndexedDB library:</p>
     <ul class="checklist">
-      <li>Copy your Markdown text from Typora and paste it into a new Quorly document — headings, lists, bold and italic carry over.</li>
+      <li>Use <strong>Import</strong> in Quorly and choose your <code>.md</code> file; headings, lists, bold and italic are rendered. You can also paste the rendered text.</li>
       <li>In Chromium-based browsers, export your Quorly document as Markdown (<code>.md</code>) or plain text (<code>.txt</code>) with one click.</li>
       <li>For images: paste or drop them directly into Quorly; they are embedded in the document and saved in the library.</li>
-      <li>Quorly also supports importing Markdown content through its paste pipeline; open the editor and start from a blank page.</li>
+      <li>The imported document opens as a new draft; the original <code>.md</code> file stays untouched on disk.</li>
     </ul>
 
     <h2>The bottom line</h2>
@@ -260,7 +260,7 @@
       </details>
       <details>
         <summary>Does Quorly export to PDF and Markdown?</summary>
-        <p>Quorly exports to PDF in any browser, and to Markdown, plain text and .quorly in Chromium-based browsers. Typora exports to PDF, Markdown, HTML, LaTeX and EPUB.</p>
+        <p>Quorly exports to PDF in any browser, and to Markdown, plain text and .quorly in Chromium-based browsers. Typora exports to PDF, Word, HTML, LaTeX and EPUB.</p>
       </details>
       <details>
         <summary>Does Quorly upload my writing?</summary>
@@ -271,18 +271,21 @@
     <h2>Sources</h2>
     <p class="micro">Verified October 2026 at <a href="https://typora.io/" target="_blank" rel="noopener">typora.io</a> (features, price, exports), <a href="https://store.typora.io/" target="_blank" rel="noopener">store.typora.io</a> (pricing, trial, license terms). Quorly claims verified directly in the editor and against <a href="/privacy/">/privacy/</a>.</p>
 
-    <p><a href="/compare/">← Back to Quorly vs CalmlyWriter, Dillinger &amp; StackEdit</a></p>
+    <p><a href="/compare/">← Back to full comparison</a></p>
   </section>
 </main>
 
 <footer class="footer">
   <div class="footer-inner">
-    <a class="brand small" href="/"><img src="/quorly.png" alt="" width="22" height="22" /><span>Quorly</span></a>
-    <nav>
+    <div class="footer-brand">
+      <a class="brand small" href="/"><img src="/quorly.png" alt="" width="22" height="22" /><span>Quorly</span></a>
+      <p class="copy">Your words stay on your device.</p>
+    </div>
+    <nav aria-label="Product">
+      <span class="nav-label">Product</span>
       <a href="/app/">Editor</a>
       <a href="/privacy/">Privacy</a>
       <a href="/#features">Features</a>
-      <a href="/compare/">Compare</a>
     </nav>
     <nav aria-label="Compare pages">
       <span class="nav-label">Compare</span>
@@ -290,7 +293,6 @@
       <a href="/compare/typora/">Typora</a>
       <a href="/compare/calmlywriter/">CalmlyWriter</a>
     </nav>
-    <p class="copy">Your words stay on your device.</p>
   </div>
 </footer>
 
