@@ -291,6 +291,10 @@ kbd {
 .compare-note h2 { margin: 0 0 .5em; font-size: 1rem; }
 .compare-note p { margin: 0; font-size: .9rem; }
 
+/* .prose a would otherwise paint CTA labels in the accent colour on the accent pill. */
+.prose .cta-row .btn-primary { color: var(--accent-ink); }
+.prose .cta-row .btn-ghost { color: var(--text); }
+
 /* ---------- comparison table ---------- */
 
 .compare-table {
