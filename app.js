@@ -2746,7 +2746,7 @@ function toggleSidebar() {
 }
 
 // UI-14: below 1180px the Formatting section lives in the fixed bar under the top bar; above it,
-// it goes back into the panel in its original position (before Insert). One instance is moved
+// it goes back into the panel before the Recents section. One instance is moved
 // around rather than duplicated, so its ids and dropdown wiring stay single.
 function syncLayoutMode(isMobile) {
     const section = document.getElementById('formatSection');
@@ -2759,8 +2759,8 @@ function syncLayoutMode(isMobile) {
     } else {
         setPanelOpen(false);
         if (section.parentNode !== panel) {
-            const insert = document.getElementById('insertSection');
-            panel.insertBefore(section, insert && insert.parentNode === panel ? insert : null);
+            const recents = panel.querySelector('.sidebar-recents');
+            panel.insertBefore(section, recents || null);
         }
     }
 }

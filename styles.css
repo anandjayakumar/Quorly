@@ -1593,7 +1593,7 @@ body.light-mode .recents-list::-webkit-scrollbar-thumb {
 
 /* The current document is marked by the row background only — its title is not bolder. */
 .recent-item.is-current .recent-title {
-  color: #ffffff;
+  color: #ffffffd4;
 }
 
 .recent-meta {
@@ -2590,7 +2590,7 @@ body.light-mode .q-dialog-btn.is-danger:focus-visible {
   body{padding:0 !important; margin:0;}
 
   /* Natural flow: the reader is a single fragmentable container with clone padding. */
-  .reader {
+  body.q-app .reader {
     padding: 16mm 15mm;
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;

@@ -238,6 +238,9 @@ try {
   for (const marker of markers) {
     record(`/app.js has ${marker}`, body.includes(marker), 'missing');
   }
+  // N-12: Formatting section must sit before Recents after a layout switch.
+  record('/app.js uses sidebar-recents anchor', body.includes("panel.querySelector('.sidebar-recents')"), 'missing anchor');
+  record('/app.js has no dead insertSection lookup', !body.includes("getElementById('insertSection')"), 'dead reference still present');
 } catch (e) {
   record('/app.js library markers', false, String(e.message || e));
 }
@@ -267,9 +270,11 @@ try {
     'box-decoration-break: clone',
     '-webkit-box-decoration-break: clone',
     '@page { size: A4; margin: 0; }',
+    'body.q-app .reader {\n    padding: 16mm 15mm;',
   ];
   for (const marker of markers) {
-    record(`/styles.css has ${marker}`, body.includes(marker), 'missing');
+    // Multi-line markers are pinned exactly but labelled on one line.
+    record(`/styles.css has ${marker.replace(/\s*\n\s*/g, ' ')}`, body.includes(marker), 'missing');
   }
 } catch (e) {
   record('/styles.css print markers', false, String(e.message || e));
