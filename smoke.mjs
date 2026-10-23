@@ -281,6 +281,8 @@ try {
     '-webkit-box-decoration-break: clone',
     '@page { size: A4; margin: 0; }',
     'body.q-app .reader {\n    padding: 16mm 15mm;',
+    '\n    -webkit-print-color-adjust: exact !important;',
+    '\n    print-color-adjust: exact !important;',
   ];
   for (const marker of markers) {
     // Multi-line markers are pinned exactly but labelled on one line.
