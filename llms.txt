@@ -10,6 +10,8 @@ Quorly is a single-page editor written in plain HTML, CSS and JavaScript with no
 - [Editor](https://quorly.dev/app/): the writing surface — headings, lists, quotes, code blocks, tables, images, Markdown/PDF/TXT export, focus mode, themes, typography and column width.
 - [Privacy](https://quorly.dev/privacy/): exactly what is stored locally and what the single analytics counter records.
 - [Compare](https://quorly.dev/compare/): Quorly vs Dillinger, StackEdit and Typora — verified feature-by-feature, as of October 2026.
+- [Compare: Quorly vs Typora](https://quorly.dev/compare/typora/): dedicated page answering "free Typora alternative" — price, platform, exports, privacy.
+- [Compare: Quorly vs CalmlyWriter](https://quorly.dev/compare/calmlywriter/): dedicated page answering "CalmlyWriter online alternative" — browser vs app, offline, exports.
 
 ## For agents
 

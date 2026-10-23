@@ -42,7 +42,10 @@ await checkDocument('/', {
     // which hides it and breaks the mailto: — so this is the tripwire for that.
     'mailto:hello@quorly.dev',
     // Internal link: the homepage points at the comparison page with descriptive anchor text.
-    'See how Quorly compares to Typora'],
+    'See how Quorly compares to Typora',
+    '/compare/typora/',
+    '/compare/calmlywriter/',
+    'Compare pages'],
   notContains: ['Version history', 'no tracking', '__cfemail__', 'email-protection#'],
 });
 
@@ -97,9 +100,57 @@ await checkDocument('/compare/', {
     '"@type": "SoftwareApplication"',
     'What is the best free browser-based alternative to Typora?',
     'Free, Private Alternative',
+    '/compare/typora/',
+    '/compare/calmlywriter/',
+    'Compare pages',
     '/landing.js',
   ],
   notContains: ['quorly.pages.dev', 'style="', 'onclick=', 'onload=', 'onerror='],
+});
+
+await checkDocument('/compare/typora/', {
+  type: 'text/html',
+  contains: [
+    'Quorly vs Typora',
+    'https://typora.io/',
+    'https://store.typora.io/',
+    'target="_blank" rel="noopener"',
+    'https://quorly.dev/compare/typora/',
+    'Free Browser Alternative',
+    'Free, no tiers',
+    '$14.99',
+    'IndexedDB',
+    'Radical transparency',
+    'Frequently asked questions',
+    'application/ld+json',
+    '"@type": "FAQPage"',
+    '"@type": "SoftwareApplication"',
+    'Back to full comparison',
+    '/landing.js',
+  ],
+  notContains: ['quorly.pages.dev', 'style="', 'onclick=', 'onload=', 'onerror=', 'no tracking'],
+});
+
+await checkDocument('/compare/calmlywriter/', {
+  type: 'text/html',
+  contains: [
+    'Quorly vs CalmlyWriter',
+    'https://calmlywriter.com/',
+    'target="_blank" rel="noopener"',
+    'https://quorly.dev/compare/calmlywriter/',
+    'Free Browser Alternative',
+    'Free, no tiers',
+    '$23.90',
+    'IndexedDB',
+    'Radical transparency',
+    'Frequently asked questions',
+    'application/ld+json',
+    '"@type": "FAQPage"',
+    '"@type": "SoftwareApplication"',
+    'Back to full comparison',
+    '/landing.js',
+  ],
+  notContains: ['quorly.pages.dev', 'style="', 'onclick=', 'onload=', 'onerror=', 'no tracking'],
 });
 
 // --- agent discovery surface (llms.txt, skill, catalogs, robots signal) -----------

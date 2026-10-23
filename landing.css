@@ -259,6 +259,15 @@ kbd {
 .footer-inner nav a:hover { color: var(--text); }
 .copy { margin: 0; }
 
+.nav-label {
+  color: var(--text);
+  font-weight: 700;
+  font-size: .78rem;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 /* ---------- long-form prose (privacy page) ---------- */
 
 .prose { max-width: 760px; }
