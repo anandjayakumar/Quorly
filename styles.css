@@ -1593,7 +1593,7 @@ body.light-mode .recents-list::-webkit-scrollbar-thumb {
 
 /* The current document is marked by the row background only — its title is not bolder. */
 .recent-item.is-current .recent-title {
-  color: #ffffff;
+  color: #ffffffd4;
 }
 
 .recent-meta {
