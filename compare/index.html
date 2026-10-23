@@ -3,12 +3,110 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Quorly vs. The Alternatives: Truly Private, Local-First Writing</title>
-<meta name="description" content="Quorly vs Dillinger, StackEdit, CalmlyWriter and Typora: a free, private, local-first WYSIWYG editor with offline PWA support, no account and no paywalled PDF export." />
+<title>Quorly vs. CalmlyWriter, Typora &amp; Dillinger — Free Private Alternative</title>
+<meta name="description" content="Free Typora or CalmlyWriter alternative? Compare Quorly with Dillinger and StackEdit: offline PWA, rich-text editing, free PDF export, no cookies." />
 <link rel="canonical" href="https://quorly.dev/compare/" />
+<meta name="robots" content="index, follow" />
 <meta name="theme-color" content="#0e0e0e" />
 <link rel="icon" href="/favicon.png" type="image/png" />
+
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://quorly.dev/compare/" />
+<meta property="og:site_name" content="Quorly" />
+<meta property="og:title" content="Quorly vs. CalmlyWriter, Typora &amp; Dillinger — Free Private Alternative" />
+<meta property="og:description" content="A side-by-side comparison of private writing apps: rich-text editing, offline PWA support, a persistent local library and free PDF/Markdown exports — in your browser." />
+<meta property="og:image" content="https://quorly.dev/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Quorly — a writing app that never sees your words. Private, local-first writing in your browser." />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Quorly vs. CalmlyWriter, Typora &amp; Dillinger — Free Private Alternative" />
+<meta name="twitter:description" content="Compare Quorly with Typora, CalmlyWriter, Dillinger and StackEdit: local-first browser writing with no accounts, no cookies, and free PDF/Markdown exports." />
+<meta name="twitter:image" content="https://quorly.dev/og.png" />
+<meta name="twitter:image:alt" content="Quorly — a writing app that never sees your words. Private, local-first writing in your browser." />
+
 <link rel="stylesheet" href="/landing.css" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://quorly.dev/compare/#webpage",
+      "url": "https://quorly.dev/compare/",
+      "name": "Quorly vs. CalmlyWriter, Typora, Dillinger & StackEdit",
+      "description": "Side-by-side comparison of Quorly against CalmlyWriter, Typora, Dillinger and StackEdit: local-first privacy, offline PWA support and free exports.",
+      "isPartOf": {
+        "@type": "WebSite",
+        "@id": "https://quorly.dev/#website",
+        "url": "https://quorly.dev/",
+        "name": "Quorly"
+      },
+      "about": { "@id": "https://quorly.dev/#software" }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://quorly.dev/#software",
+      "name": "Quorly",
+      "url": "https://quorly.dev/",
+      "image": "https://quorly.dev/og.png",
+      "applicationCategory": "WritingApplication",
+      "applicationSubCategory": "Private offline text editor",
+      "operatingSystem": "Any (web browser)",
+      "description": "A private, local-first browser writing app with rich-text editing, Focus Mode, offline PWA support, a persistent IndexedDB document library, WebMCP agent tools and one-click PDF, Markdown and plain-text export.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "featureList": [
+        "Local-first browser storage (localStorage and IndexedDB)",
+        "No account, no cookies, no document uploads",
+        "Distraction-free WYSIWYG rich-text editing with Focus Mode",
+        "Installable offline Progressive Web App (PWA)",
+        "Free PDF export, plus Markdown, plain text and .quorly files in Chromium-based browsers",
+        "In-browser WebMCP tools for local AI agents"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://quorly.dev/compare/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is the best free browser-based alternative to Typora?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Quorly is a 100% free, browser-first alternative to Typora. Typora is a paid native desktop app ($14.99) that edits local Markdown files; Quorly runs instantly in any browser with no installation, offers distraction-free WYSIWYG rich-text editing, works offline as an installable PWA, and exports to PDF in any browser, or Markdown and plain text in Chromium-based browsers."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does Quorly compare to CalmlyWriter Online?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "CalmlyWriter's free web version keeps its documents only in temporary browser storage, with no version history or trash, does not work offline, and locks tables, images and PDF exports behind its $23.90 desktop app. Quorly provides all of those features in the browser for free, including an installable offline PWA, a persistent multi-document library with snapshots in IndexedDB, tables, embedded images and free PDF export."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is Quorly different from Dillinger and StackEdit?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Dillinger and StackEdit are split-screen Markdown source editors: you type raw Markdown on one side and see a preview on the other. Quorly is a single-canvas WYSIWYG rich-text editor, so you format headings, lists, tables, images and code blocks directly on the page, then export to PDF in any browser or Markdown in Chromium-based browsers — with no cloud account and no StackEdit sponsorship fee for PDF export."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Quorly upload my writing to the cloud or track me?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Quorly requires no account, sets no cookies, and never sends your document content or personal identifiers over the network. Drafts, parked snapshots and embedded images stay in your browser on your device. The only network requests are an anonymous, cookie-free event name (plus at most one short label) to Quorly's own /e endpoint, and Cloudflare's aggregate visit count."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
@@ -27,7 +125,7 @@
 
 <main>
   <section class="section prose">
-    <h1>Quorly vs. The Alternatives: Truly Private, Local-First Writing</h1>
+    <h1>Quorly vs. CalmlyWriter, Typora &amp; Dillinger: The Free, Private Alternative</h1>
     <p class="micro">Last verified: October 2026. Every competitor claim is checked against its own site; competitor links open in a new tab.</p>
 
     <p>Most writing apps force you to make a compromise. Browser-based editors usually split your screen into code and preview, or push you toward cloud accounts and analytics. Privacy-first editors usually ask you to buy and install desktop software.</p>
@@ -210,6 +308,26 @@
       <h2>Radical transparency</h2>
       <p>When we say private, we mean it. Quorly sends no cookies, no user identifiers and no document content. Two requests still leave the page: Cloudflare Web Analytics, which counts visits without cookies or cross-site identifiers, and a cookie-free <code>navigator.sendBeacon('/e')</code> POST carrying one event name (for example <code>first_keystroke</code> or <code>export</code>) plus at most one short label such as the export format or the WebMCP tool name (<code>format</code>, <code>tool</code> or <code>theme</code>, each capped at 32 chars). Your open draft lives in <code>localStorage</code>; the library, version snapshots and images live in <code>IndexedDB</code> on this device. Open DevTools → Network and watch it yourself.</p>
     </aside>
+
+    <section class="faq compare-faq">
+      <h2>Frequently asked questions</h2>
+      <details>
+        <summary>What is the best free browser-based alternative to Typora?</summary>
+        <p>Quorly is a 100% free, browser-first alternative to Typora. Typora is a paid native desktop app ($14.99) that edits local Markdown files; Quorly runs instantly in any browser with no installation, offers distraction-free WYSIWYG rich-text editing, works offline as an installable PWA, and exports to PDF in any browser, or Markdown and plain text in Chromium-based browsers.</p>
+      </details>
+      <details>
+        <summary>How does Quorly compare to CalmlyWriter Online?</summary>
+        <p>CalmlyWriter's free web version keeps its documents only in temporary browser storage, with no version history or trash, does not work offline, and locks tables, images and PDF exports behind its $23.90 desktop app. Quorly provides all of those features in the browser for free, including an installable offline PWA, a persistent multi-document library with snapshots in IndexedDB, tables, embedded images and free PDF export.</p>
+      </details>
+      <details>
+        <summary>How is Quorly different from Dillinger and StackEdit?</summary>
+        <p>Dillinger and StackEdit are split-screen Markdown source editors: you type raw Markdown on one side and see a preview on the other. Quorly is a single-canvas WYSIWYG rich-text editor, so you format headings, lists, tables, images and code blocks directly on the page, then export to PDF in any browser or Markdown in Chromium-based browsers — with no cloud account and no StackEdit sponsorship fee for PDF export.</p>
+      </details>
+      <details>
+        <summary>Does Quorly upload my writing to the cloud or track me?</summary>
+        <p>No. Quorly requires no account, sets no cookies, and never sends your document content or personal identifiers over the network. Drafts, parked snapshots and embedded images stay in your browser on your device. The only network requests are an anonymous, cookie-free event name (plus at most one short label) to Quorly's own /e endpoint, and Cloudflare's aggregate visit count.</p>
+      </details>
+    </section>
 
     <h2>Sources</h2>
     <p class="micro">Verified October 2026 at <a href="https://dillinger.io/" target="_blank" rel="noopener">dillinger.io</a> (features, privacy), <a href="https://stackedit.io/" target="_blank" rel="noopener">stackedit.io</a>, <a href="https://typora.io/" target="_blank" rel="noopener">typora.io</a> / <a href="https://store.typora.io/" target="_blank" rel="noopener">store.typora.io</a>, and <a href="https://calmlywriter.com/" target="_blank" rel="noopener">calmlywriter.com</a> (text-editor, online-help, online-vs-app, help).</p>

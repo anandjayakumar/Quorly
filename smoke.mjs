@@ -40,7 +40,9 @@ await checkDocument('/', {
     // The published contact address must survive to the reader. On the custom domain
     // Cloudflare rewrites an unprotected address into an obfuscated `__cfemail__` link,
     // which hides it and breaks the mailto: — so this is the tripwire for that.
-    'mailto:hello@quorly.dev'],
+    'mailto:hello@quorly.dev',
+    // Internal link: the homepage points at the comparison page with descriptive anchor text.
+    'See how Quorly compares to Typora'],
   notContains: ['Version history', 'no tracking', '__cfemail__', 'email-protection#'],
 });
 
@@ -89,6 +91,12 @@ await checkDocument('/compare/', {
     'No account',
     'IndexedDB',
     'Radical transparency',
+    'Frequently asked questions',
+    'application/ld+json',
+    '"@type": "FAQPage"',
+    '"@type": "SoftwareApplication"',
+    'What is the best free browser-based alternative to Typora?',
+    'Free, Private Alternative',
     '/landing.js',
   ],
   notContains: ['quorly.pages.dev', 'style="', 'onclick=', 'onload=', 'onerror='],
