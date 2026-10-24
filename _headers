@@ -172,6 +172,18 @@
   Content-Type: image/png
 /icon-512.png
   Content-Type: image/png
+/favicon_io/favicon.ico
+  Content-Type: image/x-icon
+  Cache-Control: public, max-age=604800
+/favicon_io/favicon-16x16.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=604800
+/favicon_io/favicon-32x32.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=604800
+/favicon_io/apple-touch-icon.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=604800
 # The hero photograph. One self-hosted WebP; the type is pinned for the same `nosniff`
 # reason as the scripts. Not `immutable`: the scene may be replaced in place.
 /landing-bg.webp
