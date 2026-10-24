@@ -10,6 +10,15 @@
 
 const BASE = (process.argv[2] || 'https://quorly.dev').replace(/\/+$/, '');
 
+// Cloudflare Access service token (optional). When previews/production are protected by
+// Access, set CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET in the environment so smoke
+// requests authenticate. Absent => no headers (works against unprotected hosts).
+const ACCESS_HEADERS = {};
+if (process.env.CF_ACCESS_CLIENT_ID && process.env.CF_ACCESS_CLIENT_SECRET) {
+  ACCESS_HEADERS['CF-Access-Client-Id'] = process.env.CF_ACCESS_CLIENT_ID;
+  ACCESS_HEADERS['CF-Access-Client-Secret'] = process.env.CF_ACCESS_CLIENT_SECRET;
+}
+
 const results = [];
 let failed = 0;
 
@@ -19,7 +28,7 @@ function record(name, ok, detail) {
 }
 
 async function get(path) {
-  const res = await fetch(BASE + path, { headers: { 'Accept-Encoding': 'identity' } });
+  const res = await fetch(BASE + path, { headers: { 'Accept-Encoding': 'identity', ...ACCESS_HEADERS } });
   const body = await res.text().catch(() => '');
   return { status: res.status, headers: res.headers, body };
 }
@@ -572,7 +581,7 @@ try {
 try {
   const res = await fetch(BASE + '/e', {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8', ...ACCESS_HEADERS },
     body: JSON.stringify({ e: 'smoke-check', format: 'smoke' }),
   });
   record('POST /e answers 204', res.status === 204, `status=${res.status}`);
@@ -593,7 +602,7 @@ try {
 try {
   const res = await fetch(BASE + '/e', {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8', ...ACCESS_HEADERS },
     body: 'x'.repeat(4096),
   });
   record('POST /e caps an oversized body', res.status === 204, `status=${res.status}`);
@@ -604,7 +613,7 @@ try {
 try {
   const res = await fetch(BASE + '/e', {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=UTF-8', Origin: 'https://evil.example' },
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8', Origin: 'https://evil.example', ...ACCESS_HEADERS },
     body: JSON.stringify({ e: 'smoke-check', format: 'smoke' }),
   });
   record('POST /e drops a cross-origin beacon', res.status === 204 && !res.headers.get('access-control-allow-origin'),
