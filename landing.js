@@ -8,7 +8,14 @@ document.addEventListener('click', (event) => {
   const link = event.target && event.target.closest ? event.target.closest('a[href^="/app"]') : null;
   if (!link) return;
   try {
-    if (navigator.sendBeacon) navigator.sendBeacon('/e', JSON.stringify({ e: 'landing_cta' }));
+    if (!navigator.sendBeacon) return;
+    // Never record automated/agent traffic or QA opt-outs.
+    if (navigator.webdriver) return;
+    try {
+      if (new URLSearchParams(location.search).has('qa')) return;
+      if (localStorage.getItem('quorly_no_track') === '1') return;
+    } catch (_) { /* ignore */ }
+    navigator.sendBeacon('/e', JSON.stringify({ e: 'landing_cta' }));
   } catch (err) {
     /* analytics must never affect navigation */
   }

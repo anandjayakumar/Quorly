@@ -100,6 +100,17 @@ function isSameOrigin(request) {
   return true;
 }
 
+function isAutomated(request) {
+  // Defense in depth: drop beacons from headless/automated browsers and explicit QA opt-outs.
+  // Real visitors never send these. (Primary guard is client-side `navigator.webdriver`.)
+  try {
+    const url = new URL(request.url);
+    if (url.searchParams.has('qa')) return true;
+  } catch (_) { /* ignore */ }
+  const ua = request.headers.get('user-agent') || '';
+  return /HeadlessChrome|Playwright|Puppeteer|Selenium|PhantomJS|webdriver/i.test(ua);
+}
+
 function pick(value, allowed) {
   return typeof value === 'string' && allowed.has(value) ? value : '';
 }
@@ -118,7 +129,7 @@ export async function onRequest(context) {
     });
   }
 
-  if (!isSameOrigin(request)) return noContent();
+  if (!isSameOrigin(request) || isAutomated(request)) return noContent();
 
   try {
     const raw = await readCapped(request);

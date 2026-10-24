@@ -435,6 +435,13 @@ let firstKeystrokeTracked = false; // one `first_keystroke` per document that ge
 function track(event, props) {
     try {
         if (!navigator.sendBeacon || !FUNNEL_EVENTS.has(event)) return;
+        // Never record automated/agent traffic (WebDriver-controlled browsers set
+        // navigator.webdriver). QA runs can also opt out via ?qa=1 or localStorage.
+        if (navigator.webdriver) return;
+        try {
+            if (new URLSearchParams(location.search).has('qa')) return;
+            if (localStorage.getItem('quorly_no_track') === '1') return;
+        } catch (_) { /* ignore */ }
         const payload = { e: event };
         if (props && typeof props.format === 'string') payload.format = props.format.slice(0, 32);
         if (props && typeof props.tool === 'string') payload.tool = props.tool.slice(0, 32);
