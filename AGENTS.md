@@ -37,10 +37,16 @@ static files from Cloudflare Pages, with one Pages Function for the visit counte
    customer metrics in queries. Test on preview/local; the preview has no ANALYTICS binding.
 4. **`nosniff` is on.** A new file needs a `Content-Type` pin in `_headers` or it will not load.
 5. **Deploys go through GitHub Actions.** Pushing to `dev` runs the gate and deploys a preview;
-   pushing to `main` runs the gate and promotes to production. Agents only merge and push — never
-   run production deploys, prune production, or change DNS/Zoho without explicit confirmation.
-   Production lives at `https://quorly.pages.dev` (Pages project `quorly`), canonical host
-   `https://quorly.dev`.
+   pushing to `main` runs the gate and promotes to production. **Never merge `dev` into `main`
+   or push to `main` unless the user explicitly asks to promote/ship to production.** By default,
+   only push to `dev`. Production deploys are a deliberate, user-initiated action. Agents only
+   merge and push — never run production deploys, prune production, or change DNS/Zoho without
+   explicit confirmation. Production lives at `https://quorly.pages.dev` (Pages project `quorly`),
+   canonical host `https://quorly.dev`.
+6. **Testing and debugging happens on localhost only.** Never use `preview.quorly.pages.dev` or
+   any deployed URL for testing/debugging. Spin up `wrangler pages dev` locally and test against
+   `http://127.0.0.1:<port>`. Deployed URLs (preview or production) are for verification after
+   the fact, not for iterative development.
 
    Preview deploys (`*.quorly.pages.dev`) are protected by Cloudflare Access. CI authenticates
    via service tokens (`CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET`); without them,
