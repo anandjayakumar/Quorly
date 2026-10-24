@@ -3,3 +3,5 @@ README.md
 smoke.mjs
 wrangler.jsonc
 wrangler.toml
+package.json
+package-lock.json

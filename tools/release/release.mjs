@@ -5,12 +5,15 @@
  *   node tools/release/release.mjs run [--commit <commit>] [--dry-run]
  *   node tools/release/release.mjs launch
  *   node tools/release/release.mjs promote --commit <commit> [--force]
- *   node tools/release/release.mjs prune [--keep N]
+ *   node tools/release/release.mjs prune [--environment preview|production] [--keep N] [--force]
+ *   node tools/release/release.mjs verify
  *   node tools/release/release.mjs status
  *
  * `run`      snapshot a commit -> local gate -> deploy preview -> verify the alias -> prune.
  * `launch`   what the post-commit hook calls: spawns `run` detached and returns immediately.
  * `promote`  deploy a commit that already passed the gate to production. Manual only.
+ * `prune`    keep the newest N deployments. Preview prunes immediately; production needs --force.
+ * `verify`   compare the live site with the SHA-256 manifest recorded at promotion.
  *
  * Both `--commit` forms take any commit-ish — a full SHA, an abbreviation, a branch or HEAD — and
  * resolve it to the full SHA first, so what is gated, deployed, recorded and moved onto `main` is
@@ -21,6 +24,7 @@
  * in .release/ (git-ignored).
  */
 import { execSync, spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import net from 'node:net';
@@ -64,9 +68,16 @@ function pagesApi() {
 // differs from a normal shell's. Pin both to the interpreter running this file.
 const NODE = `"${process.execPath}"`;
 const NPX_BIN = path.join(path.dirname(process.execPath), process.platform === 'win32' ? 'npx.cmd' : 'npx');
-const WRANGLER = fs.existsSync(NPX_BIN) ? `"${NPX_BIN}" --yes wrangler@3` : 'npx --yes wrangler@3';
+// M-6: wrangler is pinned exactly in package.json/package-lock.json and installed with `npm ci`.
+// Prefer that locked binary. The npx fallback only exists for an environment where `npm ci` has
+// not run yet (a fresh clone doing `run --dry-run`); it is no longer the release path.
+const LOCAL_WRANGLER = path.join(REPO, 'node_modules', '.bin', process.platform === 'win32' ? 'wrangler.cmd' : 'wrangler');
+const WRANGLER = fs.existsSync(LOCAL_WRANGLER)
+  ? `"${LOCAL_WRANGLER}"`
+  : (fs.existsSync(NPX_BIN) ? `"${NPX_BIN}" --yes wrangler@3.114.17` : 'npx --yes wrangler@3.114.17');
 const KEEP_PREVIEWS = 3;
-const SMOKE_MIN_TOTAL = 363; // +1 new L-6 vendor-version check
+const KEEP_PRODUCTION = 3;
+const SMOKE_MIN_TOTAL = 365; // +2 checks: the release tooling must never be published
 const DEV_READY_MS = 150_000;
 
 // ---------------------------------------------------------------------------------
@@ -109,6 +120,7 @@ function sh(cmd, { cwd = REPO, allowFail = false, env = process.env, quiet = fal
 function gitHead() { return sh('git rev-parse HEAD', { allowFail: false }).out; }
 function gitBranch() { return sh('git rev-parse --abbrev-ref HEAD', { allowFail: true }).out || '(detached)'; }
 function isDirty() { return sh('git status --porcelain', { allowFail: true }).out.length > 0; }
+function gitSubject(sha) { return sh(`git log -1 --format=%s ${sha}`, { allowFail: true, quiet: true }).out.split('\n')[0].trim(); }
 
 /**
  * The full 40-character SHA for a commit-ish argument. Resolving once, here, is what stops the
@@ -277,8 +289,16 @@ function runSmoke(base, { label, cwd = REPO } = {}) {
   return `${passed}/${total} passed`;
 }
 
-function deploy(stage, branch, runDir) {
-  const r = sh(`${WRANGLER} pages deploy "${stage}" --project-name=${PROJECT} --branch=${branch} --commit-dirty=true`,
+/**
+ * Deploy a stage that was built from `git archive <sha>`. M-6: tell Cloudflare which commit this
+ * artifact came from. The stage is a pristine archive, so `commit_dirty=false` is a fact, not an
+ * assertion about the working tree; the message is quoted through JSON so shell metacharacters in
+ * a commit subject cannot escape into the command.
+ */
+function deploy(stage, branch, runDir, meta = {}) {
+  const hash = meta.sha ? ` --commit-hash=${meta.sha}` : '';
+  const message = meta.message ? ` --commit-message=${JSON.stringify(meta.message)}` : '';
+  const r = sh(`${WRANGLER} pages deploy "${stage}" --project-name=${PROJECT} --branch=${branch}${hash}${message} --commit-dirty=false`,
     { cwd: runDir, allowFail: true, env: { ...process.env, CI: '1' } });
   if (r.code !== 0) throw new Error(`deploy to ${branch} failed:\n${r.out.slice(-700)}`);
   const urls = [...r.out.matchAll(/https:\/\/([a-z0-9-]+)\.quorly\.pages\.dev/g)].map((m) => ({ id: m[1], url: m[0] }));
@@ -287,11 +307,51 @@ function deploy(stage, branch, runDir) {
   return deployment;
 }
 
+/**
+ * SHA-256 of every deployed file, keyed by its site path. Written next to the production record so
+ * an auditor can compare the live site to the promoted commit without trusting the local log.
+ * HTML documents are recorded too, but verification skips them: Cloudflare injects its analytics
+ * beacon into the served HTML, so their bytes intentionally differ from the archive.
+ */
+function hashStage(stage) {
+  const files = {};
+  const walk = (dir, prefix) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, entry.name);
+      const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) walk(abs, rel);
+      else files['/' + rel] = createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
+    }
+  };
+  walk(stage, '');
+  return files;
+}
+
+/** Compare recorded production hashes with what quorly.dev actually serves. Read-only. */
+async function verifyProduction() {
+  const record = readJson(PRODUCTION);
+  if (!record || !record.files) throw new Error('no production hash manifest yet — promote a commit first');
+  const checked = [];
+  const mismatched = [];
+  const skipped = [];
+  for (const [sitePath, expected] of Object.entries(record.files)) {
+    if (/\.html$/i.test(sitePath) || sitePath === '/') { skipped.push(sitePath); continue; }
+    const res = await fetch(PROD_ALIAS + sitePath, { headers: { 'Accept-Encoding': 'identity' } });
+    if (!res.ok) { mismatched.push(`${sitePath}: HTTP ${res.status}`); continue; }
+    const actual = createHash('sha256').update(Buffer.from(await res.arrayBuffer())).digest('hex');
+    checked.push(sitePath);
+    if (actual !== expected) mismatched.push(`${sitePath}: ${actual.slice(0, 12)} != ${expected.slice(0, 12)}`);
+  }
+  for (const line of mismatched) log('verify: ' + line);
+  log(`verify: ${record.short || record.commit} — ${checked.length} checked, ${skipped.length} HTML skipped, ${mismatched.length} mismatched`);
+  return mismatched.length === 0;
+}
+
 // ---------------------------------------------------------------------------------
 // pruning (wrangler v3 has no `pages deployment delete`, so this is the REST API)
 // ---------------------------------------------------------------------------------
 
-async function prunePreviews(keep = KEEP_PREVIEWS) {
+async function pruneDeployments(environment = 'preview', keep = KEEP_PREVIEWS, { confirm = true } = {}) {
   const auth = cfAuth();
   if (!auth) throw new Error('no Cloudflare credentials for the REST prune');
   const API = pagesApi();
@@ -299,10 +359,15 @@ async function prunePreviews(keep = KEEP_PREVIEWS) {
   const j = await res.json();
   if (!j.success) throw new Error('listing deployments failed: ' + JSON.stringify(j.errors).slice(0, 300));
 
-  const previews = j.result
-    .filter((d) => d.environment === 'preview')
+  const deploys = j.result
+    .filter((d) => d.environment === environment)
     .sort((a, b) => new Date(b.created_on) - new Date(a.created_on));
-  const doomed = previews.slice(keep);
+  const doomed = deploys.slice(keep);
+
+  if (!confirm) {
+    for (const d of doomed) log(`prune: would delete ${environment} ${d.id} (${d.created_on})`);
+    return `${environment}: kept ${Math.min(deploys.length, keep)} of ${deploys.length}, would delete ${doomed.length} (pass --force to delete)`;
+  }
 
   let deleted = 0;
   for (const d of doomed) {
@@ -311,8 +376,10 @@ async function prunePreviews(keep = KEEP_PREVIEWS) {
     if (del.ok && body.success !== false) deleted += 1;
     else log(`prune: could not delete ${d.id} (${del.status})`);
   }
-  return `kept ${Math.min(previews.length, keep)} of ${previews.length}, deleted ${deleted}`;
+  return `${environment}: kept ${Math.min(deploys.length, keep)} of ${deploys.length}, deleted ${deleted}`;
 }
+
+const prunePreviews = (keep = KEEP_PREVIEWS) => pruneDeployments('preview', keep);
 
 // ---------------------------------------------------------------------------------
 // `run`
@@ -439,7 +506,7 @@ async function cmdRun(argv) {
       log('--- deploy-preview: skipped (--dry-run)');
     } else {
       await step('deploy-preview', () => {
-        const d = deploy(stage, 'preview', runDir);
+        const d = deploy(stage, 'preview', runDir, { sha, message: gitSubject(sha) });
         status.deploy = { id: d.id, url: d.url, alias: PREVIEW_ALIAS, branch: 'preview' };
         return d.id;
       });
@@ -552,7 +619,7 @@ async function cmdPromote(argv) {
     await step('snapshot', () => `${snapshot(sha, runDir, stage)} files from ${short}`);
 
     await step('promote-deploy', () => {
-      const d = deploy(stage, 'main', runDir);
+      const d = deploy(stage, 'main', runDir, { sha, message: gitSubject(sha) });
       status.deploy = { id: d.id, url: d.url, alias: PROD_ALIAS, branch: 'main' };
       return d.id;
     });
@@ -571,10 +638,21 @@ async function cmdPromote(argv) {
 
     await step('mark-main', () => {
       sh(`git branch -f main ${sha}`);
-      const record = { deployId: status.deploy.id, url: status.deploy.url, commit: sha, short, promotedAt: nowIso() };
+      // The manifest is computed from the exact stage that was just deployed, so it can be
+      // compared with the live site later (`release.mjs verify`).
+      const files = hashStage(stage);
+      const record = {
+        deployId: status.deploy.id,
+        url: status.deploy.url,
+        commit: sha,
+        short,
+        message: gitSubject(sha),
+        promotedAt: nowIso(),
+        files,
+      };
       fs.writeFileSync(PRODUCTION, JSON.stringify(record, null, 2));
       status.production = record;
-      return `main -> ${short}`;
+      return `main -> ${short} (${Object.keys(files).length} files hashed)`;
     });
 
     status.state = 'passed';
@@ -627,12 +705,23 @@ try {
   else if (cmd === 'launch') code = cmdLaunch();
   else if (cmd === 'prune') {
     const k = rest.indexOf('--keep');
-    const r = await prunePreviews(k >= 0 ? Number(rest[k + 1]) : KEEP_PREVIEWS);
-    console.log(r);
+    const e = rest.indexOf('--environment');
+    const environment = e >= 0 ? rest[e + 1] : 'preview';
+    if (environment !== 'preview' && environment !== 'production') {
+      console.error('prune --environment must be preview or production');
+      process.exit(1);
+    }
+    // Production pruning deletes rollback targets, so it only acts with an explicit --force.
+    const confirm = environment === 'preview' || rest.includes('--force');
+    const keep = k >= 0 ? Number(rest[k + 1]) : (environment === 'production' ? KEEP_PRODUCTION : KEEP_PREVIEWS);
+    console.log(await pruneDeployments(environment, keep, { confirm }));
+  } else if (cmd === 'verify') {
+    const ok = await verifyProduction();
+    if (!ok) process.exitCode = 1;
   } else if (cmd === 'status') {
     console.log(fs.existsSync(STATUS) ? fs.readFileSync(STATUS, 'utf8') : 'no status yet');
   } else {
-    console.log('usage: release.mjs run|launch|promote|prune|status');
+    console.log('usage: release.mjs run|launch|promote|prune|verify|status');
   }
   process.exit(code);
 } catch (e) {

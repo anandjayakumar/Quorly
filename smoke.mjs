@@ -639,7 +639,7 @@ try {
 
 // --- metafiles and unknown paths must NOT be public -------------------------------
 
-for (const path of ['/README.md', '/_headers', '/.assetsignore', '/smoke.mjs', '/does-not-exist-xyz']) {
+for (const path of ['/README.md', '/_headers', '/.assetsignore', '/smoke.mjs', '/package.json', '/package-lock.json', '/does-not-exist-xyz']) {
   try {
     const { status } = await get(path);
     record(`${path} is not public`, status === 404, `status=${status} (expected 404)`);

@@ -17,3 +17,6 @@ smoke.mjs        export-ignore
 .gitattributes   export-ignore
 .githooks/       export-ignore
 tools/           export-ignore
+# Release tooling: `npm ci` needs these, the published site never should.
+package.json      export-ignore
+package-lock.json export-ignore

@@ -41,6 +41,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
+
+      # M-6: wrangler is pinned by package-lock.json, so CI and the release runner use the
+      # same version instead of whatever `npx wrangler@3` resolves at run time.
+      - name: Install pinned tooling
+        run: npm ci
 
       - name: Gate — snapshot, local Pages server, smoke suite
         run: node tools/release/release.mjs run --dry-run
