@@ -28,8 +28,8 @@ function json(body, status = 200) {
 async function runQuery(accountId, token, sql) {
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/analytics_engine/sql`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: sql }),
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'text/plain' },
+    body: sql,
   });
   const text = await res.text();
   let parsed;
