@@ -42,6 +42,11 @@ static files from Cloudflare Pages, with one Pages Function for the visit counte
    Production lives at `https://quorly.pages.dev` (Pages project `quorly`), canonical host
    `https://quorly.dev`.
 
+   Preview deploys (`*.quorly.pages.dev`) are protected by Cloudflare Access. CI authenticates
+   via service tokens (`CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET`); without them,
+   `release.mjs run` smoke checks against the preview alias fail with a redirect to the
+   Access login page. Local dev (`wrangler pages dev`) needs no token.
+
 ## Agent-facing surface
 
 - `/llms.txt` — site summary and links.

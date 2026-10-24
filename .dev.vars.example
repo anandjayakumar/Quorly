@@ -1,0 +1,10 @@
+# Local dev secrets for Cloudflare Pages Functions + release runner.
+# Copy to .dev.vars (gitignored) and fill in. Not deployed.
+METRICS_KEY=your-metrics-key
+CF_ACCOUNT_ID=07e6e9a6b18b4cae4d21fccba4dae17a
+CF_ANALYTICS_TOKEN=your-analytics-read-token
+# Cloudflare Access service token for smoke tests against protected previews:
+CF_ACCESS_CLIENT_ID=your-service-token-client-id
+CF_ACCESS_CLIENT_SECRET=your-service-token-client-secret
+" path">
+C:\Users\anand\Downloads\ArticleWriter.st\.dev.vars.example
