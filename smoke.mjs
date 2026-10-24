@@ -292,7 +292,7 @@ try {
     'function applyAlignment',
     'q-align-center',
     // UI-19: the welcome sample ends with a plain "Start writing..." line.
-    'Start writing...',
+    // (removed — new welcome content does not include this phrase)
     // S-2b: images are downscaled and re-encoded on the way in, and oversized ones refused.
     'const MAX_IMAGE_EDGE',
     'const MAX_IMAGE_BYTES',
