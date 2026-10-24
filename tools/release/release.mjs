@@ -624,10 +624,28 @@ const commitArg = shaArg >= 0 ? argv[shaArg + 1] : null;
 
     await step('snapshot', () => `${snapshot(sha, runDir, stage)} files from ${short}`);
 
-    await step('promote-deploy', () => {
+    await step('promote-deploy', async () => {
       if (skipDeploy) {
-        const prior = readJson(PRODUCTION);
-        if (prior) status.deploy = { id: prior.deployId, url: prior.url, alias: PROD_ALIAS, branch: 'main' };
+        const auth = cfAuth();
+        let dep = null;
+        if (auth) {
+          try {
+            const res = await fetch(`${pagesApi()}?environment=production&per_page=5`, {
+              headers: { Authorization: `Bearer ${auth.token}` },
+            });
+            const j = await res.json();
+            const list = (j && j.result) || [];
+            dep = list.find((d) => {
+              const c = d.deployment_trigger && d.deployment_trigger.metadata && d.deployment_trigger.metadata.commit_hash;
+              return c && String(c).startsWith(short);
+            }) || list[0];
+          } catch (e) { /* fall through */ }
+        }
+        if (!dep) {
+          const prior = readJson(PRODUCTION);
+          if (prior) dep = { id: prior.deployId, url: prior.url };
+        }
+        if (dep) status.deploy = { id: dep.id, url: dep.url, alias: PROD_ALIAS, branch: 'main' };
         return 'skipped (--skip-deploy)';
       }
       const d = deploy(stage, 'main', runDir, { sha, message: gitSubject(sha) });
