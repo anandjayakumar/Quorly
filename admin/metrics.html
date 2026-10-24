@@ -8,14 +8,23 @@
   <link rel="stylesheet" href="/admin/metrics.css">
 </head>
 <body>
-  <h1>Quorly metrics</h1>
-  <div class="sub">Anonymous funnel counters. Agent traffic tagged separately.</div>
+  <header>
+    <h1>Quorly metrics</h1>
+    <p class="sub">Anonymous funnel counters. Agent traffic is tagged separately so it can be filtered out of customer metrics.</p>
+  </header>
+
   <div class="bar">
     <input id="key" type="password" placeholder="Metrics key" autocomplete="off">
     <button id="load">Load</button>
     <span id="status" class="sub"></span>
   </div>
+
+  <section id="kpis" class="kpi-row"></section>
+
   <div id="out" class="grid"></div>
+
   <script src="/admin/metrics.js"></script>
 </body>
 </html>
+" path">
+C:\Users\anand\Downloads\ArticleWriter.web\admin\metrics.html
