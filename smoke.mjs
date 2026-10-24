@@ -638,11 +638,18 @@ try {
 }
 
 // --- metafiles and unknown paths must NOT be public -------------------------------
+// 404 means the file is not in the artifact. 403 means the edge refused it: the zone
+// carries a WAF custom rule (M-6) blocking /.github/, because Pages can keep serving a
+// removed asset from a deployment that still holds it until the asset's own cache TTL
+// runs out. Either status means the bytes are unreachable, which is the actual invariant.
+
+const NOT_PUBLIC = new Set([403, 404]);
 
 for (const path of ['/README.md', '/_headers', '/.assetsignore', '/smoke.mjs', '/package.json', '/package-lock.json', '/.github/workflows/ci.yml', '/does-not-exist-xyz']) {
   try {
     const { status } = await get(path);
-    record(`${path} is not public`, status === 404, `status=${status} (expected 404)`);
+    const how = status === 404 ? 'not found' : status === 403 ? 'blocked at the edge' : 'SERVED';
+    record(`${path} is not public`, NOT_PUBLIC.has(status), `status=${status} (${how}); expected 403 or 404`);
   } catch (e) {
     record(`${path} is not public`, false, String(e.message || e));
   }
