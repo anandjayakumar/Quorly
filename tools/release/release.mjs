@@ -716,8 +716,14 @@ try {
     const keep = k >= 0 ? Number(rest[k + 1]) : (environment === 'production' ? KEEP_PRODUCTION : KEEP_PREVIEWS);
     console.log(await pruneDeployments(environment, keep, { confirm }));
   } else if (cmd === 'verify') {
-    const ok = await verifyProduction();
-    if (!ok) process.exitCode = 1;
+    // A missing manifest is an ordinary state before the first promotion, not a crash.
+    try {
+      const ok = await verifyProduction();
+      if (!ok) process.exitCode = 1;
+    } catch (e) {
+      console.error(String(e.message || e));
+      process.exitCode = 1;
+    }
   } else if (cmd === 'status') {
     console.log(fs.existsSync(STATUS) ? fs.readFileSync(STATUS, 'utf8') : 'no status yet');
   } else {
