@@ -1,0 +1,77 @@
+name: Deploy production
+
+# CD: a push to `main` that passes CI deploys to production. Preview deploys (dev) are a
+# prerequisite in practice: a commit reaches main only after it shipped a passing preview.
+# `promote` re-runs the gate first; if it fails, the deploy step never runs.
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    name: gate (dry-run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - name: Checkout triggering commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Node 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install pinned tooling
+        run: npm ci
+
+      - name: Gate
+        run: node tools/release/release.mjs run --dry-run
+
+  deploy:
+    needs: gate
+    name: promote to production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "true"
+      WRANGLER_SEND_METRICS: "false"
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout triggering commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Node 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install pinned tooling
+        run: npm ci
+
+      # --force skips the "passing preview run on record" check, which can't be satisfied on a
+      # fresh runner; the dry-run gate above is the test that must pass before this step runs.
+      - name: Promote to production
+        run: node tools/release/release.mjs promote --commit ${{ github.event.workflow_run.head_sha }} --force

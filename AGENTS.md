@@ -33,8 +33,11 @@ static files from Cloudflare Pages, with one Pages Function for the visit counte
 3. **No document content leaves the origin.** The only network calls are same-origin assets and
    the counter at `/e`, which accepts an allowlisted event name plus one short property.
 4. **`nosniff` is on.** A new file needs a `Content-Type` pin in `_headers` or it will not load.
-5. **Deploys go through the release pipeline.** A commit on the release branch runs the smoke
-   suite and deploys a preview; production is promoted only on explicit approval.
+5. **Deploys go through GitHub Actions.** Pushing to `dev` runs the gate and deploys a preview;
+   pushing to `main` runs the gate and promotes to production. Agents only merge and push — never
+   run production deploys, prune production, or change DNS/Zoho without explicit confirmation.
+   Production lives at `https://quorly.pages.dev` (Pages project `quorly`), canonical host
+   `https://quorly.dev`.
 
 ## Agent-facing surface
 

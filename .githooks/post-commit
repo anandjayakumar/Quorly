@@ -1,29 +1,11 @@
 #!/bin/sh
-# Quorly post-commit hook.
+# Quorly post-commit hook — CD has moved to GitHub Actions.
 #
-# A commit on `dev` runs the smoke gate and, if it passes, deploys a preview. This returns
-# immediately: release.mjs re-launches itself detached, so committing is never blocked waiting
-# on a build. `main` is the promoted branch and must not trigger anything, or promotion would
-# loop back into a run.
+# Preview and production deploys now run in `.github/workflows/deploy-preview.yml` and
+# `deploy-production.yml`, triggered by pushes to `dev` and `main`. This hook no longer
+# launches anything; committing and merging must never block on a build.
 #
-# Never fail the commit — a broken pipeline must not stop you from committing.
-# Result of the run: .release/status.json  (and a per-run log in .release/runs/).
+# Manual escape hatches still work: `node tools/release/release.mjs run` (preview) and
+# `node tools/release/release.mjs promote --commit <sha>` (production).
 
-branch=$(git rev-parse --abbrev-ref HEAD)
-[ "$branch" = "dev" ] || exit 0
-
-# Git for Windows runs this under its bundled sh, which does not always see nvm4w's node.
-command -v node >/dev/null 2>&1 || PATH="$PATH:/c/nvm4w/nodejs"
-
-repo=$(git rev-parse --show-toplevel)
-
-# The account id is needed only by the preview prune, and it must never be committed.
-# Prefer the environment; otherwise read the local, ignored file, so the hook also works
-# from a shell that started before the variable was set.
-if [ -z "$CLOUDFLARE_ACCOUNT_ID" ] && [ -f "$repo/.release/account-id" ]; then
-  CLOUDFLARE_ACCOUNT_ID=$(cat "$repo/.release/account-id")
-  export CLOUDFLARE_ACCOUNT_ID
-fi
-
-node "$repo/tools/release/release.mjs" launch >/dev/null 2>&1
 exit 0

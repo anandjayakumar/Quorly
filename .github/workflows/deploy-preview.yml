@@ -1,0 +1,50 @@
+name: Deploy preview
+
+# CD: a push to `dev` that passes CI deploys a preview. This runs only after the `CI`
+# workflow succeeds for that push (workflow_run), so a failing gate blocks the deploy.
+# Agents only merge + push; this workflow does the rest.
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [dev]
+
+concurrency:
+  group: deploy-preview
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    name: gate + deploy preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "true"
+      WRANGLER_SEND_METRICS: "false"
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout triggering commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Node 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install pinned tooling
+        run: npm ci
+
+      # `run` (no --dry-run) gates, deploys the preview, verifies the alias, prunes.
+      # It exits non-zero on any failure, which stops this job.
+      - name: Gate and deploy preview
+        run: node tools/release/release.mjs run
