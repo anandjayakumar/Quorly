@@ -2315,21 +2315,41 @@ function insertTable(rowsWanted = 3, colsWanted = 3) {
 function insertChecklist() {
     preserveScroll(() => {
         editBody.focus();
-        if (lastSelectionRange && editBody.contains(lastSelectionRange.commonAncestorContainer)) {
-            const sel = window.getSelection();
-            sel.removeAllRanges();
-            sel.addRange(lastSelectionRange);
-        } else {
-            // No saved selection: place the caret at the end of the document.
-            const sel = window.getSelection();
-            const range = document.createRange();
-            range.selectNodeContents(editBody);
-            range.collapse(false);
-            sel.removeAllRanges();
-            sel.addRange(range);
-        }
-        const html = `<ul class="q-checklist"><li><input type="checkbox" class="q-check" contenteditable="false"><span class="q-check-text"><br></span></li></ul><p><br></p>`;
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return;
+        const range = sel.getRangeAt(0);
+        if (!editBody.contains(range.commonAncestorContainer)) return;
+
+        const selectedText = range.collapsed ? '' : sel.toString();
+        const blocks = selectedText
+            ? selectedText.split(/\n+/).map(s => s.trim()).filter(Boolean)
+            : [];
+        if (blocks.length === 0) blocks.push('');
+
+        const escape = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        const itemsHtml = blocks.map(b =>
+            `<li><input type="checkbox" class="q-check" contenteditable="false"><span class="q-check-text">${b ? escape(b) : '<br>'}</span></li>`
+        ).join('');
+        const html = `<ul class="q-checklist">${itemsHtml}</ul>`;
+
         document.execCommand('insertHTML', false, html);
+
+        // Place the caret inside the last item's text span.
+        const uls = editBody.querySelectorAll('ul.q-checklist');
+        const ul = uls[uls.length - 1];
+        if (ul) {
+            const spans = ul.querySelectorAll('.q-check-text');
+            const target = spans[spans.length - 1];
+            if (target) {
+                const r = document.createRange();
+                r.selectNodeContents(target);
+                r.collapse(false);
+                const s = window.getSelection();
+                s.removeAllRanges();
+                s.addRange(r);
+            }
+        }
         saveToLocalStorage();
     });
 }
