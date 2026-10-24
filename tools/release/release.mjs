@@ -66,7 +66,7 @@ const NODE = `"${process.execPath}"`;
 const NPX_BIN = path.join(path.dirname(process.execPath), process.platform === 'win32' ? 'npx.cmd' : 'npx');
 const WRANGLER = fs.existsSync(NPX_BIN) ? `"${NPX_BIN}" --yes wrangler@3` : 'npx --yes wrangler@3';
 const KEEP_PREVIEWS = 3;
-const SMOKE_MIN_TOTAL = 347; // +10 new H-2/M-3/M-4 regression checks
+const SMOKE_MIN_TOTAL = 349; // +2 new M-2 funnel checks
 const DEV_READY_MS = 150_000;
 
 // ---------------------------------------------------------------------------------

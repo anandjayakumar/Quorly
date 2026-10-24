@@ -543,6 +543,30 @@ try {
   record('GET /e', false, String(e.message || e));
 }
 
+// M-2: the cap and the origin check must still fail open (204, no body, no CORS grant).
+try {
+  const res = await fetch(BASE + '/e', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    body: 'x'.repeat(4096),
+  });
+  record('POST /e caps an oversized body', res.status === 204, `status=${res.status}`);
+} catch (e) {
+  record('POST /e oversized body', false, String(e.message || e));
+}
+
+try {
+  const res = await fetch(BASE + '/e', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8', Origin: 'https://evil.example' },
+    body: JSON.stringify({ e: 'smoke-check', format: 'smoke' }),
+  });
+  record('POST /e drops a cross-origin beacon', res.status === 204 && !res.headers.get('access-control-allow-origin'),
+    `status=${res.status} acao=${res.headers.get('access-control-allow-origin') || '(none)'}`);
+} catch (e) {
+  record('POST /e cross-origin beacon', false, String(e.message || e));
+}
+
 // The Function source is not an asset; it must never be downloadable.
 try {
   const { status } = await get('/functions/e.js');
