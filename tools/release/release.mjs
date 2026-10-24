@@ -331,10 +331,15 @@ function hashStage(stage) {
 async function verifyProduction() {
   const record = readJson(PRODUCTION);
   if (!record || !record.files) throw new Error('no production hash manifest yet — promote a commit first');
+  // Pages consumes these as configuration and never serves them. They belong in the
+  // manifest (the deploy has to ship them) but there is no live response to compare.
+  const pageConfig = new Set(['/_headers', '/_redirects', '/_routes.json', '/.assetsignore']);
   const checked = [];
   const mismatched = [];
   const skipped = [];
+  let config = 0;
   for (const [sitePath, expected] of Object.entries(record.files)) {
+    if (pageConfig.has(sitePath)) { config += 1; continue; }
     if (/\.html$/i.test(sitePath) || sitePath === '/') { skipped.push(sitePath); continue; }
     const res = await fetch(PROD_ALIAS + sitePath, { headers: { 'Accept-Encoding': 'identity' } });
     if (!res.ok) { mismatched.push(`${sitePath}: HTTP ${res.status}`); continue; }
@@ -343,7 +348,7 @@ async function verifyProduction() {
     if (actual !== expected) mismatched.push(`${sitePath}: ${actual.slice(0, 12)} != ${expected.slice(0, 12)}`);
   }
   for (const line of mismatched) log('verify: ' + line);
-  log(`verify: ${record.short || record.commit} — ${checked.length} checked, ${skipped.length} HTML skipped, ${mismatched.length} mismatched`);
+  log(`verify: ${record.short || record.commit} — ${checked.length} checked, ${skipped.length} HTML skipped, ${config} Pages config, ${mismatched.length} mismatched`);
   return mismatched.length === 0;
 }
 
