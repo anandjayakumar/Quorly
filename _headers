@@ -189,3 +189,9 @@
 /landing-bg.webp
   Content-Type: image/webp
   Cache-Control: public, max-age=604800
+
+# Admin metrics dashboard and its API: never cache, never index.
+/admin/*
+  Cache-Control: no-store
+/api/*
+  Cache-Control: no-store
