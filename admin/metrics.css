@@ -1,18 +1,38 @@
 :root { color-scheme: dark; }
-body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 24px; background: #0b0d10; color: #e6e8eb; }
-h1 { font-size: 20px; margin: 0 0 8px; }
-.sub { color: #9aa0a6; font-size: 13px; margin-bottom: 20px; }
-.bar { display: flex; gap: 8px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
-input { background: #15181d; color: #e6e8eb; border: 1px solid #2a2f36; border-radius: 6px; padding: 8px 10px; font-size: 14px; min-width: 260px; }
-button { background: #2a6df4; color: #fff; border: 0; border-radius: 6px; padding: 8px 14px; font-size: 14px; cursor: pointer; }
+* { box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 24px; background: #0b0d10; color: #e6e8eb; max-width: 1200px; margin: 0 auto; padding: 24px 24px 48px; }
+header { margin-bottom: 20px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+.sub { color: #9aa0a6; font-size: 13px; line-height: 1.5; }
+.bar { display: flex; gap: 8px; align-items: center; margin-bottom: 24px; flex-wrap: wrap; }
+input { background: #15181d; color: #e6e8eb; border: 1px solid #2a2f36; border-radius: 6px; padding: 8px 12px; font-size: 14px; min-width: 280px; }
+button { background: #2a6df4; color: #fff; border: 0; border-radius: 6px; padding: 8px 16px; font-size: 14px; cursor: pointer; font-weight: 500; }
 button:disabled { opacity: .5; cursor: default; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-.card { background: #15181d; border: 1px solid #2a2f36; border-radius: 10px; padding: 16px; }
-.card h2 { font-size: 14px; margin: 0 0 12px; color: #9aa0a6; text-transform: uppercase; letter-spacing: .04em; }
+button:hover:not(:disabled) { background: #3b7df5; }
+
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.kpi { background: #15181d; border: 1px solid #2a2f36; border-radius: 10px; padding: 16px; }
+.kpi .label { font-size: 11px; color: #9aa0a6; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.kpi .value { font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kpi .hint { font-size: 11px; color: #6b7280; margin-top: 4px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+.card { background: #15181d; border: 1px solid #2a2f36; border-radius: 10px; padding: 18px; }
+.card h2 { font-size: 13px; margin: 0 0 4px; color: #e6e8eb; font-weight: 600; }
+.card .desc { font-size: 11px; color: #6b7280; margin-bottom: 12px; line-height: 1.4; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #2a2f36; }
-th { color: #9aa0a6; font-weight: 500; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #1e2228; }
+th { color: #9aa0a6; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
 td.num { text-align: right; font-variant-numeric: tabular-nums; }
-.err { color: #ff6b6b; font-size: 12px; margin-top: 8px; white-space: pre-wrap; }
-canvas { width: 100%; height: 180px; display: block; }
-.empty { color: #6b7280; font-size: 13px; }
+.bar-cell { display: flex; align-items: center; gap: 8px; }
+.bar-fill { height: 6px; background: #2a6df4; border-radius: 3px; min-width: 2px; }
+.bar-pct { font-size: 11px; color: #6b7280; min-width: 36px; text-align: right; }
+.err { color: #ff6b6b; font-size: 12px; margin-top: 8px; white-space: pre-wrap; padding: 8px; background: #1a1214; border-radius: 6px; }
+.empty { color: #6b7280; font-size: 13px; padding: 12px 0; }
+canvas { width: 100%; height: 200px; display: block; margin-top: 8px; }
+.chart-wrap { position: relative; }
+.chart-labels { display: flex; justify-content: space-between; font-size: 10px; color: #6b7280; margin-top: 4px; }
+.tag { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 500; }
+.tag.customer { background: #1a2e1a; color: #4ade80; }
+.tag.agent { background: #2e1a2e; color: #c084fc; }
+.tag.format { background: #1a2333; color: #60a5fa; }
