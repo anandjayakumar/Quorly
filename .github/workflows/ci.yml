@@ -9,6 +9,12 @@ name: CI
 #
 # That combination is what caught the `octet-stream` regression locally; running it here means
 # a broken commit fails loudly even when nobody's machine is awake.
+#
+# M-7: every `uses:` below is pinned to a full 40-character commit SHA with the release it
+# belongs to in a trailing comment. A tag like `@v4` can be moved by whoever controls the action
+# repository, so it is not a fixed dependency. Bump a SHA deliberately, one commit at a time.
+# This file is excluded from the deployed site (.gitattributes + .assetsignore); a CI definition
+# is not a web asset.
 
 on:
   push:
@@ -33,12 +39,12 @@ jobs:
       WRANGLER_SEND_METRICS: "false"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
       - name: Node 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "20"
           cache: npm
@@ -53,7 +59,7 @@ jobs:
 
       - name: Upload gate log
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: gate-log
           path: .release/runs/*.log

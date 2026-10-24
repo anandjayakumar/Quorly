@@ -5,3 +5,4 @@ wrangler.jsonc
 wrangler.toml
 package.json
 package-lock.json
+.github

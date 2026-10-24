@@ -77,7 +77,7 @@ const WRANGLER = fs.existsSync(LOCAL_WRANGLER)
   : (fs.existsSync(NPX_BIN) ? `"${NPX_BIN}" --yes wrangler@3.114.17` : 'npx --yes wrangler@3.114.17');
 const KEEP_PREVIEWS = 3;
 const KEEP_PRODUCTION = 3;
-const SMOKE_MIN_TOTAL = 365; // +2 checks: the release tooling must never be published
+const SMOKE_MIN_TOTAL = 366; // +1 check: CI definitions must never be published (M-7)
 const DEV_READY_MS = 150_000;
 
 // ---------------------------------------------------------------------------------
