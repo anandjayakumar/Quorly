@@ -20,7 +20,7 @@
  * `quorly-*` cache that does not match.
  */
 
-const VERSION = 'quorly-v4';
+const VERSION = 'quorly-v5';
 const CACHE = `quorly-static-${VERSION}`;
 const SW_PATH = '/sw.js';
 

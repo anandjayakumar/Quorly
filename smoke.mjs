@@ -657,6 +657,13 @@ try {
 }
 
 try {
+  const { body: markedBody } = await get('/vendor/marked.min.js');
+  record('/vendor/marked.min.js is 18.1.1', markedBody.includes('marked v18.1.1'), 'version missing');
+} catch (e) {
+  record('/vendor/marked.min.js check', false, String(e.message || e));
+}
+
+try {
   const { body: appBody } = await get('/app.js');
   record('/app.js contains RETURN_DOM_FRAGMENT: true', appBody.includes('RETURN_DOM_FRAGMENT: true'), 'missing');
   record('/app.js contains afterSanitizeAttributes', appBody.includes('afterSanitizeAttributes'), 'missing');
