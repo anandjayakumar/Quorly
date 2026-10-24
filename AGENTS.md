@@ -31,13 +31,21 @@ static files from Cloudflare Pages, with one Pages Function for the visit counte
 2. **Frozen storage keys.** `doc_title_v13`, `doc_body_v13`, `doc_title_image_v13` hold the open
    document. Do not rename them; older builds read the same keys.
 3. **No document content leaves the origin.** The only network calls are same-origin assets and
-   the counter at `/e`, which accepts an allowlisted event name plus one short property.
+   the counter at `/e`, which accepts an allowlisted event name plus one short property. `/e`
+   drops our own QA runs entirely (`?qa` / `localStorage.quorly_no_track`), and tags agent
+   traffic (WebMCP, WebDriver, headless UA) with an `agent` blob so it can be separated from
+   customer metrics in queries. Test on preview/local; the preview has no ANALYTICS binding.
 4. **`nosniff` is on.** A new file needs a `Content-Type` pin in `_headers` or it will not load.
 5. **Deploys go through GitHub Actions.** Pushing to `dev` runs the gate and deploys a preview;
    pushing to `main` runs the gate and promotes to production. Agents only merge and push — never
    run production deploys, prune production, or change DNS/Zoho without explicit confirmation.
    Production lives at `https://quorly.pages.dev` (Pages project `quorly`), canonical host
    `https://quorly.dev`.
+
+   Preview deploys (`*.quorly.pages.dev`) are protected by Cloudflare Access. CI authenticates
+   via service tokens (`CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET`); without them,
+   `release.mjs run` smoke checks against the preview alias fail with a redirect to the
+   Access login page. Local dev (`wrangler pages dev`) needs no token.
 
 ## Agent-facing surface
 

@@ -435,10 +435,19 @@ let firstKeystrokeTracked = false; // one `first_keystroke` per document that ge
 function track(event, props) {
     try {
         if (!navigator.sendBeacon || !FUNNEL_EVENTS.has(event)) return;
+        // Our own agent/QA runs opt out entirely via ?qa or localStorage; they never
+        // reach the dataset. Real agent (WebMCP/WebDriver) traffic is still recorded
+        // but tagged `agent` so it can be separated from customer metrics in queries.
+        try {
+            if (new URLSearchParams(location.search).has('qa')) return;
+            if (localStorage.getItem('quorly_no_track') === '1') return;
+        } catch (_) { /* ignore */ }
         const payload = { e: event };
         if (props && typeof props.format === 'string') payload.format = props.format.slice(0, 32);
         if (props && typeof props.tool === 'string') payload.tool = props.tool.slice(0, 32);
         if (props && typeof props.theme === 'string') payload.theme = props.theme.slice(0, 32);
+        if (props && props.agent === true) payload.agent = '1';
+        else if (navigator.webdriver) payload.agent = '1';
         navigator.sendBeacon('/e', JSON.stringify(payload));
     } catch (err) {
         // Analytics must never be able to break the editor or delay a navigation.
