@@ -171,12 +171,12 @@
     drawChart(daily);
 
     // Errors
-    const R = json.results || {};
-    for (const k of Object.keys(R)) {
-      if (R[k] && R[k].ok === false) {
+    const results = json.results || {};
+    for (const k of Object.keys(results)) {
+      if (results[k] && results[k].ok === false) {
         const d = document.createElement('div');
         d.className = 'err';
-        d.textContent = k + ': ' + (R[k].raw || R[k].status || 'unknown error');
+        d.textContent = k + ': ' + (results[k].raw || results[k].status || 'unknown error');
         out.appendChild(d);
       }
     }
