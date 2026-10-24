@@ -17,14 +17,35 @@
 # which is 'none', so the web app manifest would be blocked and the service worker could not
 # register. Chrome only fetches the manifest once a page is installable — i.e. once a service
 # worker exists — so this is inert until W-1 lands and then becomes load-bearing.
+#
+# COOP (L-2) is global: the editor never relies on a cross-origin opener, and `same-origin`
+# gives the document its own browsing-context group. CORP is NOT global on purpose — the
+# OpenGraph image and the public icons must stay embeddable by social previews, so it is
+# scoped below to the application document and to served code/styles only.
+#
+# Permissions-Policy (L-3) lists only features Chromium implements; `tools` was an origin-trial
+# directive and only produced a console warning.
 
 /*
   Content-Security-Policy: default-src 'none'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://cloudflareinsights.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
-  Permissions-Policy: geolocation=(), microphone=(), camera=(), tools=(self)
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
   X-Frame-Options: DENY
   Strict-Transport-Security: max-age=31536000
+  Cross-Origin-Opener-Policy: same-origin
+
+# L-2: the editor document and every served script/stylesheet are same-origin resources.
+# `/app/*` also covers `/app/index.html`; `*` matches slashes, so `/*.js` and `/*.css` cover
+# `/app.js`, `/vendor/*.js`, `/sw.js` and both stylesheets.
+/app
+  Cross-Origin-Resource-Policy: same-origin
+/app/*
+  Cross-Origin-Resource-Policy: same-origin
+/*.js
+  Cross-Origin-Resource-Policy: same-origin
+/*.css
+  Cross-Origin-Resource-Policy: same-origin
 
 # Self-hosted variable fonts never change in place — cache them hard.
 /fonts/*
@@ -136,6 +157,9 @@
   Cache-Control: public, max-age=3600
 /.well-known/ard.json
   Content-Type: application/json; charset=utf-8
+  Cache-Control: public, max-age=3600
+/.well-known/security.txt
+  Content-Type: text/plain; charset=utf-8
   Cache-Control: public, max-age=3600
 /manifest.webmanifest
   Content-Type: application/manifest+json; charset=utf-8

@@ -1,7 +1,7 @@
 {
   "name": "Quorly — private writing app",
   "short_name": "Quorly",
-  "description": "A private, local-first writing app that runs entirely in your browser. No account, no upload, no tracking.",
+  "description": "A private, local-first writing app that runs entirely in your browser. No account, no upload, no cookies.",
   "id": "/app/",
   "start_url": "/app/",
   "scope": "/",
