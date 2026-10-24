@@ -301,12 +301,22 @@ try {
     'suggestedName: `${slug}.quorly`',
     'preparePrintTitle();',
     'restorePrintTitle();',
+    // H-1: strict title-image validation and safe application (no direct img.src assignment without validation).
+    'function isValidTitleImageSrc',
+    'function applyTitleImage',
+    'function setTitleImage(src)',
+    'isValidTitleImageSrc',
   ];
   for (const marker of markers) {
     record(`/app.js has ${marker}`, body.includes(marker), 'missing');
   }
   // N-12: Formatting section must sit before Recents after a layout switch.
   record('/app.js uses sidebar-recents anchor', body.includes("panel.querySelector('.sidebar-recents')"), 'missing anchor');
+  // H-1: exported HTML has CSP meta, escaped src, clamped width, and encoded markdown URL.
+  record('/app.js export includes CSP meta', body.includes("http-equiv=\"Content-Security-Policy\""), 'missing CSP meta');
+  record('/app.js generates escaped title src', body.includes('escapeHtml(titleImageData.src)'), 'missing escaped src');
+  record('/app.js clamps title width safely', body.includes('function safeTitleImageWidth'), 'missing width clamp');
+  record('/app.js encodes markdown image URL', body.includes('encodeURI'), 'missing encodeURI');
   record('/app.js has no dead insertSection lookup', !body.includes("getElementById('insertSection')"), 'dead reference still present');
 } catch (e) {
   record('/app.js library markers', false, String(e.message || e));

@@ -37,6 +37,32 @@ const DEFAULT_BODY = "<h2>Overview</h2><p>Quorly is a quiet, local-first writing
 // File System Access API feature detection (Chromium only; Firefox/Safari lack these)
 const FSA_SUPPORTED = typeof window.showSaveFilePicker === 'function' && typeof window.showOpenFilePicker === 'function';
 
+// Strict title-image source validation (H-1): reject anything that can break out of
+// an HTML attribute or inject executable content. Accept only raster base64 data URLs.
+function isValidTitleImageSrc(src) {
+    if (typeof src !== 'string') return false;
+    const stripped = src.replace(/[\r\n\s]/g, '');
+    if (!stripped) return false;
+    // Reject URLs containing quotes or angle brackets that could break HTML interpolation.
+    if (/["'<>]/.test(stripped)) return false;
+    // Strictly accept only raster base64 data URLs.
+    return /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/i.test(stripped);
+}
+
+function safeTitleImageWidth(width) {
+    const n = parseInt(width, 10);
+    if (!Number.isFinite(n)) return '700px';
+    return Math.max(200, Math.min(1000, n)) + 'px';
+}
+
+function applyTitleImage(src, width) {
+    const container = document.getElementById('titleImageContainer');
+    const img = document.getElementById('titleImage');
+    img.src = src;
+    img.style.width = safeTitleImageWidth(width);
+    container.classList.add('has-image');
+}
+
 // Escape text for safe interpolation into HTML
 function escapeHtml(str) {
     return String(str)
@@ -946,9 +972,13 @@ function loadStoredTitleImage() {
     if (!saved) return;
     try {
         const imageData = JSON.parse(saved);
-        img.src = imageData.src;
-        img.style.width = imageData.width;
-        container.classList.add('has-image');
+        if (imageData && imageData.src) {
+            if (isValidTitleImageSrc(imageData.src)) {
+                applyTitleImage(imageData.src, imageData.width || '700px');
+            } else {
+                console.warn('Rejected invalid stored title image');
+            }
+        }
     } catch (e) {
         console.error('Failed to load title image', e);
     }
@@ -1004,9 +1034,12 @@ async function openRecent(id) {
     applyTableWidths();
     migrateAlignment();
     if (snapshot.titleImage) {
-        // Set the width before setTitleImage so the write it triggers records the real width.
-        document.getElementById('titleImage').style.width = snapshot.titleImage.width || '700px';
-        setTitleImage(snapshot.titleImage.src);
+        const img = document.getElementById('titleImage');
+        img.style.width = snapshot.titleImage.width || '700px';
+        const ok = setTitleImage(snapshot.titleImage.src);
+        if (!ok) {
+            // Rejected unsafe image: deleteTitleImage called inside setTitleImage.
+        }
     } else {
         deleteTitleImage();
     }
@@ -1269,11 +1302,11 @@ function loadQuorly(rawContent) {
         applyTableWidths();
         migrateAlignment();
         if (snapshot.titleImage && snapshot.titleImage.src) {
-            const img = document.getElementById('titleImage');
-            const container = document.getElementById('titleImageContainer');
-            img.src = snapshot.titleImage.src;
-            img.style.width = snapshot.titleImage.width || '700px';
-            container.classList.add('has-image');
+            if (isValidTitleImageSrc(snapshot.titleImage.src)) {
+                applyTitleImage(snapshot.titleImage.src, snapshot.titleImage.width || '700px');
+            } else {
+                deleteTitleImage();
+            }
         } else {
             deleteTitleImage();
         }
@@ -2307,15 +2340,19 @@ const scheduleDiskSave = debounce(() => { saveToDisk(); }, 800);
 function generateHTMLFile() {
     const safeTitle = escapeHtml(editTitle.textContent);
     const titleImageData = getTitleImageData();
-    const titleImageHTML = titleImageData 
-        ? `<div style="text-align: center; margin-bottom: 30px;"><img src="${titleImageData.src}" style="max-width: 100%; width: ${titleImageData.width}; border-radius: 12px;" /></div>`
-        : '';
+    let titleImageHTML = '';
+    if (titleImageData) {
+        const safeSrc = escapeHtml(titleImageData.src);
+        const safeWidth = safeTitleImageWidth(titleImageData.width);
+        titleImageHTML = `<div style="text-align: center; margin-bottom: 30px;"><img src="${safeSrc}" style="max-width: 100%; width: ${safeWidth}; border-radius: 12px;" /></div>`;
+    }
     
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: https:; style-src 'unsafe-inline';">
     <title>${safeTitle}</title>
     <style>
         body { max-width: 800px; margin: 40px auto; padding: 20px; font-family: 'Inter', sans-serif; line-height: 1.8; }
@@ -2339,7 +2376,9 @@ function convertToMarkdown() {
     // Add title image if exists
     const titleImageData = getTitleImageData();
     if (titleImageData) {
-        md += `![Header Image](${titleImageData.src})\n\n`;
+        const src = String(titleImageData.src || '');
+        const encodedSrc = encodeURI(src).replace(/[()]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+        md += `![Header Image](${encodedSrc})\n\n`;
     }
     
     // Helper to serialize inline content (preserves bold, italic, etc.)
@@ -3025,11 +3064,14 @@ function attachTitleButton() {
 }
 
 function setTitleImage(src) {
-    const container = document.getElementById('titleImageContainer');
-    const img = document.getElementById('titleImage');
-    img.src = src;
-    container.classList.add('has-image');
+    if (!isValidTitleImageSrc(src)) {
+        deleteTitleImage();
+        return false;
+    }
+    const currentWidth = document.getElementById('titleImage').style.width || '700px';
+    applyTitleImage(src, currentWidth);
     saveToLocalStorage();
+    return true;
 }
 
 function deleteTitleImage() {
