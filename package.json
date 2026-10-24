@@ -12,6 +12,6 @@
     "test": "node tools/test-h1.mjs && node tools/test-e.mjs && node tools/test-marked.mjs"
   },
   "devDependencies": {
-    "wrangler": "3.114.17"
+    "wrangler": "4.152.0"
   }
 }
