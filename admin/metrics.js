@@ -121,5 +121,3 @@
   // auto-load if key present
   if (saved) load(saved);
 })();
-" path">
-C:\Users\anand\Downloads\ArticleWriter.metrics\admin\metrics.js
