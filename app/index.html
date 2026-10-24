@@ -45,6 +45,7 @@
   <button type="button" data-format="blockquote">Quote</button>
   <button type="button" data-format="insertUnorderedList">• List</button>
   <button type="button" data-format="insertOrderedList">1. List</button>
+<button type="button" data-format="insertChecklist" title="Task list" aria-label="Task list">☑ Task</button>
   <button type="button" data-format="link">Link</button>
   <button type="button" data-format="code">Code</button>
   <button type="button" data-format="justifyLeft">◧</button>
@@ -205,9 +206,9 @@
             <li role="option" tabindex="-1" data-value="720" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="10" y="4" width="4" height="8" rx="1" fill="currentColor"/></svg></li>
             <li role="option" tabindex="-1" data-value="840" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="8" y="4" width="8" height="8" rx="1" fill="currentColor"/></svg></li>
             <li role="option" tabindex="-1" data-value="960" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="6" y="4" width="12" height="8" rx="1" fill="currentColor"/></svg></li>
-            <li role="option" tabindex="-1" data-value="1080" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="4" y="4" width="16" height="8" rx="1" fill="currentColor"/></svg></li>
+            <li role="option" tabindex="-1" data-value="1080" aria-selected="true"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="4" y="4" width="16" height="8" rx="1" fill="currentColor"/></svg></li>
             <li role="option" tabindex="-1" data-value="1200" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="2" y="4" width="20" height="8" rx="1" fill="currentColor"/></svg></li>
-            <li role="option" tabindex="-1" data-value="1320" aria-selected="true"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="0" y="4" width="24" height="8" rx="1" fill="currentColor"/></svg></li>
+            <li role="option" tabindex="-1" data-value="1320" aria-selected="false"><svg viewBox="0 0 24 16" width="24" height="16" aria-hidden="true"><rect x="0" y="4" width="24" height="8" rx="1" fill="currentColor"/></svg></li>
           </ul>
         </div>
       </div>
@@ -252,8 +253,8 @@
         <button class="fmt-btn" type="button" data-format="justifyRight" title="Align right" aria-label="Align right">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h16"/><path d="M10 10h10"/><path d="M4 14h16"/><path d="M10 18h10"/></svg>
         </button>
-        <button class="fmt-btn" type="button" data-format="justifyFull" title="Justify" aria-label="Justify">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h16"/><path d="M4 10h16"/><path d="M4 14h16"/><path d="M4 18h16"/></svg>
+        <button class="fmt-btn" type="button" data-format="insertChecklist" title="Task list" aria-label="Task list">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1.2"/><path d="M5 6.5l1.5 1.5L8.5 5"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/><rect x="3" y="9.5" width="7" height="7" rx="1.2"/><rect x="3" y="16" width="7" height="7" rx="1.2"/></svg>
         </button>
       </div>
     </div>

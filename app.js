@@ -1,7 +1,7 @@
 
 let fileHandle = null;
 let bodyFontSize = 17;
-let editorWidth = 1320;
+let editorWidth = 1080;
 // UI-14: at ≤1180px the panel is a drawer and the Formatting section moves under the top bar.
 const MOBILE_LAYOUT = window.matchMedia('(max-width: 1180px)');
 let savedRange = null;
