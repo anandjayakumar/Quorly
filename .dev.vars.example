@@ -6,5 +6,3 @@ CF_ANALYTICS_TOKEN=your-analytics-read-token
 # Cloudflare Access service token for smoke tests against protected previews:
 CF_ACCESS_CLIENT_ID=your-service-token-client-id
 CF_ACCESS_CLIENT_SECRET=your-service-token-client-secret
-" path">
-C:\Users\anand\Downloads\ArticleWriter.st\.dev.vars.example
