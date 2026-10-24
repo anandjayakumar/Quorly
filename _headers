@@ -191,6 +191,9 @@
   Cache-Control: public, max-age=604800
 
 # Admin metrics dashboard and its API: never cache, never index.
+/admin/metrics.css
+  Content-Type: text/css; charset=utf-8
+  Cache-Control: no-store
 /admin/*
   Cache-Control: no-store
 /api/*
