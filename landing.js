@@ -9,13 +9,14 @@ document.addEventListener('click', (event) => {
   if (!link) return;
   try {
     if (!navigator.sendBeacon) return;
-    // Never record automated/agent traffic or QA opt-outs.
-    if (navigator.webdriver) return;
+    // Our own agent/QA runs opt out entirely.
     try {
       if (new URLSearchParams(location.search).has('qa')) return;
       if (localStorage.getItem('quorly_no_track') === '1') return;
     } catch (_) { /* ignore */ }
-    navigator.sendBeacon('/e', JSON.stringify({ e: 'landing_cta' }));
+    const payload = { e: 'landing_cta' };
+    if (navigator.webdriver) payload.agent = '1';
+    navigator.sendBeacon('/e', JSON.stringify(payload));
   } catch (err) {
     /* analytics must never affect navigation */
   }

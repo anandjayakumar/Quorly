@@ -100,13 +100,16 @@ function isSameOrigin(request) {
   return true;
 }
 
-function isAutomated(request) {
-  // Defense in depth: drop beacons from headless/automated browsers and explicit QA opt-outs.
-  // Real visitors never send these. (Primary guard is client-side `navigator.webdriver`.)
+function isQa(request) {
+  // Our own agent/QA runs opt out entirely: ?qa on the request URL drops the write.
   try {
     const url = new URL(request.url);
     if (url.searchParams.has('qa')) return true;
   } catch (_) { /* ignore */ }
+  return false;
+}
+
+function isAutomatedUa(request) {
   const ua = request.headers.get('user-agent') || '';
   return /HeadlessChrome|Playwright|Puppeteer|Selenium|PhantomJS|webdriver/i.test(ua);
 }
@@ -129,7 +132,7 @@ export async function onRequest(context) {
     });
   }
 
-  if (!isSameOrigin(request) || isAutomated(request)) return noContent();
+  if (!isSameOrigin(request) || isQa(request)) return noContent();
 
   try {
     const raw = await readCapped(request);
@@ -138,6 +141,10 @@ export async function onRequest(context) {
       const event = data && data.e;
       // The allowlist is the schema: unknown events are dropped, never stored.
       if (typeof event === 'string' && EVENTS.has(event) && env.ANALYTICS) {
+        // Agent traffic (WebMCP, WebDriver, headless UA) is tagged, not dropped,
+        // so it can be separated from customer metrics in queries. ?qa runs are
+        // dropped entirely (see isQa above).
+        const agentFlag = (data && data.agent === true) || (data && data.agent === '1') || isAutomatedUa(request) ? '1' : '';
         env.ANALYTICS.writeDataPoint({
           indexes: [event],
           blobs: [
@@ -145,6 +152,7 @@ export async function onRequest(context) {
             pick(data.format, FORMATS),
             pick(data.tool, TOOLS),
             pick(data.theme, THEMES),
+            agentFlag,
           ],
           doubles: [1],
         });

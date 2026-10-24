@@ -43,7 +43,7 @@
   // Same anonymous counter the rest of the app uses. Tool names are not document content.
   function logTool(name) {
     try {
-      if (typeof track === 'function') track('webmcp_tool', { tool: name });
+      if (typeof track === 'function') track('webmcp_tool', { tool: name, agent: true });
     } catch (_) {
       // Analytics must never break a tool call.
     }
