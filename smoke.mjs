@@ -528,7 +528,9 @@ try {
   record('CSP present', csp.includes("default-src 'none'"), csp.slice(0, 60) || '(none)');
   record('CSP has no unsafe-inline', !csp.includes('unsafe-inline'), 'unsafe-inline present');
   record('CSP allows analytics beacon', csp.includes('https://static.cloudflareinsights.com'),
-    'beacon origin missing — Web Analytics will not report');
+    'beacon origin missing');
+  record('CSP allows Google Analytics', csp.includes('https://www.googletagmanager.com'),
+    'googletagmanager origin missing - GA will not load');
   record("CSP allows same-origin reads", csp.includes("connect-src 'self'"),
     "connect-src must include 'self' so /robots.txt and /sitemap.xml stay readable");
   // Both directives fall back to default-src, which is 'none'.
