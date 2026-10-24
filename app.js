@@ -2310,6 +2310,30 @@ function insertTable(rowsWanted = 3, colsWanted = 3) {
     });
 }
 
+// Insert an editable checklist (task list). Each item is a <li> carrying a real
+// checkbox plus a text span, so the checked state survives save/load and export.
+function insertChecklist() {
+    preserveScroll(() => {
+        editBody.focus();
+        if (lastSelectionRange && editBody.contains(lastSelectionRange.commonAncestorContainer)) {
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(lastSelectionRange);
+        } else {
+            // No saved selection: place the caret at the end of the document.
+            const sel = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(editBody);
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+        const html = `<ul class="q-checklist"><li><input type="checkbox" class="q-check" contenteditable="false"><span class="q-check-text"><br></span></li></ul><p><br></p>`;
+        document.execCommand('insertHTML', false, html);
+        saveToLocalStorage();
+    });
+}
+
 async function handleImage(file, target) {
     if (!file) return;
     // S-2b: downscale and re-encode before it ever reaches the document or localStorage.
@@ -2598,7 +2622,11 @@ function format(cmd) {
         return; // formatInlineCode saves the document itself
     } else if (cmd === 'codeblock') {
         document.execCommand('formatBlock', false, 'pre');
-    } else if (ALIGN_BY_CMD[cmd]) {
+    } else if (cmd === 'insertChecklist') {
+        insertChecklist();
+        return; // insertChecklist saves the document itself
+    } else if (cmd === 'justifyFull') {
+        return; // removed — kept as a no-op so legacy keybinds do nothing
         applyAlignment(cmd); // UI-17: a class, not execCommand's blocked inline style
     } else {
         document.execCommand(cmd, false, null);
