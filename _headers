@@ -166,8 +166,9 @@
   Cache-Control: public, max-age=3600
 /manifest.webmanifest
   Content-Type: application/manifest+json; charset=utf-8
-/og.png
+/default-title-1.png
   Content-Type: image/png
+  Cache-Control: public, max-age=31536000, immutable
 /icon-192.png
   Content-Type: image/png
 /icon-512.png

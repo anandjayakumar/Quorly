@@ -30,7 +30,7 @@ const sessionHandles = new Map();
 
 // Default document shown on first load and when starting a new file.
 const DEFAULT_TITLE = "Welcome to Quorly";
-const DEFAULT_BODY = "<h2>Overview</h2><p>Quorly is a quiet, local-first writing space. Select any text to format it, or use the panel on the left.</p><blockquote>Everything stays on your device.</blockquote><p>Start writing...</p>";
+const DEFAULT_BODY = "<h2>Overview</h2><p>Writing is one of the simplest things we can do, yet finding a place to do it well has become surprisingly complicated.</p><p>Our ideas live in documents, our notes scatter across applications, and our unfinished thoughts sit behind login screens and loading spinners. Even a blank page can come with a little too much baggage. But writing shouldn't be complicated. It should begin with a thought, a cursor, and the freedom to see where the words take you.</p><h2>Just you and the page</h2><p>The best writing space is the one that gets out of your way. Your words belong to you. There is something reassuring about a notebook that asks nothing of you. No account to create. No subscription to remember. No need to wonder where your words are going or who might be reading them. Just a place to think.</p><p>That belief is at the heart of Quorly.</p><p>Quorly is a quiet, local-first writing space designed around a simple idea: your words should remain yours. Your documents stay on your device, and you can write without creating an account or sending your work to the cloud.</p><p>Your writing doesn't need an audience. Your workspace doesn't need to know who you are.</p><p>You just need somewhere to begin.</p><h2>Make the page your own</h2>";
 
 // --- SAFETY & UTILITIES ---
 
@@ -1028,6 +1028,9 @@ function restoreLiveDocument() {
     applyTableWidths();
     migrateAlignment();
     loadStoredTitleImage();
+    if (!localStorage.getItem("doc_title_image_v13")) {
+        loadDefaultTitleImage();
+    }
     firstKeystrokeTracked = false;
 }
 
@@ -1054,6 +1057,25 @@ function loadStoredTitleImage() {
     }
 }
 
+async function loadDefaultTitleImage() {
+    try {
+        const response = await fetch('/default-title-1.png');
+        if (!response.ok) return;
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const dataUrl = reader.result;
+            if (isValidTitleImageSrc(dataUrl)) {
+                applyTitleImage(dataUrl, '700px');
+                saveToLocalStorage();
+            }
+        };
+        reader.readAsDataURL(blob);
+    } catch (e) {
+        console.error('Failed to load default title image', e);
+    }
+}
+
 // A clean page (first run, "New", or after the 48 h restore window lapses).
 function startCleanDocument(blank) {
     editTitle.textContent = blank ? "Untitled" : DEFAULT_TITLE;
@@ -1072,7 +1094,11 @@ function startCleanDocument(blank) {
     // Overwrite the live keys so a reload cannot resurrect the previous document.
     safeSetItem("doc_title_v13", editTitle.textContent);
     safeSetItem("doc_body_v13", bodyHTML());
-    localStorage.removeItem("doc_title_image_v13");
+    if (blank) {
+        localStorage.removeItem("doc_title_image_v13");
+    } else {
+        loadDefaultTitleImage();
+    }
     firstKeystrokeTracked = false;
 }
 
