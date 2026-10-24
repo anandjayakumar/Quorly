@@ -1,0 +1,12 @@
+# Dependabot: keep wrangler pinned (M-6) and let the owner bump it deliberately.
+# The release pipeline parses wrangler's CLI output and pins the version in package.json,
+# so an unreviewed bump can break every deploy. Security updates for other deps are allowed.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "wrangler"
