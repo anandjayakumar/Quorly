@@ -652,7 +652,7 @@ const commitArg = shaArg >= 0 ? argv[shaArg + 1] : null;
       // On a CI runner (or any checkout where `main` is the current branch at `sha`),
       // `git branch -f main` fails with "cannot force update the branch ... used by
       // worktree". The branch is already where it needs to be in that case.
-      const head = sh('git rev-parse HEAD', { quiet: true, allowFail: true }).trim();
+      const head = gitHead();
       if (head !== sha) sh(`git branch -f main ${sha}`);
       // The manifest is computed from the exact stage that was just deployed, so it can be
       // compared with the live site later (`release.mjs verify`).
