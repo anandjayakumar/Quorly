@@ -2549,6 +2549,17 @@ function convertToMarkdown() {
                 else if (tag === 'BLOCKQUOTE') text += `> ${serializeInline(node)}\n\n`;
                 else if (tag === 'PRE') text += '\n```\n' + node.textContent.replace(/\n$/, '') + '\n```\n\n';
                 else if (tag === 'TABLE') text += serializeTable(node) + '\n\n';
+                else if (tag === 'UL' && node.classList.contains('q-checklist')) {
+                    const listItems = Array.from(node.children).filter(child => child.tagName === 'LI');
+                    listItems.forEach(li => {
+                        const cb = li.querySelector('.q-check');
+                        const checked = cb && (cb.checked || cb.hasAttribute('checked')) ? 'x' : ' ';
+                        const txt = serializeInline(li).replace(/^\s*\n?/, '').trim();
+                        // strip the checkbox's contribution (none, since input has no text)
+                        text += `- [${checked}] ${txt}\n`;
+                    });
+                    text += "\n";
+                }
                 else if (tag === 'UL') {
                     const listItems = Array.from(node.children).filter(child => child.tagName === 'LI');
                     listItems.forEach(li => {
@@ -2669,7 +2680,7 @@ async function openLinkDialog() {
 // defines, and is converted back to an inline style only in the exported file, which is opened
 // outside our origin.
 const ALIGN_CLASSES = ['q-align-left', 'q-align-center', 'q-align-right', 'q-align-justify'];
-const ALIGN_BY_CMD = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right', justifyFull: 'justify' };
+const ALIGN_BY_CMD = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right' };
 const ALIGN_TAGS = 'p,h1,h2,h3,h4,h5,h6,blockquote,pre,li,td,th,table,div';
 
 // The deepest block-level elements the selection touches: a caret inside a paragraph aligns that
@@ -3621,6 +3632,56 @@ function wireUI() {
             return;
         }
         if (!e.target.closest('.table-wrapper')) clearTableSelection(null);
+    });
+
+    // Checklist: clicking a checkbox toggles + persists its checked state.
+    editBody.addEventListener('click', (e) => {
+        const cb = e.target && e.target.closest ? e.target.closest('.q-check') : null;
+        if (!cb || !editBody.contains(cb)) return;
+        if (cb.checked) cb.setAttribute('checked', 'checked');
+        else cb.removeAttribute('checked');
+        const li = cb.closest('li');
+        if (li) li.classList.toggle('q-checked', cb.checked);
+        saveToLocalStorage();
+    });
+
+    // Checklist: Enter creates a new item; Enter on an empty item exits the list.
+    editBody.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return;
+        const anchor = sel.anchorNode;
+        const el = anchor && anchor.nodeType === 1 ? anchor : (anchor ? anchor.parentElement : null);
+        const li = el && el.closest ? el.closest('li') : null;
+        if (!li || !li.closest('.q-checklist')) return;
+        const span = li.querySelector('.q-check-text');
+        const txt = (span ? span.textContent : '').replace(/\u200b/g, '').trim();
+        e.preventDefault();
+        if (txt === '') {
+            const p = document.createElement('p');
+            p.innerHTML = '<br>';
+            const ul = li.parentNode;
+            ul.parentNode.insertBefore(p, ul.nextSibling);
+            li.remove();
+            if (!ul.querySelector('li')) ul.remove();
+            const r = document.createRange();
+            r.selectNodeContents(p);
+            r.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(r);
+            saveToLocalStorage();
+            return;
+        }
+        const item = document.createElement('li');
+        item.innerHTML = '<input type="checkbox" class="q-check" contenteditable="false"><span class="q-check-text"><br></span>';
+        li.parentNode.insertBefore(item, li.nextSibling);
+        const newSpan = item.querySelector('.q-check-text');
+        const r = document.createRange();
+        r.selectNodeContents(newSpan);
+        r.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        saveToLocalStorage();
     });
 
     editBody.addEventListener('click', (e) => {
