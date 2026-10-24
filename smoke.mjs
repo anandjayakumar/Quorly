@@ -578,6 +578,29 @@ for (const path of ['/README.md', '/_headers', '/.assetsignore', '/smoke.mjs', '
   }
 }
 
+// --- H-2 / M-3 / M-4 regression checks ----------------------------------------
+try {
+  const { body: vendBody } = await get('/vendor/dompurify.min.js');
+  record('/vendor/dompurify.min.js contains 3.4.17', vendBody.includes('3.4.17'), 'version missing');
+} catch (e) {
+  record('/vendor/dompurify.min.js check', false, String(e.message || e));
+}
+
+try {
+  const { body: appBody } = await get('/app.js');
+  record('/app.js contains RETURN_DOM_FRAGMENT: true', appBody.includes('RETURN_DOM_FRAGMENT: true'), 'missing');
+  record('/app.js contains afterSanitizeAttributes', appBody.includes('afterSanitizeAttributes'), 'missing');
+  record('/app.js contains noopener noreferrer', appBody.includes('noopener noreferrer'), 'missing');
+  record('/app.js contains sanitizeToFragment', appBody.includes('sanitizeToFragment'), 'missing');
+  record('/app.js contains replaceChildren', appBody.includes('replaceChildren'), 'missing');
+  record('/app.js no longer has editBody.innerHTML = temp.innerHTML', !appBody.includes('editBody.innerHTML = temp.innerHTML'), 'old double-parse still present');
+  record('/app.js no longer has container.innerHTML = sanitizeHTML(insert)', !appBody.includes('container.innerHTML = sanitizeHTML(insert)'), 'old double-parse still present');
+  record('/app.js no longer has the fail-open sanitizer fallback', !appBody.includes('t.innerHTML = String(html)'), 'fail-open fallback still present');
+  record('/app.js forbids media and form tags on import', appBody.includes("'video', 'audio', 'source', 'track'") && appBody.includes("'input', 'button', 'select', 'textarea'"), 'FORBID_TAGS incomplete');
+} catch (e) {
+  record('/app.js H-2/M-3/M-4 markers', false, String(e.message || e));
+}
+
 // --- report ----------------------------------------------------------------------
 
 async function checkDocument(path, { type, contains, notContains = [] }) {

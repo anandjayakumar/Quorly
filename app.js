@@ -77,26 +77,80 @@ function escapeHtml(str) {
 const PURIFY_CONFIG = {
     ADD_ATTR: ['contenteditable', 'data-highlighted', 'target'],
     ADD_DATA_URI_TAGS: ['img'],
-    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'link', 'meta'],
-    FORBID_ATTR: ['srcdoc']
+    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'link', 'meta',
+        'video', 'audio', 'source', 'track', 'input', 'button', 'select', 'textarea'],
+    FORBID_ATTR: ['srcdoc', 'style', 'srcset', 'ping', 'formaction', 'action', 'method']
 };
-function sanitizeHTML(html) {
-    if (window.DOMPurify) {
-        return DOMPurify.sanitize(html, PURIFY_CONFIG);
-    }
-    // Fallback if the sanitizer failed to load: strip scripts and event handlers.
-    const t = document.createElement('div');
-    t.innerHTML = String(html);
-    t.querySelectorAll('script, style, iframe, object, embed, link, meta').forEach(n => n.remove());
-    t.querySelectorAll('*').forEach(el => {
-        [...el.attributes].forEach(a => {
-            const n = a.name.toLowerCase();
-            if (n.startsWith('on') || ((n === 'href' || n === 'src') && /^\s*javascript:/i.test(a.value))) {
-                el.removeAttribute(a.name);
+// Register the link-safety hook exactly once at module initialization (M-4).
+if (typeof window !== 'undefined' && window.DOMPurify) {
+    DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+        if (node.tagName === 'A') {
+            node.setAttribute('rel', 'noopener noreferrer');
+            if (node.hasAttribute('target') && node.getAttribute('target') !== '_blank') {
+                node.removeAttribute('target');
             }
-        });
+        }
     });
-    return t.innerHTML;
+}
+
+function sanitizeToFragment(html) {
+    if (typeof window === 'undefined' || !window.DOMPurify) {
+        console.error('DOMPurify unavailable; refusing to import HTML');
+        try {
+            if (document.getElementById('appToast')) {
+                const msg = 'Import blocked: HTML sanitizer unavailable. Only trusted plain text can be inserted.';
+                if (typeof toast === 'function') toast(msg, 6000);
+            }
+        } catch (_) { /* no-op */ }
+        return document.createDocumentFragment();
+    }
+    return DOMPurify.sanitize(html, { ...PURIFY_CONFIG, RETURN_DOM_FRAGMENT: true });
+}
+
+function sanitizeHTML(html) {
+    if (typeof window === 'undefined' || !window.DOMPurify) {
+        console.error('DOMPurify unavailable; refusing to sanitize HTML');
+        return '';
+    }
+    return DOMPurify.sanitize(html, PURIFY_CONFIG);
+}
+
+// Legacy alignment preservation: convert inline `style*="text-align:..."` to the
+// existing `q-align-*` classes before sanitization strips the style attribute.
+// This only runs when DOMPurify is available, using an inert DOMParser (no live DOM parse).
+function preserveLegacyAlignment(html) {
+    if (typeof window === 'undefined' || !window.DOMPurify) return html;
+    try {
+        const doc = new DOMParser().parseFromString(String(html == null ? '' : html), 'text/html');
+        const ALIGN_VALUES = new Set(['left', 'center', 'right', 'justify']);
+        const ALIGN_TAGS = 'P,H1,H2,H3,H4,H5,H6,BLOCKQUOTE,PRE,LI,TD,TH,TABLE,DIV';
+        const tags = ALIGN_TAGS.split(',');
+        tags.forEach(tag => {
+            Array.from(doc.querySelectorAll ? doc.querySelectorAll(tag) : []).forEach(el => {
+                const styleAttr = el.getAttribute('style') || '';
+                const decl = styleAttr.split(';')
+                    .map(s => s.trim()).filter(Boolean)
+                    .find(p => /^text-align\s*:/i.test(p));
+                if (decl) {
+                    const value = decl.split(':')[1].trim().toLowerCase();
+                    if (ALIGN_VALUES.has(value) && value !== 'left') {
+                        el.classList.add('q-align-' + value);
+                    }
+                    const remaining = styleAttr.split(';')
+                        .map(s => s.trim()).filter(Boolean)
+                        .filter(p => !/^text-align\s*:/i.test(p));
+                    if (remaining.length) {
+                        el.setAttribute('style', remaining.join('; '));
+                    } else {
+                        el.removeAttribute('style');
+                    }
+                }
+            });
+        });
+        // Serialize through the browser so text nodes stay escaped; joining nodeValue by hand
+        // would turn a literal "&lt;img&gt;" back into markup before the sanitizer sees it.
+        return doc.body ? doc.body.innerHTML : String(html);
+    } catch (_) { return String(html); }
 }
 
 // Transient on-screen notice (replaces silent failures)
@@ -615,8 +669,10 @@ async function newFile() {
 function markdownToClean(markdownText) {
     if (typeof marked === 'undefined') return null;
     const html = marked.parse(markdownText);
+    const alignedHtml = preserveLegacyAlignment(html);
+    const fragment = sanitizeToFragment(alignedHtml);
     const temp = document.createElement('div');
-    temp.innerHTML = sanitizeHTML(html); // sanitize BEFORE building interactive nodes
+    temp.appendChild(fragment.cloneNode(true));
 
     // Convert MD images to interactive containers
     temp.querySelectorAll('img').forEach(img => {
@@ -653,7 +709,8 @@ function loadMarkdown(markdownText) {
     editTitle.textContent = h1 ? h1.textContent : "Untitled Document";
     if(h1) h1.remove();
     isLoading = true;
-    editBody.innerHTML = temp.innerHTML;
+    editBody.innerHTML = '';
+    while (temp.firstChild) editBody.appendChild(temp.firstChild);
     applyTableWidths();
     migrateAlignment();
     firstKeystrokeTracked = false; // an imported document starts its own count
@@ -954,7 +1011,11 @@ async function deleteRecent(id) {
 // Put the live document (the original *_v13 keys) into the editor.
 function restoreLiveDocument() {
     editTitle.textContent = localStorage.getItem("doc_title_v13") || DEFAULT_TITLE;
-    editBody.innerHTML = sanitizeHTML(localStorage.getItem("doc_body_v13") || DEFAULT_BODY);
+    const bodyHtml = localStorage.getItem("doc_body_v13") || DEFAULT_BODY;
+    const alignedHtml = preserveLegacyAlignment(bodyHtml);
+    const fragment = sanitizeToFragment(alignedHtml);
+    editBody.innerHTML = '';
+    editBody.replaceChildren(...Array.from(fragment.childNodes));
     applyTableWidths();
     migrateAlignment();
     loadStoredTitleImage();
@@ -987,7 +1048,11 @@ function loadStoredTitleImage() {
 // A clean page (first run, "New", or after the 48 h restore window lapses).
 function startCleanDocument(blank) {
     editTitle.textContent = blank ? "Untitled" : DEFAULT_TITLE;
-    editBody.innerHTML = blank ? "" : sanitizeHTML(DEFAULT_BODY);
+    const bodyHtml = blank ? '' : DEFAULT_BODY;
+    const alignedHtml = preserveLegacyAlignment(bodyHtml);
+    const fragment = sanitizeToFragment(alignedHtml);
+    editBody.innerHTML = '';
+    editBody.replaceChildren(...Array.from(fragment.childNodes));
 
     const img = document.getElementById('titleImage');
     const container = document.getElementById('titleImageContainer');
@@ -1030,7 +1095,11 @@ async function openRecent(id) {
 
     isLoading = true;
     editTitle.textContent = snapshot.title || 'Untitled';
-    editBody.innerHTML = sanitizeHTML(snapshot.body || '');
+    const bodyHtml = snapshot.body || '';
+    const alignedHtml = preserveLegacyAlignment(bodyHtml);
+    const fragment = sanitizeToFragment(alignedHtml);
+    editBody.innerHTML = '';
+    editBody.replaceChildren(...Array.from(fragment.childNodes));
     applyTableWidths();
     migrateAlignment();
     if (snapshot.titleImage) {
@@ -1298,7 +1367,11 @@ function loadQuorly(rawContent) {
         isLoading = true;
         const snapshot = JSON.parse(rawContent);
         editTitle.textContent = snapshot.title || 'Untitled';
-        editBody.innerHTML = sanitizeHTML(snapshot.body || '');
+        const bodyHtml = snapshot.body || '';
+        const alignedHtml = preserveLegacyAlignment(bodyHtml);
+        const fragment = sanitizeToFragment(alignedHtml);
+        editBody.innerHTML = '';
+        editBody.replaceChildren(...Array.from(fragment.childNodes));
         applyTableWidths();
         migrateAlignment();
         if (snapshot.titleImage && snapshot.titleImage.src) {
@@ -1324,9 +1397,11 @@ function loadQuorly(rawContent) {
 }
 
 function loadHTML(htmlContent) {
+    const alignedHtml = preserveLegacyAlignment(htmlContent);
+    const fragment = sanitizeToFragment(alignedHtml);
     const temp = document.createElement('div');
-    temp.innerHTML = sanitizeHTML(htmlContent); // strip scripts/handlers from untrusted files
-    
+    temp.appendChild(fragment.cloneNode(true));
+
     // Extract title from h1 or title tag
     let title = "Untitled Document";
     const h1 = temp.querySelector('h1');
@@ -1340,7 +1415,8 @@ function loadHTML(htmlContent) {
     
     editTitle.textContent = title;
     isLoading = true;
-    editBody.innerHTML = temp.innerHTML;
+    editBody.innerHTML = '';
+    while (temp.firstChild) editBody.appendChild(temp.firstChild);
     applyTableWidths();
     migrateAlignment();
     updateStats();
@@ -2060,7 +2136,9 @@ editBody.addEventListener('paste', (e) => {
             const savedSelection = captureBodySelection();
 
             const container = document.createElement('div');
-            container.innerHTML = sanitizeHTML(insert);
+            const alignedInsert = preserveLegacyAlignment(insert);
+            const fragmentFromSanitize = sanitizeToFragment(alignedInsert);
+            container.appendChild(fragmentFromSanitize);
             const fragment = document.createDocumentFragment();
             while (container.firstChild) {
                 fragment.appendChild(container.firstChild);
