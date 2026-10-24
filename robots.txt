@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /api/
 
 # AI crawlers: the site may be crawled, quoted and used to answer questions, but not
 # used to train models. Content-Signal is a robots.txt extension; agents that do not
