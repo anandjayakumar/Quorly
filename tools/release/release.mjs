@@ -4,7 +4,7 @@
  *
  *   node tools/release/release.mjs run [--commit <commit>] [--dry-run]
  *   node tools/release/release.mjs launch
- *   node tools/release/release.mjs promote --commit <commit> [--force]
+ *   node tools/release/release.mjs promote --commit <commit> [--force] [--skip-deploy]
  *   node tools/release/release.mjs prune [--environment preview|production] [--keep N] [--force]
  *   node tools/release/release.mjs verify
  *   node tools/release/release.mjs status
@@ -558,7 +558,8 @@ async function cmdRun(argv) {
 async function cmdPromote(argv) {
   const shaArg = argv.indexOf('--commit');
   const force = argv.includes('--force');
-  const commitArg = shaArg >= 0 ? argv[shaArg + 1] : null;
+const skipDeploy = argv.includes('--skip-deploy');
+const commitArg = shaArg >= 0 ? argv[shaArg + 1] : null;
 
   // A usage error must not leave a release record behind, so the commit is checked before the run
   // directory, the log and the lock exist.
@@ -624,12 +625,18 @@ async function cmdPromote(argv) {
     await step('snapshot', () => `${snapshot(sha, runDir, stage)} files from ${short}`);
 
     await step('promote-deploy', () => {
+      if (skipDeploy) {
+        const prior = readJson(PRODUCTION);
+        if (prior) status.deploy = { id: prior.deployId, url: prior.url, alias: PROD_ALIAS, branch: 'main' };
+        return 'skipped (--skip-deploy)';
+      }
       const d = deploy(stage, 'main', runDir, { sha, message: gitSubject(sha) });
       status.deploy = { id: d.id, url: d.url, alias: PROD_ALIAS, branch: 'main' };
       return d.id;
     });
 
     await step('smoke-production', async () => {
+      if (skipDeploy) return 'skipped (--skip-deploy)';
       try {
         return runSmoke(PROD_ALIAS, { label: 'production gate' });
       } catch (e) {
@@ -642,7 +649,11 @@ async function cmdPromote(argv) {
     });
 
     await step('mark-main', () => {
-      sh(`git branch -f main ${sha}`);
+      // On a CI runner (or any checkout where `main` is the current branch at `sha`),
+      // `git branch -f main` fails with "cannot force update the branch ... used by
+      // worktree". The branch is already where it needs to be in that case.
+      const head = sh('git rev-parse HEAD', { quiet: true, allowFail: true }).trim();
+      if (head !== sha) sh(`git branch -f main ${sha}`);
       // The manifest is computed from the exact stage that was just deployed, so it can be
       // compared with the live site later (`release.mjs verify`).
       const files = hashStage(stage);
