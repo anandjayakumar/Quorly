@@ -1,0 +1,17 @@
+{
+  "name": "quorly",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Quorly — private, local-first writing app (static site plus Pages Functions).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "gate": "node tools/release/release.mjs run --dry-run",
+    "smoke": "node smoke.mjs",
+    "test": "node tools/test-h1.mjs && node tools/test-e.mjs && node tools/test-marked.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "3.114.17"
+  }
+}

@@ -1,0 +1,4 @@
+Contact: mailto:hello@quorly.dev
+Expires: 2027-10-24T00:00:00Z
+Preferred-Languages: en
+Canonical: https://quorly.dev/.well-known/security.txt

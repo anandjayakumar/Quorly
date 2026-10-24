@@ -198,6 +198,20 @@ for (const path of ['/.well-known/ai-catalog.json', '/.well-known/ard.json']) {
 }
 
 try {
+  const { status, headers, body } = await get('/.well-known/security.txt');
+  const type = headers.get('content-type') || '';
+  record('/.well-known/security.txt is served', status === 200, `status=${status}`);
+  record('security.txt is text/plain', type.startsWith('text/plain'), `type=${type}`);
+  record('security.txt has Contact and Canonical',
+    /^Contact: mailto:hello@quorly\.dev$/m.test(body) && body.includes('Canonical: https://quorly.dev/.well-known/security.txt'),
+    'contact or canonical missing');
+  const expires = (body.match(/^Expires: (.+)$/m) || [])[1];
+  record('security.txt Expires is in the future', !!expires && Date.parse(expires) > Date.now(), `expires=${expires || '(none)'}`);
+} catch (e) {
+  record('security.txt', false, String(e.message || e));
+}
+
+try {
   const { body } = await get('/robots.txt');
   record('/robots.txt has the Content-Signal', body.includes('Content-Signal: search=yes, ai-input=yes, ai-train=no'), 'missing');
   record('/robots.txt advertises the Agentmap', body.includes('Agentmap: https://quorly.dev/.well-known/ard.json'), 'missing');
@@ -301,12 +315,22 @@ try {
     'suggestedName: `${slug}.quorly`',
     'preparePrintTitle();',
     'restorePrintTitle();',
+    // H-1: strict title-image validation and safe application (no direct img.src assignment without validation).
+    'function isValidTitleImageSrc',
+    'function applyTitleImage',
+    'function setTitleImage(src)',
+    'isValidTitleImageSrc',
   ];
   for (const marker of markers) {
     record(`/app.js has ${marker}`, body.includes(marker), 'missing');
   }
   // N-12: Formatting section must sit before Recents after a layout switch.
   record('/app.js uses sidebar-recents anchor', body.includes("panel.querySelector('.sidebar-recents')"), 'missing anchor');
+  // H-1: exported HTML has CSP meta, escaped src, clamped width, and encoded markdown URL.
+  record('/app.js export includes CSP meta', body.includes("http-equiv=\"Content-Security-Policy\""), 'missing CSP meta');
+  record('/app.js generates escaped title src', body.includes('escapeHtml(titleImageData.src)'), 'missing escaped src');
+  record('/app.js clamps title width safely', body.includes('function safeTitleImageWidth'), 'missing width clamp');
+  record('/app.js encodes markdown image URL', body.includes('encodeURI'), 'missing encodeURI');
   record('/app.js has no dead insertSection lookup', !body.includes("getElementById('insertSection')"), 'dead reference still present');
 } catch (e) {
   record('/app.js library markers', false, String(e.message || e));
@@ -465,6 +489,11 @@ try {
     `${icons.length} icons`);
   record('manifest has a maskable icon', icons.some((i) => (i.purpose || '').includes('maskable')),
     'no maskable icon — Android will letterbox the icon');
+  // L-5: Cloudflare Web Analytics is enabled, so "no tracking" overclaims.
+  record('manifest does not claim "no tracking"', !/no tracking/i.test(m.description || ''),
+    `description=${m.description || '(none)'}`);
+  record('manifest words privacy accurately', /no cookies/i.test(m.description || ''),
+    `description=${m.description || '(none)'}`);
 } catch (e) {
   record('manifest', false, String(e.message || e));
 }
@@ -502,8 +531,35 @@ try {
     `x-frame-options=${headers.get('x-frame-options')}`);
   record('Referrer-Policy no-referrer', headers.get('referrer-policy') === 'no-referrer',
     `referrer-policy=${headers.get('referrer-policy')}`);
+  // L-2: the editor must not share a browsing-context group with a cross-origin opener.
+  record('Cross-Origin-Opener-Policy same-origin', headers.get('cross-origin-opener-policy') === 'same-origin',
+    `coop=${headers.get('cross-origin-opener-policy') || '(none)'}`);
+  // L-3: `tools` is not an implemented Permissions-Policy feature; it only logged a warning.
+  const pp = headers.get('permissions-policy') || '';
+  record('Permissions-Policy has no tools directive', !/(^|,)\s*tools\s*=/.test(pp), pp || '(none)');
+  record('Permissions-Policy still disables powerful features',
+    /geolocation=\(\)/.test(pp) && /microphone=\(\)/.test(pp) && /camera=\(\)/.test(pp), pp || '(none)');
 } catch (e) {
   record('security headers', false, String(e.message || e));
+}
+
+// --- L-2: CORP is scoped, never global (social previews must keep working) --------
+for (const path of ['/app/', '/app.js', '/styles.css']) {
+  try {
+    const { headers } = await get(path);
+    record(`CORP same-origin on ${path}`, headers.get('cross-origin-resource-policy') === 'same-origin',
+      `corp=${headers.get('cross-origin-resource-policy') || '(none)'}`);
+  } catch (e) {
+    record(`CORP ${path}`, false, String(e.message || e));
+  }
+}
+
+try {
+  const { headers } = await get('/og.png');
+  record('/og.png stays embeddable (no CORP)', !headers.get('cross-origin-resource-policy'),
+    `corp=${headers.get('cross-origin-resource-policy') || '(none)'}`);
+} catch (e) {
+  record('/og.png CORP', false, String(e.message || e));
 }
 
 // --- funnel endpoint (M-1): same-origin, anonymous, fail-open ------------------------
@@ -533,6 +589,30 @@ try {
   record('GET /e', false, String(e.message || e));
 }
 
+// M-2: the cap and the origin check must still fail open (204, no body, no CORS grant).
+try {
+  const res = await fetch(BASE + '/e', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    body: 'x'.repeat(4096),
+  });
+  record('POST /e caps an oversized body', res.status === 204, `status=${res.status}`);
+} catch (e) {
+  record('POST /e oversized body', false, String(e.message || e));
+}
+
+try {
+  const res = await fetch(BASE + '/e', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8', Origin: 'https://evil.example' },
+    body: JSON.stringify({ e: 'smoke-check', format: 'smoke' }),
+  });
+  record('POST /e drops a cross-origin beacon', res.status === 204 && !res.headers.get('access-control-allow-origin'),
+    `status=${res.status} acao=${res.headers.get('access-control-allow-origin') || '(none)'}`);
+} catch (e) {
+  record('POST /e cross-origin beacon', false, String(e.message || e));
+}
+
 // The Function source is not an asset; it must never be downloadable.
 try {
   const { status } = await get('/functions/e.js');
@@ -559,13 +639,43 @@ try {
 
 // --- metafiles and unknown paths must NOT be public -------------------------------
 
-for (const path of ['/README.md', '/_headers', '/.assetsignore', '/smoke.mjs', '/does-not-exist-xyz']) {
+for (const path of ['/README.md', '/_headers', '/.assetsignore', '/smoke.mjs', '/package.json', '/package-lock.json', '/.github/workflows/ci.yml', '/does-not-exist-xyz']) {
   try {
     const { status } = await get(path);
     record(`${path} is not public`, status === 404, `status=${status} (expected 404)`);
   } catch (e) {
     record(`${path} is not public`, false, String(e.message || e));
   }
+}
+
+// --- H-2 / M-3 / M-4 regression checks ----------------------------------------
+try {
+  const { body: vendBody } = await get('/vendor/dompurify.min.js');
+  record('/vendor/dompurify.min.js contains 3.4.17', vendBody.includes('3.4.17'), 'version missing');
+} catch (e) {
+  record('/vendor/dompurify.min.js check', false, String(e.message || e));
+}
+
+try {
+  const { body: markedBody } = await get('/vendor/marked.min.js');
+  record('/vendor/marked.min.js is 18.1.1', markedBody.includes('marked v18.1.1'), 'version missing');
+} catch (e) {
+  record('/vendor/marked.min.js check', false, String(e.message || e));
+}
+
+try {
+  const { body: appBody } = await get('/app.js');
+  record('/app.js contains RETURN_DOM_FRAGMENT: true', appBody.includes('RETURN_DOM_FRAGMENT: true'), 'missing');
+  record('/app.js contains afterSanitizeAttributes', appBody.includes('afterSanitizeAttributes'), 'missing');
+  record('/app.js contains noopener noreferrer', appBody.includes('noopener noreferrer'), 'missing');
+  record('/app.js contains sanitizeToFragment', appBody.includes('sanitizeToFragment'), 'missing');
+  record('/app.js contains replaceChildren', appBody.includes('replaceChildren'), 'missing');
+  record('/app.js no longer has editBody.innerHTML = temp.innerHTML', !appBody.includes('editBody.innerHTML = temp.innerHTML'), 'old double-parse still present');
+  record('/app.js no longer has container.innerHTML = sanitizeHTML(insert)', !appBody.includes('container.innerHTML = sanitizeHTML(insert)'), 'old double-parse still present');
+  record('/app.js no longer has the fail-open sanitizer fallback', !appBody.includes('t.innerHTML = String(html)'), 'fail-open fallback still present');
+  record('/app.js forbids media and form tags on import', appBody.includes("'video', 'audio', 'source', 'track'") && appBody.includes("'input', 'button', 'select', 'textarea'"), 'FORBID_TAGS incomplete');
+} catch (e) {
+  record('/app.js H-2/M-3/M-4 markers', false, String(e.message || e));
 }
 
 // --- report ----------------------------------------------------------------------
